@@ -1,0 +1,41 @@
+ModalMap: Modeling and Map production using Random Forest and Stochastic Gradient Boosting
+
+############################## before you begin ##############################################
+
+
+Make certain you have already installed required packages: gbm, randomForest, rgdal, and PresenceAbsence
+
+Install ModalMap package using Packages > Install package(s) from local zip files...
+
+######################### Sample dataset ######################################################
+
+After installing ModelMap, there will be a subdirrectory external under the package dirrectory in your installation.
+
+For Example: C:\R\R-2.6.2\library\ModelMap\external 
+
+This contains the example dataset, along will a word document giving a short tutorial on converting model.map output to view in ArcGIS.
+
+The example dataset contains Training and Test data .csv files with 7 columns
+
+An index variable to identify each row:
+
+     * ID
+
+Two response variables:
+
+     * BIO        Continuous response variable of above ground Biomass
+     * CONIFTYP   Categorical response variable of presence of Conifer Forest Types
+
+Four predictor variables:
+
+     * 3 tasselcap (TC) bands as continuous predictor variables
+     * NLCD (National Land Cover Dataset) as a catagorical predictor variable
+
+The .csv files LUT_2001.csv and LUT_2004.csv are look up tables for associating the column headers in the training and test datasets
+with the image files for map production.
+
+The subdirectory 'imagefiles' contains the .img files for the predictor variables over a small rectangular area. 
+
+There is one image file for NLCD data.
+There are two image files for tasselcap data giving 2001 data and 2004 data.
+

@@ -1,0 +1,132 @@
+
+
+############ ModelMap 1.1 06/04/08 ######################
+
+Added check for factor or character training or test predictors not specified as categorical 
+factors by argument 'predFactor'
+
+Added warning if NA values in map production predictor layers. These NA values will be 
+automatically changed to -9999 and a warning will be given.
+
+Changed read.table command for reading in training and test datasets to read in data "as.is",
+now character values will be read in as characters, and not be automatically converted to
+factors.
+
+
+############ ModelMap 1.1.1 12/31/08 ######################
+
+Fixed bug so map creation option will not crash when numrows=1 or when final loop has only one row.
+
+
+############ ModelMap 1.1.2 01/09/09 ######################
+
+increased the resolution of output jpegs to publication quality
+added output textfile of values for each argument (even if choosen by GUI prompt) to make maps more easily repeatable
+
+
+############ ModelMap 1.1.3 01/12/09 ######################
+
+Rewrote calls to choose.dir() and choose.files() so that these functions will only be called if platform is windows. On other platforms, functions will stop with meaningfull messages specifying which additional arguments must be added to function call. 
+
+On non-windows platforms, output dirrectory will default to working dirrectory. 
+
+Changed internal variable rastnmList to rastnmVector, to make the name more descriptive as this variable is vector and not a list.
+
+Added argument rastLUTfn. This will make it easier to specify a raster Look Up Table if running model.map() in a non-GUI mode.
+
+Added argument rastnmVector to make it easier to run model.map() in a non-GUI mode.
+
+############ ModelMap 1.1.4 01/13/09 ######################
+
+Fixed diagnostic graphs so active graph sheet ends up on top.
+
+Standardized file name conventions for output files:
+	* if other output filenames are not specified in arguments, MODELfn is used as a basis to build the unspecified names.
+	* if output filenames include a path [checked by identical(basename(foo),foo) ] then they are left alone, but if they do 
+	  not include a path, the path in argument 'folder' is used for the output.
+
+Shortened header on diagnostic plots to basename(MODELfn) instead of full path and filename.
+
+Changed filename for ARGfn to 'MODELfn'_arguments.txt instead of 'asciifn'_arguments.txt
+
+Added date and time stamp to argument record file.
+
+added arguments 'jpeg.res', 'device.width', and 'device.type' to give users more control over diagnostic plot output. (the increased jpeg resolution from version 1.1.2 caused crashes on some computers, with error message "unable to allocate bitmap".)
+
+############ ModelMap 1.1.5 02/02/09 ######################
+
+Changed input filenames ('qdata.trainfn', 'qdata.testfn', 'rastLUTfn') to have a more flexible format to match output file names. Now input file names can be specified either with the full path, or with the basename, and the path from 'folder' will be used.
+
+Added pdf option for diagnostic plots
+
+Added cex argument for diagnostic plots
+
+Added req.sens, req.spec, FPC, and FNC arguments for model validation diagnostics, for categorical response model threshold optimization, to be passed along to PresenceAbsence package.
+
+Fixed bug in saving text file of Arguments, that cause function to fail when qdata.trainfn or qdata.testfn were dataframes or matrices. 
+
+############ ModelMap 1.1.6 02/05/09 ######################
+
+Prediction output for v fold cross validation will now have an additional column listing which fold each datapoint was in
+
+Updated help file with more info on production map st.dev. and the fact that it can on;y be generated for RF models.
+
+Commented out many of the little progress notes (i.e. "Now starting...").
+
+Turned some of the print() statements into warning() statements.
+
+Fixed bug that caused coefficient of variation map to overwrite regular map when map.sd=TRUE
+
+Fixed bug that occurred if qdata.testfn was a dataframe or matrix.
+'
+Removed SGB argument 'keep.data' because it was useless. It turns out that when using gbm.fit(), which ModelMap does, 'keep.data' has to equla TRUE. There is no point in having an argument that can only be set to one value!!!
+
+When using cross validation on SGB models, Changed starting value for number of trees for each fold to 100. Previously, each fold would start at the number of trees used for the main model, then build up from there. I'm not sure this is the final form, but it seemed like either all folds should be set at the same number as the main model, or each fold should start from scratch, not have folds that require fewer trees forced to use the main model, but folds that require more allowed to generate extra.
+
+############ ModelMap 1.1.7 02/13/09 ######################
+
+Changed meaning of SGB argument n.trees. Previously, n.trees gave the starting number of trees to be increased iteritivly. Now, if you want ot increase your number of trees iterativly set n.trees=NULL (the default), and if you want to build a set number of trees set n.trees to that number. In both cases, when the predictions are made from the model, the number of trees from the model actually used for predicting will still be determined by best.iter<-gbm.perf(method="OOB")
+
+As a side effect of this change, when you are using cross validation for your model validation, if n.trees=NULL, all folds will have models built with iteritivly determined n.trees, and if n.trees equals a number all folds will have that number of trees built. However, when the predictions are made from these models, the number of trees in the fold's model actually used for predicting will still be determined by best.iter<-gbm.perf(method="OOB")
+
+Added argument 'folder' to get.test() so that file name conventions would match model.map().
+
+Fixed warning message about catagorical levels found in map data but not in training data so that there are spaces between each level
+
+Fixed how NA values are treated when making predictions. Now the argument 'na.action' specifies not just how catagorical predictors with categories not found in the training data are treated, but also how NA values in the test and map production datasets are treated. 
+
+Updated help files to cover required spatial data format, and better describe 'na.action'
+
+############ ModelMap 1.1.8 02/13/09 ######################
+
+Fixed bug in get.test() that failed to correctly check if filenames were full path or basename only.
+
+############ ModelMap 1.1.9 03/24/09 ######################
+
+Changed text size for labels of SGB varibale importance plot to avoid cutting the topsoff the characters.
+
+Added warning to SGB models to advise users that: 
+
+"ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap."
+
+Added additional info to help file describing why this warning is issued.
+
+Changed 'response.type' options to "continuous" and "bivariate" (instead of "categorical"), but added backwards compatibility so if argument 'response.type' is given as "categorical" it will automatically be switched to "bivariate".
+
+Fixed citation file.
+
+Changed 'response.type' options to "continuous" and "binary" (instead of "bivariate")
+
+############ ModelMap 1.1.10 03/27/09 ######################
+
+got rid of test() function
+
+changed liscense to Unlimited
+
+added platform check before doing anything involving Filters
+
+############ ModelMap 1.1.10 03/27/09 ######################
+
+changed help files default graphic device from windows to jpeg
+
+changed windows() to dev.new() and graphics.device="windows" to "default"
