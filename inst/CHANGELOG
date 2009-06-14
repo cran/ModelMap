@@ -125,8 +125,16 @@ changed liscense to Unlimited
 
 added platform check before doing anything involving Filters
 
-############ ModelMap 1.1.10 03/27/09 ######################
+############ ModelMap 1.1.11 03/27/09 ######################
 
 changed help files default graphic device from windows to jpeg
 
 changed windows() to dev.new() and graphics.device="windows" to "default"
+
+############ ModelMap 1.1.12 06/11/09 ######################
+
+Fixed bug in that crashed GUI version when asking "response.type"
+
+############ ModelMap 1.1.13 06/11/09 ######################
+
+Fixed bug in that crashed GUI version when asking "response.type"

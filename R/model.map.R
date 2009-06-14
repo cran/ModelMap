@@ -297,11 +297,11 @@ print(paste("response.name =",response.name))
 ## If model.obj null, ask for response.type
 
 if(is.null(model.obj)){
-	if(response.type=="categorical"){response.type<-"binary"}
 	if(is.null(response.type)){
 		response.type <- select.list(c("continuous","binary"), title="Select response type.")}
 	if(response.type=="" || is.null(response.type)){
-		stop("response.type is required")}	
+		stop("response.type is required")}
+	if(response.type=="categorical"){response.type<-"binary"}	
 }
 
 
