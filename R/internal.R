@@ -1,3 +1,47 @@
+#############################################################################################
+#############################################################################################
+###################################### Get Rasts ############################################
+#############################################################################################
+#############################################################################################
+
+getRasts<-function(){
+	## This function prompts user to browse to and select raster layers used for model predictors.
+	## Returns vector of rasters.  
+
+	## Adds to file filters to Cran R Filters table.
+	Filters<-rbind(Filters,img=c("Imagine files (*.img)", "*.img"))
+	Filters<-rbind(Filters,csv=c("Comma-delimited files (*.csv)", "*.csv"))
+
+	userPrompt <- "Yes"
+      rastnmVector <- {}
+      while(userPrompt == "Yes"){
+		## Gets raster format from user.
+      	rasterType = select.list(c("Imagine Image", "ArcInfo Grid"), title="Select type of raster.")
+		if(rasterType==""){stop("Type of Raster must be selected")}
+		if(rasterType == "Imagine Image"){	
+			rasts <- choose.files(caption="Select image", filters = Filters["img",], multi = TRUE)
+				if(is.null(rasts)){
+					stop("")}
+			}
+		if(rasterType == "ArcInfo Grid"){
+			rasts = choose.dir(default=getwd(),caption="Select grid")
+			if(is.null(rasts)){
+				stop("")}
+		}
+		if(is.null(rasterType)){
+			stop("")
+		}
+
+		## Prompts user to select more.
+		userPrompt = select.list(c("Yes", "No"), title="Another?")
+		if(userPrompt==""){userPrompt<-"No"}
+		## Compiles list of rasters.
+		rastnmVector = c(rastnmVector, rasts)
+	}
+	return(rastnmVector)
+}
+
+
 
 #############################################################################################
 ###################################### Diagnostics ##########################################
@@ -5,116 +49,70 @@
 
 
 diagnostics.function<-function(	model.obj=NULL,
-				MODELfn=NULL,
-				MODELpredfn=NULL,
-				response.name=NULL,
-				folder=getwd(),
-				device.type="default",
-				DIAGNOSTICfn=MODELfn,
-				jpeg.res=72,
-				device.width=7,
-				device.height=7,
-				main=basename(MODELfn),
-				cex=par$cex,
-				req.sens,
-				req.spec,
-				FPC,
-				FNC	){
-print("MODELfn:")
-print(MODELfn)
+						model.type,
+						predList,
+						PRED,
+						MODELfn=NULL,
+						MODELpredfn=NULL,
+						response.name,
+						response.type,
+						folder=getwd(),
+						device.type="default",
+						jpeg.res=72,
+						device.width=7,
+						device.height=7,
+						main=basename(MODELpredfn),
+						cex=par$cex,
+						req.sens,
+						req.spec,
+						FPC,
+						FNC	){
 
-### Filenames ###
 
-	
-	if(is.null(folder)){
-		if(.Platform$OS.type=="windows"){
-			folder<-choose.dir(default=getwd(), caption="Select output directory")}}
-	if(folder==FALSE){folder<-NULL}
-	if(!is.null(folder)){
-		MODELfn<-paste(folder,"\\",MODELfn,sep="")
-		MODELpredfn<-paste(folder,"\\",MODELpredfn,sep="")
-		DIAGNOSTICfn<-paste(folder,"\\",DIAGNOSTICfn,sep="")
-	}
+### check predictions for -9999 ###
 
-print("folder:")
-print(folder)
-print("DIAGNOSTICfn:")
-print(DIAGNOSTICfn)
-
-### load model and predictions ###
-
-PRED<-read.table(MODELpredfn,header=TRUE,sep=",")
-if(is.null(model.obj)){
-	load(MODELfn)}
-
-### Extract Model Type from model.obj ###
-
-	model.type<-attr(model.obj,"class")
-	model.type<-switch(model.type,	"randomForest"="RF",
-							"gbm"="SGB",
-							"unknown")
-	if(model.type=="unknown"){
-		stop("model.obj is of unknown type")}
-
-### Extract Response Type ###
-
-	if(model.type=="RF"){
-		response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")}
-	if(model.type=="SGB"){
-		response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
-	if(response.type=="unknown"){
-		stop("supplied model.obj has an unknown response type")}
-
-### Extract Response name ###
-
-	if(is.null(response.name)){
-		if(!is.null(model.obj$response)){
-			response.name<-model.obj$response
-		}else{response.name<-"response"}
-	}
-
-### Extract predictor names ###
-
-	if(model.type=="RF"){
-		predList<-row.names(model.obj$importance)}
-	if(model.type=="SGB"){
-		predList<-model.obj$var.names}
+PRED.NA<-PRED[PRED$pred==-9999,]
+Npred.NA<-nrow(PRED.NA)
+PRED<-PRED[PRED$pred!=-9999,]
+if(Npred.NA>0){
+	warning(Npred.NA," datapoints not included in diagnostic plots because categorical factored predictor contained levels not found in training data")}
 
 
 for(i in 1:length(device.type)){
 
-### Output filenames ###
+	### Output filenames ###
 
-	OPTTHRESHfn<-paste(DIAGNOSTICfn,"_optthresholds.csv",sep="")
+	OPTTHRESHfn<-paste(MODELpredfn,"_optthresholds.csv",sep="")
+	PREDPREVfn<-paste(MODELpredfn,"_prevalence.csv",sep="")
 
 	if(device.type[i] == "default"){
-		SCATTERPLOTfn<-paste(DIAGNOSTICfn,"_scatterplot",sep="")
-		IMPORTANCEfn<-paste(DIAGNOSTICfn,"_importance",sep="")
-		THRESHOLDPLOTSfn<-paste(DIAGNOSTICfn,"_thresholdplots",sep="")
+		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot",sep="")
+		IMPORTANCEfn<-paste(MODELpredfn,"_importance",sep="")
+		THRESHOLDPLOTSfn<-paste(MODELpredfn,"_thresholdplots",sep="")
 	}
 
 	if(device.type[i] == "jpeg"){
-		SCATTERPLOTfn<-paste(DIAGNOSTICfn,"_scatterplot.jpg",sep="")
-		IMPORTANCEfn<-paste(DIAGNOSTICfn,"_importance.jpg",sep="")
-		THRESHOLDPLOTSfn<-paste(DIAGNOSTICfn,"_thresholdplots.jpg",sep="")
+		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot.jpg",sep="")
+		IMPORTANCEfn<-paste(MODELpredfn,"_importance.jpg",sep="")
+		THRESHOLDPLOTSfn<-paste(MODELpredfn,"_thresholdplots.jpg",sep="")
 	}
 
 	if(device.type[i] == "pdf"){
-		SCATTERPLOTfn<-paste(DIAGNOSTICfn,"_scatterplot.pdf",sep="")
-		IMPORTANCEfn<-paste(DIAGNOSTICfn,"_importance.pdf",sep="")
-		THRESHOLDPLOTSfn<-paste(DIAGNOSTICfn,"_thresholdplots.pdf",sep="")
+		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot.pdf",sep="")
+		IMPORTANCEfn<-paste(MODELpredfn,"_importance.pdf",sep="")
+		THRESHOLDPLOTSfn<-paste(MODELpredfn,"_thresholdplots.pdf",sep="")
 	}
 
 	if(device.type[i] == "postscript"){
-		SCATTERPLOTfn<-paste(DIAGNOSTICfn,"_scatterplot.ps",sep="")
-		IMPORTANCEfn<-paste(DIAGNOSTICfn,"_importance.ps",sep="")
-		THRESHOLDPLOTSfn<-paste(DIAGNOSTICfn,"_thresholdplots.ps",sep="")
+		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot.ps",sep="")
+		IMPORTANCEfn<-paste(MODELpredfn,"_importance.ps",sep="")
+		THRESHOLDPLOTSfn<-paste(MODELpredfn,"_thresholdplots.ps",sep="")
 	}
 
 	if(device.type[i] == "win.metafile"){
-		SCATTERPLOTfn<-paste(DIAGNOSTICfn,"_scatterplot.emf",sep="")
-		IMPORTANCEfn<-paste(DIAGNOSTICfn,"_importance.emf",sep="")
-		THRESHOLDPLOTSfn<-paste(DIAGNOSTICfn,"_thresholdplots.emf",sep="")
+		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot.emf",sep="")
+		IMPORTANCEfn<-paste(MODELpredfn,"_importance.emf",sep="")
+		THRESHOLDPLOTSfn<-paste(MODELpredfn,"_thresholdplots.emf",sep="")
 	}
 
 
@@ -190,12 +188,17 @@ for(i in 1:length(device.type)){
 		
 		if(i==1){
 			#write.table(optimal.thresholds(PRED),file=OPTTHRESHfn,sep=",",row.names=FALSE)
-			write.table(	error.threshold.plot(	PRED,opt.methods=optimal.thresholds(),plot.it=FALSE,
-								req.sens=req.sens,req.spec=req.spec,FPC=FPC,FNC=FNC),
-					file=OPTTHRESHfn,sep=",",row.names=FALSE)
+
+			opt.thresh<-error.threshold.plot(	PRED,opt.methods=optimal.thresholds(),plot.it=FALSE,
+									req.sens=req.sens,req.spec=req.spec,FPC=FPC,FNC=FNC)
+			pred.prev<-predicted.prevalence(PRED, threshold = opt.thresh$threshold)
+			pred.prev<-cbind(opt.thresh$opt.methods, pred.prev)
+
+			write.table(	opt.thresh,file=OPTTHRESHfn,sep=",",row.names=FALSE)
+			write.table(	pred.prev,file=PREDPREVfn,sep=",",row.names=FALSE)
 		}	
 	}
-	### Continuous ###
+### Continuous ###
 
 	if(response.type == "continuous"){
 
@@ -292,17 +295,16 @@ getRasts<-function(){
 #############################################################################################
 
 model.SGB<-function(	qdata,
-			train,
-			predList,
-			response.name,
-			response.type,
-			seed=NULL,
-			n.trees=NULL,                 # number of trees
-			shrinkage=0.001,   	      # shrinkage or learning rate,
-                  interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
-			bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-			train.fraction = 1.0,       	# fraction of data for training,
-                  n.minobsinnode = 10         	# minimum total weight needed in each node
+				predList,
+				response.name,
+				response.type,
+				seed=NULL,
+				n.trees=NULL,                 # number of trees
+				shrinkage=0.001,   	      # shrinkage or learning rate,
+                 	 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
+				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
+				train.fraction = 1.0,       	# fraction of data for training,
+                 	 	n.minobsinnode = 10         	# minimum total weight needed in each node
 ){
 
 ## This function generates a presence/absence (binary categorical) model using gbm.
@@ -317,16 +319,12 @@ if(response.type=="continuous"){distribution="gaussian"}
 
 qdata.x<-qdata[,match(predList,names(qdata))]
 
-qdata.x.train<-qdata.x[train,]
-
 qdata.y<-qdata[,response.name]
 if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
 
-qdata.y.train<-qdata.y[train]
-
 if(is.null(n.trees)){
-	SGB <- gbm.fit(	x=qdata.x.train,
-				y=qdata.y.train,        
+	SGB <- gbm.fit(	x=qdata.x,
+				y=qdata.y,        
 				distribution=distribution,
 				n.trees=100,                	
 				shrinkage=shrinkage, 
@@ -345,9 +343,12 @@ if(is.null(n.trees)){
       	SGB <- gbm.more(SGB,100)          
       	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
 	}
+	SGB$iter <- TRUE
+
+
 }else{
-	SGB <- gbm.fit(	x=qdata.x.train,
-				y=qdata.y.train,        
+	SGB <- gbm.fit(	x=qdata.x,
+				y=qdata.y,        
 				distribution=distribution,
 				n.trees=n.trees,                	
 				shrinkage=shrinkage, 
@@ -357,20 +358,7 @@ if(is.null(n.trees)){
 				n.minobsinnode = n.minobsinnode)
 }
 
-is.fact<-sapply(qdata.x.train,is.factor)
-rast.factors<-names(is.fact[is.fact])
-
-SGB.levels<-NULL
-if(any(is.fact)){
-	SGB.levels<-as.list(1:length(rast.factors))
-	names(SGB.levels)<-rast.factors
-	for(p in 1:length(rast.factors)){
-		SGB.levels[[p]]<-levels(qdata.x.train[,rast.factors[p]])}}
-
 SGB$response<-response.name
-
-if(!is.null(SGB.levels)){
-	SGB$levels<-SGB.levels}
 
 return(SGB)
 
@@ -383,12 +371,13 @@ return(SGB)
 ################################### SGB - Predict ###########################################
 #############################################################################################
 
-Bpredict.SGB<-function(	qdata,
-				train,
-				response.name=SGB$response,
-				SGB,
-				na.action="na.omit"
-				){
+prediction.SGB<-function(	prediction.type,
+					qdata,
+					train,
+					response.name=deparse(substitute(SGB$response.name)),
+					SGB,
+					na.action="na.omit"
+					){
 
 ## This function makes predictions to test data for Random Forest presence/absence (binary 
 ## categorical) model.
@@ -413,43 +402,55 @@ qdata.y<-qdata[,response.name]
 
 if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
 
-if(identical(train,1:nrow(qdata))){
-	qdata.test<-qdata
-	qdata.x.test<-qdata.x
-	qdata.y.test<-qdata.y
+if(prediction.type=="TRAIN"){
+
+	if(!is.null(SGB$levels)){
+		print("assigning levels")
+		print(SGB$levels)
+		for(p in names(SGB$levels)){
+			qdata.x[,p]<-factor(qdata.x[,p],levels=SGB$levels[[p]])
+		}
+	}
+
 	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
+
+	#print(qdata.x)
+	print(paste("best.iter",best.iter))
+	#print(SGB)
+
 	pred<-predict.gbm(	object=SGB,
 					newdata=qdata.x,
 					n.trees=best.iter,
 					type="response",
 					single.tree=FALSE)
 
-}else{
-	qdata.test<-qdata[-train,]
-	qdata.x.test<-qdata.x[-train,]
-	qdata.y.test<-qdata.y[-train]
+	#print(cbind(qdata.x,pred))
+}
 
-	## -9999 
+if(prediction.type=="TEST"){
 
-	not9<-!apply(qdata.x.test[,]==-9999,1,any)
-	qdata.x.test.not9<-qdata.x.test[not9,]
-	qdata.x.test.not9<-data.frame(qdata.x.test.not9)
-	qdata.x.test.not9<-qdata.x.test.not9[,match(SGB$var.names,names(qdata.x.test.not9))]
+
+	## check -9999 
+
+	not9<-!apply(qdata.x[,]==-9999,1,any)
+	qdata.x.not9<-qdata.x[not9,]
+	qdata.x.not9<-data.frame(qdata.x.not9)
+	qdata.x.not9<-qdata.x.not9[,match(SGB$var.names,names(qdata.x.not9))]
 
 	## checking for NA's
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("predictor",names(qdata.x.test)[p],"contains NA's"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("predictor",names(qdata.x)[p],"contains NA's"))
 		}
 		if(na.action=="na.roughfix"){
 			warning("Replacing NA predictors with median value or most common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with NA predictors")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 			}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
@@ -457,56 +458,46 @@ if(identical(train,1:nrow(qdata))){
 
 	## Factors
 
-	if(is.null(SGB$levels)){
-		var.factors<-SGB$var.type!=0
-		if( any(var.factors)){	
-			SGB.levels<-as.list(1:sum(var.factors))
-			names(SGB.levels)<-SGB$var.names[var.factors]
-			for(p in 1:sum(var.factors)){
-				SGB.levels[[p]]<-SGB$var.levels[var.factors][[p]]}
-			SGB$levels<-SGB.levels
-		}
-	}
-
 	if(!is.null(SGB$levels)){
 		missing.levels<-SGB$levels
 		for(p in names(SGB$levels)){
-			missing.levels[[p]]<-unique(qdata.x.test.not9[,p][!qdata.x.test.not9[,p]%in%SGB$levels[[p]]])
-			qdata.x.test.not9[,p]<-factor(qdata.x.test.not9[,p],levels=SGB$levels[[p]])
+			missing.levels[[p]]<-unique(qdata.x.not9[,p][!qdata.x.not9[,p]%in%SGB$levels[[p]]])
+			qdata.x.not9[,p]<-factor(qdata.x.not9[,p],levels=SGB$levels[[p]])
 		}
 	}
 
 	## checking for missing factor categories
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("categorical factored predictor",names(qdata.x.test)[p],"contains  levels",paste(missing.levels[[names(qdata.x.test)[p]]],collapse=", "), "not found in training data"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("categorical factored predictor",names(qdata.x)[p],"contains  levels",paste(missing.levels[[names(qdata.x)[p]]],collapse=", "), "not found in training data"))
 		}
 
 		if(na.action=="na.roughfix"){
 			warning("Replacing predictor categories not found in training data with most common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with predictor categories not found in the training data")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 			}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
-	}
+	}		
 
-	pred<-rep(-9999,nrow(qdata.x.test))
+	## make predictions
+	pred<-rep(-9999,nrow(qdata.x))
 	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
 	pred[not9]<-predict.gbm(	object=SGB,
-						newdata=qdata.x.test.not9,
+						newdata=qdata.x.not9,
 						n.trees=best.iter,
 						type="response",
 						single.tree=FALSE)
 }
-SGB.PRED<-data.frame(cbind(obs=qdata.y.test,pred=pred))
+SGB.PRED<-data.frame(cbind(obs=qdata.y,pred=pred))
 
-row.names(SGB.PRED)<-row.names(qdata.test)
+row.names(SGB.PRED)<-row.names(qdata)
 
 return(SGB.PRED)
 }
@@ -518,62 +509,71 @@ return(SGB.PRED)
 #############################################################################################
 
 rF.binary<-function(	qdata,
-					train,
-					predList,
-					response.name,
-					ntree=500,
-					mtry=NULL,
-					seed=NULL){
+				predList,
+				response.name,
+				ntree=500,
+				mtry=NULL,
+				replace=TRUE,
+				strata=NULL,
+				sampsize = NULL,
+				seed=NULL){
 
 ## This function generates a presence/absence (binary categorical) model using Random Forests.
 ##	Inputs: Full dataset, training indices, predictor names, response name, and seed (optional)
 ##	Output: Random Forest model
+
 
 if(!is.null(seed)){
 	set.seed(seed)}
 
 qdata.x<-qdata[,match(predList,names(qdata))]
 
-qdata.x.train<-qdata.x[train,]
-
-is.fact<-sapply(qdata.x.train,is.factor)
+is.fact<-sapply(qdata.x,is.factor)
 if(any(is.fact)){
-	qdata.x.train[,is.fact]<-lapply(qdata.x.train[,is.fact,drop=FALSE],factor)}
+	qdata.x[,is.fact]<-lapply(qdata.x[,is.fact,drop=FALSE],factor)}
 
 qdata.y<-qdata[,response.name]
 qdata.y[qdata.y>0]<-1
 qdata.y<-as.factor(qdata.y)
 
-qdata.y.train<-qdata.y[train]
+print("about to start tuning")
 
 if(is.null(mtry)){
-	RT<-tuneRF(	x=qdata.x.train, y=qdata.y.train,
+
+	A<-list(	x=qdata.x, y=qdata.y,
 			doBest=FALSE,
 			importance=TRUE,
 			proximity=TRUE,
-			plot=FALSE)
+			plot=FALSE,
+			replace=replace,
+			strata=strata,
+			sampsize=sampsize)
+
+	A<-A[!sapply(A, is.null)]
+
+	RT<-do.call("tuneRF", A)
+
 	mtry<-RT[which.min(RT[,2]),1]
 }
 
-RF<-randomForest(	x=qdata.x.train, y=qdata.y.train,
-			importance=TRUE,
-			proximity=TRUE,
-			mtry=mtry,
-			ntree=ntree)
+print("finished tuning")
 
-rast.factors<-names(is.fact[is.fact])
+A<-list(	x=qdata.x, y=qdata.y,
+		importance=TRUE,
+		proximity=TRUE,
+		mtry=mtry,
+		ntree=ntree,
+		replace=replace,
+		strata=strata,
+		sampsize=sampsize)
 
-RF.levels<-NULL
-if(any(is.fact)){
-	RF.levels<-as.list(1:length(rast.factors))
-	names(RF.levels)<-rast.factors
-	for(p in 1:length(rast.factors)){
-		RF.levels[[p]]<-levels(qdata.x.train[,rast.factors[p]])}}
+A<-A[!sapply(A, is.null)]
+
+RF<-do.call("randomForest", A)
+
+#rast.factors<-names(is.fact[is.fact])
 
 RF$response<-response.name
-
-if(!is.null(RF.levels)){
-	RF$levels<-RF.levels}
 
 return(RF)
 }
@@ -584,7 +584,8 @@ return(RF)
 ################## RF - Predict - Categorical (binary) response ##########################
 #############################################################################################
 
-Bpredict.rF.binary<-function(	qdata,
+prediction.rF.binary<-function(	prediction.type,
+						qdata,
 						train,
 						response.name=RF$response,
 						RF,
@@ -608,39 +609,33 @@ qdata.y<-qdata[,response.name]
 qdata.y[qdata.y>0]<-1
 qdata.y<-as.factor(qdata.y)
 
-if(identical(train,1:nrow(qdata))){
-	qdata.test<-qdata
-	qdata.x.test<-qdata.x
-	qdata.y.test<-qdata.y
+if(prediction.type=="OOB"){
 	pred<-predict(RF, type="vote")[,"1"]
+}
+if(prediction.type=="TEST"){
 
-}else{
-	qdata.test<-qdata[-train,]
-	qdata.x.test<-qdata.x[-train,]
-	qdata.y.test<-qdata.y[-train]
+	## check -9999 
 
-	## -9999 
-
-	not9<-!apply(qdata.x.test[,]==-9999,1,any)
-	qdata.x.test.not9<-qdata.x.test[not9,]
-	qdata.x.test.not9<-data.frame(qdata.x.test.not9)
-	qdata.x.test.not9<-qdata.x.test.not9[,match(rownames(RF$importance),names(qdata.x.test.not9))]
+	not9<-!apply(qdata.x[,]==-9999,1,any)
+	qdata.x.not9<-qdata.x[not9,]
+	qdata.x.not9<-data.frame(qdata.x.not9)
+	qdata.x.not9<-qdata.x.not9[,match(rownames(RF$importance),names(qdata.x.not9))]
 
 	## checking for NA's
 
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("predictor",names(qdata.x.test)[p],"contains NA's"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("predictor",names(qdata.x)[p],"contains NA's"))
 		}
 		if(na.action=="na.roughfix"){
 			warning("Replacing NA predictors with median value or most common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with NA predictors")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 			}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
@@ -651,39 +646,39 @@ if(identical(train,1:nrow(qdata))){
 	if(!is.null(RF$levels)){
 			missing.levels<-RF$levels
 			for(p in names(RF$levels)){
-				missing.levels[[p]]<-unique(qdata.x.test.not9[,p][!qdata.x.test.not9[,p]%in%RF$levels[[p]]])
-				qdata.x.test.not9[,p]<-factor(qdata.x.test.not9[,p],levels=RF$levels[[p]])}
+				missing.levels[[p]]<-unique(qdata.x.not9[,p][!qdata.x.not9[,p]%in%RF$levels[[p]]])
+				qdata.x.not9[,p]<-factor(qdata.x.not9[,p],levels=RF$levels[[p]])}
 		}
 
 	## checking for missing factor categories
 
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("categorical factored predictor",names(qdata.x.test)[p],"contains  levels",paste(missing.levels[[names(qdata.x.test)[p]]],collapse=", "), "not found in training data"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("categorical factored predictor",names(qdata.x)[p],"contains  levels",paste(missing.levels[[names(qdata.x)[p]]],collapse=", "), "not found in training data"))
 		}
 
 		if(na.action=="na.roughfix"){
 			warning("Replacing predictor categories not found in training data with most common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with predictor categories not found in the training data")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 				}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
 	}
 
-	pred<-rep(-9999,nrow(qdata.x.test))
-	pred[not9]<-predict(RF, qdata.x.test.not9,type="vote")[,"1"]
+	pred<-rep(-9999,nrow(qdata.x))
+	pred[not9]<-predict(RF, qdata.x.not9,type="vote")[,"1"]
 }
 
-RF.PRED<-data.frame(	cbind(obs=as.numeric(as.character(qdata.y.test)),
+RF.PRED<-data.frame(	cbind(obs=as.numeric(as.character(qdata.y)),
 					pred=pred))
 
-row.names(RF.PRED)<-row.names(qdata.test)
+row.names(RF.PRED)<-row.names(qdata)
 
 return(RF.PRED)
 }
@@ -695,11 +690,13 @@ return(RF.PRED)
 #############################################################################################
 
 rF.continuous<-function(	qdata,
-					train,
 					predList,
 					response.name,
 					ntree=500,
 					mtry=NULL,
+					replace=TRUE,
+					strata=NULL,
+					sampsize = NULL,
 					seed=NULL){
 
 
@@ -711,44 +708,50 @@ if(!is.null(seed)){
 	set.seed(seed)}
 
 qdata.x<-qdata[,match(predList,names(qdata))]
-qdata.x.train<-qdata.x[train,]
 
-is.fact<-sapply(qdata.x.train,is.factor)
+is.fact<-sapply(qdata.x,is.factor)
 if(any(is.fact)){
-	qdata.x.train[,is.fact]<-lapply(qdata.x.train[,is.fact,drop=FALSE],factor)}
+	qdata.x[,is.fact]<-lapply(qdata.x[,is.fact,drop=FALSE],factor)}
 
 qdata.y<-qdata[,response.name]
-qdata.y.train<-qdata.y[train]
+
+
 
 if(is.null(mtry)){
-	RT<-tuneRF(	x=qdata.x.train, y=qdata.y.train,
+
+	A<-list(	x=qdata.x, y=qdata.y,
 			doBest=FALSE,
 			importance=TRUE,
 			proximity=TRUE,
-			plot=FALSE)
+			plot=FALSE,
+			replace=replace,
+			strata=strata,
+			sampsize=sampsize)
+
+	A<-A[!sapply(A, is.null)]
+
+	RT<-do.call("tuneRF", A)
+
 	mtry<-RT[which.min(RT[,2]),1]
 }
 
-RF<-randomForest(	x=qdata.x.train, y=qdata.y.train,
-			importance=TRUE,
-			proximity=TRUE,
-			mtry=mtry,
-			ntree=ntree)
+A<-list(	x=qdata.x, y=qdata.y,
+		importance=TRUE,
+		proximity=TRUE,
+		mtry=mtry,
+		ntree=ntree,
+		replace=replace,
+		strata=strata,
+		sampsize=sampsize)
 
-is.fact<-sapply(qdata.x.train,is.factor)
-rast.factors<-names(is.fact[is.fact])
+A<-A[!sapply(A, is.null)]
 
-RF.levels<-NULL
-if(any(is.fact)){
-	RF.levels<-as.list(1:length(rast.factors))
-	names(RF.levels)<-rast.factors
-	for(p in 1:length(rast.factors)){
-		RF.levels[[p]]<-levels(qdata.x.train[,rast.factors[p]])}}
+RF<-do.call("randomForest", A)
+
+#is.fact<-sapply(qdata.x,is.factor)
+#rast.factors<-names(is.fact[is.fact])
 
 RF$response<-response.name
-
-if(!is.null(RF.levels)){
-	RF$levels<-RF.levels}
 
 return(RF)
 
@@ -759,8 +762,8 @@ return(RF)
 ########################## RF - Predict - Continuous Response ###############################
 #############################################################################################
 
-Bpredict.rF.continuous<-function(	qdata,
-						train,
+prediction.rF.continuous<-function(	prediction.type,
+						qdata,
 						response.name=RF$response,
 						RF,
 						na.action="na.omit"
@@ -771,7 +774,7 @@ Bpredict.rF.continuous<-function(	qdata,
 ##			the Random Forest model and what to do if NAs are in predictors (default).
 ##	Output: Random Forest prediction object.
 
-#print("MAKING PREDICTIONS SUBFUNCTION")
+print("MAKING PREDICTIONS SUBFUNCTION")
 
 if(is.null(response.name)){
 	stop("must provide response name")}
@@ -787,46 +790,36 @@ predList<-row.names(RF$importance)
 qdata.x<-qdata[,match(predList,names(qdata))]
 qdata.y<-qdata[,response.name]
 
-if(identical(train,1:nrow(qdata))){
-	qdata.test<-qdata
-	qdata.x.test<-qdata.x
-	qdata.y.test<-qdata.y
+if(prediction.type=="OOB"){
 	pred<-RF$predicted
-}else{
+}
+if(prediction.type=="TEST"){
 
-	#print("Splitting training and test")
+	## checking -9999 
 
-	qdata.test<-qdata[-train,]
-	qdata.x.test<-qdata.x[-train,]
-	qdata.y.test<-qdata.y[-train]
-
-	## -9999 
-
-	#print("checking -9999")
-
-	not9<-!apply(qdata.x.test[,]==-9999,1,any)
+	not9<-!apply(qdata.x[,]==-9999,1,any)
 
 	#print("not9:")
 	#print(not9)
 
-	qdata.x.test.not9<-qdata.x.test[not9,]
-	qdata.x.test.not9<-data.frame(qdata.x.test.not9)
-	qdata.x.test.not9<-qdata.x.test.not9[,match(rownames(RF$importance),names(qdata.x.test.not9))]
+	qdata.x.not9<-qdata.x[not9,]
+	qdata.x.not9<-data.frame(qdata.x.not9)
+	qdata.x.not9<-qdata.x.not9[,match(rownames(RF$importance),names(qdata.x.not9))]
 
 	## checking for NA's
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("predictor",names(qdata.x.test)[p],"contains NA's"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("predictor",names(qdata.x)[p],"contains NA's"))
 		}
 		if(na.action=="na.roughfix"){
 			warning("Replacing NA predictors with median value or most common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with NA predictors")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 			}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
@@ -834,50 +827,47 @@ if(identical(train,1:nrow(qdata))){
 
 	## Factors
 
-	#print("factor stuff")
+	print("factor stuff")
 
 	if(!is.null(RF$levels)){
 		missing.levels<-RF$levels
-		#print("missing levels before:")
-		#print(missing.levels)
+
 		for(p in names(RF$levels)){
-			missing.levels[[p]]<-unique(qdata.x.test.not9[,p][!qdata.x.test.not9[,p]%in%RF$levels[[p]]])
-			qdata.x.test.not9[,p]<-factor(qdata.x.test.not9[,p],levels=RF$levels[[p]])}
-		#print("missing levels after:")
-		#print(missing.levels)
+			missing.levels[[p]]<-unique(qdata.x.not9[,p][!qdata.x.not9[,p]%in%RF$levels[[p]]])
+			qdata.x.not9[,p]<-factor(qdata.x.not9[,p],levels=RF$levels[[p]])}
 
 		}
 
 	## Checking for missing factor categories
 
-	if(any(is.na(qdata.x.test.not9))){
-		qdata.x.test.na<-apply(is.na(qdata.x.test.not9),2,sum)
-		for(p in (1:length(qdata.x.test.na))[qdata.x.test.na>0]){
-			warning(paste("categorical factored predictor",names(qdata.x.test)[p],"contains  levels",paste(missing.levels[[names(qdata.x.test)[p]]],collapse=", "), "not found in training data"))
+	if(any(is.na(qdata.x.not9))){
+		qdata.x.na<-apply(is.na(qdata.x.not9),2,sum)
+		for(p in (1:length(qdata.x.na))[qdata.x.na>0]){
+			warning(paste("categorical factored predictor",names(qdata.x)[p],"contains  levels",paste(missing.levels[[names(qdata.x)[p]]],collapse=", "), "not found in training data"))
 		}
 		print("na.action:")
 		print(na.action)
 		if(na.action=="na.roughfix"){
 			warning("Replacing predictor categories not found in training data withmost common category")
-			qdata.x.test.not9<-na.roughfix(qdata.x.test.not9)
+			qdata.x.not9<-na.roughfix(qdata.x.not9)
 		}else{
 			if(na.action=="na.omit"){
 				warning("Returning -9999 for data points with predictor categories not found in the training data")
-				notna<-!apply(is.na(qdata.x.test.not9),1,any)
-				qdata.x.test.not9<-qdata.x.test.not9[notna,]
+				notna<-!apply(is.na(qdata.x.not9),1,any)
+				qdata.x.not9<-qdata.x.not9[notna,]
 				not9[not9]<-notna
 				}else{stop("na.action must be either 'na.roughfix' or 'na.omit'")}
 		}
 	}
 
-	pred<-rep(-9999,nrow(qdata.x.test))
-	pred[not9]<-predict(RF, qdata.x.test.not9)
+	pred<-rep(-9999,nrow(qdata.x))
+	pred[not9]<-predict(RF, qdata.x.not9)
 }
 
-RF.PRED<-data.frame(	cbind(obs=as.numeric(as.character(qdata.y.test)),
+RF.PRED<-data.frame(	cbind(obs=as.numeric(as.character(qdata.y)),
 					pred=pred))
 
-row.names(RF.PRED)<-row.names(qdata.test)
+row.names(RF.PRED)<-row.names(qdata)
 
 
 return(RF.PRED)
@@ -891,20 +881,20 @@ return(RF.PRED)
 
 
 create.model<-function(	qdata,
-				train=1:nrow(qdata),
 				model.type=NULL,		# "RF", "GAM", "SGB"
 				folder=NULL,		# No ending slash, to output to working dir = getwd()
-				MODELfn=NULL,
 				predList,
 				response.name=NULL,
 				response.type,			# "binary", "continuous",
-				unique.rowname="row_index",	# Row identifier
 				seed=NULL,
 
 			# RF arguments:
 				ntree=500,
 				mtry=NULL,
-
+				replace=TRUE,
+				strata=NULL,
+				sampsize = NULL,
+			
 			# SGB arguments:
 				n.trees=NULL,                 # number of trees
 				shrinkage=0.001,   	      # shrinkage or learning rate,
@@ -920,56 +910,47 @@ if(!is.null(seed)){
 
 if(model.type=="RF"){
 	if(response.type=="binary"){
+		print("calling rF.binary")
 		model.obj<-rF.binary(	qdata=qdata,
-							train=train,
-							predList=predList,
-							response.name=response.name,
-							ntree=ntree,
-							mtry=mtry,
-							seed=NULL)}
+						predList=predList,
+						response.name=response.name,
+						ntree=ntree,
+						mtry=mtry,
+						replace=replace,
+						strata=strata,
+						sampsize=sampsize,
+						seed=NULL)}
 	if(response.type=="continuous"){
+		print("calling rF.continuous")
 		model.obj<-rF.continuous(	qdata=qdata,
-							train=train,
 							predList=predList,
 							response.name=response.name,
 							ntree=ntree,
 							mtry=mtry,
+							replace=replace,
+							strata=strata,
+							sampsize=sampsize,
 							seed=NULL)}
 }
 
 if(model.type=="SGB"){
 
+	print("calling model.SGB")
 	model.obj<-model.SGB(	qdata=qdata,
-				train=train,
-				predList=predList,
-				response.name=response.name,
-				seed=NULL,
-				response.type=response.type, 				
-				n.trees=n.trees,                 	# number of trees
-				shrinkage=shrinkage,   	      	# shrinkage or learning rate,
-                  	interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
-				bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
-				train.fraction=train.fraction,      # fraction of data for training,
-                  	n.minobsinnode=n.minobsinnode      # minimum total weight needed in each node
-				)
+					predList=predList,
+					response.name=response.name,
+					seed=NULL,
+					response.type=response.type, 				
+					n.trees=n.trees,                 	# number of trees
+					shrinkage=shrinkage,   	      	# shrinkage or learning rate,
+                  		interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
+					bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
+					train.fraction=train.fraction,      # fraction of data for training,
+                  		n.minobsinnode=n.minobsinnode      # minimum total weight needed in each node
+					)
 
 }
 
-
-if(is.null(folder)){
-	if(.Platform$OS.type=="windows"){
-		folder<-choose.dir(caption="Select directory")}}
-
-if(folder==FALSE){
-	folder<-NULL}
-
-if(is.null(MODELfn)){
-	MODELfn<- paste(model.type,"_",response.type,"_",response.name,sep="")}
-
-if(!is.null(folder)){
-	MODELfn<- paste(folder,"\\",MODELfn,sep="")}
-
-save(model.obj,file=MODELfn)
 return(model.obj)
 }
 
@@ -978,75 +959,50 @@ return(model.obj)
 #############################################################################################
 
 
-Bpredict.model<-function(model.obj,
-				qdata,
-				train=1:nrow(qdata),
-				folder=NULL,		# No ending slash, to output to working dir = getwd()
-				response.name=NULL,
-				unique.rowname="row_index",	# Row identifier
-				seed=NULL,
+prediction.model<-function(	model.obj,
+					model.type,
+					qdata,
+					folder=NULL,		# No ending slash, to output to working dir = getwd()
+					response.name,
+					response.type,
+					unique.rowname="row_index",	# Row identifier
 
-			# Model Evaluation Arguments
-				diagnostics=NULL,		# Diagnostic graphs of predictions (above). Predict must be TRUE
-				MODELpredfn=NULL,
-				na.action="na.omit",	# also used for mapping
-				v.fold=FALSE,
+				# Model Evaluation Arguments
+					prediction.type=NULL,
+					MODELpredfn=NULL,
+					na.action="na.omit",	# also used for mapping
+					v.fold=FALSE,
 
-			# SGB arguments
-				n.trees=NULL
+				# SGB arguments
+					n.trees=NULL
 ){
 
-if(!is.null(seed)){
-	set.seed(seed)}
-
-print("STARTING MODEL VALIDATION PREDICTIONS")
-#print("model attribute class:")
-#print(attr(model.obj,"class"))
-
-model.type<-switch(attr(model.obj,"class"),"randomForest"="RF","gbm"="SGB","unknown")
-if(model.type=="unknown"){stop("model.obj is of unknown type")}
-if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")}
-if(model.type=="SGB"){
-	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
-if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
-
-#print("model.type:")
-#print(model.type)
-
-### check vfold ###
-if(!identical(train,1:nrow(qdata))){
-	if(v.fold!=FALSE){
-		warning("an independant test set was provided therefor predictions will be made on this test set and cross validation will not be performed")
-		v.fold<-FALSE
-	}
-}
 
 ### make predictions ###
-if(v.fold==FALSE){
+if(prediction.type!="CV"){
 	if(model.type=="RF"){
 			
 		if(response.type=="binary"){
-			PRED<-Bpredict.rF.binary(	qdata=qdata,
-								train=train,
+			PRED<-prediction.rF.binary(	prediction.type=prediction.type,
+								qdata=qdata,
 								response.name=response.name,
 								RF=model.obj,
 								na.action=na.action)}
 		if(response.type=="continuous"){
-			PRED<-Bpredict.rF.continuous(	qdata=qdata,
-								train=train,
-								response.name=response.name,
-								RF=model.obj,
-								na.action=na.action)}
+			PRED<-prediction.rF.continuous(	prediction.type=prediction.type,
+									qdata=qdata,
+									response.name=response.name,
+									RF=model.obj,
+									na.action=na.action)}
 	}
 
 	if(model.type=="SGB"){
-		#print("ABOUT TO CALL Bpredict.SGB")
-		PRED<-Bpredict.SGB(qdata=qdata,
-					train=train,
-					response.name=response.name,
-					SGB=model.obj,
-					na.action=na.action)
+		print("calling prediction.SGB")
+		PRED<-prediction.SGB(	prediction.type=prediction.type,
+						qdata=qdata,
+						response.name=response.name,
+						SGB=model.obj,
+						na.action=na.action)
 	}
 }else{
 	print(paste("Begining ",v.fold,"-fold cross validation:",sep=""))
@@ -1056,9 +1012,9 @@ if(v.fold==FALSE){
 
 	###debugging###
 
-	cv.info<-cbind(qdata,cv.index)
-	cv.info$Vfold<-cv.index
-	write.table(cv.info,file="Vfold.csv",sep=",",row.names=FALSE)
+	#cv.info<-cbind(qdata,cv.index)
+	#cv.info$Vfold<-cv.index
+	#write.table(cv.info,file="Vfold.csv",sep=",",row.names=FALSE)
 
 	###end debugging###
 	
@@ -1068,9 +1024,9 @@ if(v.fold==FALSE){
 	if(model.type=="RF"){
 		ntree<-model.obj$ntree
 		mtry<-model.obj$mtry
+		replace<-model.obj$call$replace
 		predList<-row.names(model.obj$importance)}
 	if(model.type=="SGB"){
-		#N.Trees<-model.obj$n.trees
 		shrinkage<-model.obj$shrinkage
 		interaction.depth<-model.obj$interaction.depth
 		bag.fraction<-model.obj$bag.fraction
@@ -1083,30 +1039,32 @@ if(v.fold==FALSE){
 		train.cv<-(1:nrow(qdata))[cv.index!=i]
 		if(model.type=="RF"){
 			if(response.type=="binary"){
-				RF.cv<-rF.binary(	qdata=qdata,
-								train=train.cv,
-								predList=predList,
-								response.name=response.name,
-								ntree=ntree,
-								mtry=mtry,
-								seed=NULL)
-				PRED.cv<-Bpredict.rF.binary(	qdata=qdata,
-										train=train.cv,
+				RF.cv<-rF.binary(	qdata=qdata[train.cv,],
+							predList=predList,
+							response.name=response.name,
+							ntree=ntree,
+							mtry=mtry,
+							replace=replace,
+							seed=NULL)
+				print(paste("        calling prediction.rF.binary for fold",i))
+				PRED.cv<-prediction.rF.binary(	prediction.type="TEST",
+										qdata=qdata[-train.cv,],
 										response.name=response.name,
 										RF=RF.cv,
 										na.action=na.action)
 			}
 			if(response.type=="continuous"){
 				#print("generating new model")
-				RF.cv<-rF.continuous(	qdata=qdata,
-								train=train.cv,
+				RF.cv<-rF.continuous(	qdata=qdata[train.cv,],
 								predList=predList,
 								response.name=response.name,
 								ntree=ntree,
 								mtry=mtry,
+								replace=replace,
 								seed=NULL)
-				PRED.cv<-Bpredict.rF.continuous(	qdata=qdata,
-										train=train.cv,
+				print(paste("        calling prediction.rF.continuous for fold",i))
+				PRED.cv<-prediction.rF.continuous(	prediction.type="TEST",
+										qdata=qdata[-train.cv,],
 										response.name=response.name,
 										RF=RF.cv,
 										na.action=na.action)
@@ -1115,8 +1073,8 @@ if(v.fold==FALSE){
 		if(model.type=="SGB"){
 			#print(paste("      making model for fold",i))
 
-			SGB.cv<-model.SGB(	qdata=qdata,
-							train=train.cv,
+			
+			SGB.cv<-model.SGB(	qdata=qdata[train.cv,],
 							predList=predList,
 							response.name=response.name,
 							seed=NULL,
@@ -1128,12 +1086,12 @@ if(v.fold==FALSE){
 							train.fraction=train.fraction,      # fraction of data for training,
                   				n.minobsinnode=n.minobsinnode       # minimum total weight needed in each node
 							)
-			#print(paste("      making predictions for fold",i))
-			PRED.cv<-Bpredict.SGB(	qdata=qdata,
-							train=train.cv,
-							response.name=response.name,
-							SGB=SGB.cv,
-							na.action=na.action)
+			#print(paste("      making SGB predictions for fold",i))
+			PRED.cv<-prediction.SGB(	prediction.type="TEST",
+								qdata=qdata[-train.cv,],
+								response.name=response.name,
+								SGB=SGB.cv,
+								na.action=na.action)
 		}
 		PRED.cv$VFold<-i
 		PRED<-rbind(PRED,PRED.cv)
@@ -1142,22 +1100,11 @@ if(v.fold==FALSE){
 PRED<-PRED[match(row.names(qdata),row.names(PRED)),]
 }
 
-if(is.null(folder)){
-	if(.Platform$OS.type=="windows"){
-		folder<-choose.dir(caption="Select directory")}}
-
-if(folder==FALSE){
-	folder<-NULL}
-
-if(is.null(MODELpredfn)){
-	MODELpredfn<-paste(model.type,"_PRED_",response.type,"_",response.name,".csv",sep="")}
-
-if(!is.null(folder)){
-	MODELpredfn<-paste(folder,"\\",MODELpredfn,sep="")}
-
 PRED<-cbind(rownames(PRED),PRED)
 colnames(PRED)[1]<-unique.rowname
-write.table(PRED,file=MODELpredfn,sep=",",row.names=FALSE)
+
+PREDICTIONfn<-paste(MODELpredfn,".csv",sep="")
+write.table(PRED,file=PREDICTIONfn,sep=",",row.names=FALSE)
 return(PRED)
 }
 
@@ -1169,63 +1116,17 @@ return(PRED)
 
 
 production.prediction<-function(	model.obj,
-						model.type=NULL,
+						model.type,
 						rastLUT,
 						na.action="na.omit",
-						folder,
-						response.name,
-						response.type=NULL,
+						response.type,
 						numrows=500,	
 						map.sd=FALSE,
-						asciifn=paste(folder,"/",model.type,"_",response.type,"_",response.name,".txt",sep=""),
-						asciifn.mean=paste(folder,"/",model.type,"_",response.type,"_MEAN_",response.name,".txt",sep=""),
-						asciifn.stdev=paste(folder,"/",model.type,"_",response.type,"_STDEV_",response.name,".txt",sep=""),
-						asciifn.coefv=paste(folder,"/",model.type,"_",response.type,"_COEFVAR_",response.name,".txt",sep="")
-){
+						asciifn,
+						asciifn.mean,
+						asciifn.stdev,
+						asciifn.coefv){
 
-#####################################################################################
-##################### Extract Model Type from model.obj #############################
-#####################################################################################
-
-model.type.supplied<-model.type
-model.type.long<-attr(model.obj,"class")
-model.type<-switch(model.type.long,	"randomForest"="RF",
-						"gbm"="SGB",
-						"unknown")
-if(model.type=="unknown"){
-	stop("model.obj is of unknown type")}
-if(!is.null(model.type.supplied)){
-	if(model.type!=model.type.supplied){
-		warning("model.obj is a model of type",model.type,"not the supplied type of",model.type.supplied)
-	}
-}
-
-#####################################################################################
-##################### Extract Response Type from model.obj ##########################
-#####################################################################################
-
-
-if(model.type=="RF"){
-	model.response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")
-	if(model.response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
-	if(!is.null(response.type)){
-		if(response.type!=model.response.type){
-			warning(paste("supplied model.obj response is of type",model.response.type,"not",response.type))
-		}
-	}
-	response.type<-model.response.type
-}
-
-if(model.type=="SGB"){
-	model.response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")
-	if(model.response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
-	if(!is.null(response.type)){
-		if(response.type!=model.response.type){
-			warning(paste("supplied model.obj response is of type",model.response.type,"not",response.type))
-		}
-	}
-	response.type<-model.response.type
-}
 
 
 #####################################################################################

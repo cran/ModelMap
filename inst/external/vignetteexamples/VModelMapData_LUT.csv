@@ -1,0 +1,6 @@
+VModelMapData_dem_ELEVM_250.img,ELEV250,1
+VModelMapData_nlcd_NLCD01_250.img,NLCD01_250,1
+VModelMapData_modis_STK2005097.img,EVI2005097,1
+VModelMapData_modis_STK2005097.img,NDV2005097,2
+VModelMapData_modis_STK2005097.img,NIR2005097,3
+VModelMapData_modis_STK2005097.img,RED2005097,4

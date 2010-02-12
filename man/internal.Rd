@@ -1,15 +1,14 @@
 \name{ModelMap-internal}
 \alias{diagnostics.function}
-\alias{diagnostics.function}
 \alias{getRasts}
 \alias{model.SGB}
-\alias{Bpredict.SGB}
+\alias{prediction.SGB}
 \alias{rF.binary}
-\alias{Bpredict.rF.binary}
+\alias{prediction.rF.binary}
 \alias{rF.continuous}
-\alias{Bpredict.rF.continuous}
+\alias{prediction.rF.continuous}
 \alias{create.model}
-\alias{Bpredict.model}
+\alias{prediction.model}
 \alias{production.prediction}
 
 \title{ Internal ModelMap Functions }
