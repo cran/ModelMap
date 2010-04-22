@@ -138,3 +138,38 @@ Fixed bug in that crashed GUI version when asking "response.type"
 ############ ModelMap 1.1.13 06/11/09 ######################
 
 Fixed bug in that crashed GUI version when asking "response.type"
+
+############ ModelMap 1.1.14 11/12/09 ######################
+
+Changed diagnostic plots so datapoints with pred=-9999 (categorical predictors not included in training data and na.action="na.omit") will be left out when creating diagnostic plots.
+
+############ ModelMap 1.1.15 11/23/09 ######################
+
+Fixed bug in how map production handled SGB models created outside of ModelMap
+
+Fixed bug in prediction on the training data in SGB models with factored predictors. Bug only occured when predictions were made in a separate function call from model creation.
+
+############ ModelMap 2.0.0 12/04/09 ######################
+
+Restructured ModelMap to use three separate function calls: model.build(), model.diagnostics(), and model.mapmake(). Also simplified argument lists.
+
+Added user function build.rastLUT()
+
+In model.diagnostics() and model.mapmake(), when response name differs between model object and 'response.name' argument, priority is now given to 'response.name' argument.
+
+Added package vignette.
+
+Moved helpfile example data to a subfolder within external, and added a second subfolder for vignette data.
+
+
+############ ModelMap 2.0.1 02/12/10 ######################
+
+Added random forest arguments: 'strata' 'sampsize' 'replace'
+
+Fixed bug in model.diagnostics() GUI for selecting prediction type
+ 
+Added warning messages for improper 'model.type' or 'response.type'
+
+In 'model.diagnostics()' changed main title for graphics from 'MODELfn' to 'MODELpredfn'
+
+Added table of observed and predicted prevalence to output of 'model.diagnostics()' for binary response models.
