@@ -4,7 +4,7 @@
 
 \title{ Map Making }
 \description{
-  Applies models to GIS .img files of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chuncks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
+  Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chuncks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
 }
 \usage{
 model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, rastLUTfn = NULL, na.action = "na.omit", numrows = 500, map.sd = FALSE, asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, asciifn.coefv = NULL)

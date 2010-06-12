@@ -12,8 +12,8 @@ This package will create sophisticated models of training data and validate the 
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 2.0.1\cr
-Date: \tab 2010-02-12
+Version: \tab 2.0.2\cr
+Date: \tab 2010-06-12
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, and therefore it is in the public domain and not subject to copyright.\cr
 }
