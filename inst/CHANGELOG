@@ -173,3 +173,9 @@ Added warning messages for improper 'model.type' or 'response.type'
 In 'model.diagnostics()' changed main title for graphics from 'MODELfn' to 'MODELpredfn'
 
 Added table of observed and predicted prevalence to output of 'model.diagnostics()' for binary response models.
+
+############ ModelMap 2.0.2 12/06/10 ######################
+
+Removed duplicate pdf from vignette
+
+Added info to help file for model.mapmake() to show that it will take both ESRI Grids and imagine images as predictors.

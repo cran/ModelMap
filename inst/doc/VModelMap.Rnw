@@ -242,6 +242,7 @@ After installing the \pkg{ModelMap} package, download the sample datasets and sa
 
 <<Ex1 set options,echo=FALSE>>=
 options(prompt = "R> ")
+pdf("Vplots.pdf")
 @
 
 Start by loading the \pkg{ModelMap} package.
@@ -1515,6 +1516,16 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \end{table}
 
 \clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<Remove Rplots pdf, results=hide, echo=FALSE>>=
+dev.off()
+file.remove("Rplots.pdf")
+file.remove("Vplots.pdf")
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
