@@ -16,6 +16,7 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
 				response.type=NULL,		# "binary", "continuous",
 				seed=NULL,
 				na.action="na.omit",
+				keep.data = TRUE,
 			# RF arguments:
 				ntree=500,
 				mtry=NULL,
@@ -28,7 +29,9 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
                   	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
 				train.fraction = 1.0,       	# fraction of data for training,
-                  	n.minobsinnode = 10        	# minimum total weight needed in each node
+                  	n.minobsinnode = 10,        	# minimum total weight needed in each node
+				var.monotone = NULL
+
 ){
 
 ## Note: Must have R version 2.8 or greater
@@ -74,10 +77,6 @@ if(is.null(model.type)){
 	model.type <- select.list(c("RF","SGB"), title="Select model type.")}
 if(model.type=="" || is.null(model.type)){
 	stop("model.type is required")}
-
-if (model.type == "SGB") {
-	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
-}
 
 if(!model.type%in%c("RF","SGB")){
 	stop("ModelMap currently supports only RF and SGB for model.type")}
@@ -299,6 +298,7 @@ if(model.type=="SGB"){
 					response.name=response.name,
 					response.type=response.type,				
 					seed=NULL,
+					keep.data=keep.data,
 	
 				# SGB arguments:
 					n.trees=n.trees,                 	
@@ -306,9 +306,15 @@ if(model.type=="SGB"){
                   		interaction.depth=interaction.depth,	
 					bag.fraction=bag.fraction,          	
 					train.fraction=train.fraction,       	
-                  		n.minobsinnode=n.minobsinnode)
+                  		n.minobsinnode=n.minobsinnode,
+					var.monotone = var.monotone)	
 }	
 
+#############################################################################################
+################# add a copy of the predictor data to the model object ######################
+#############################################################################################
+
+if(keep.data){model.obj$predictor.data<-qdata[,predList]}
 
 #############################################################################################
 ################################## Write a list of argumets #################################

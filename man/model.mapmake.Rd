@@ -7,7 +7,7 @@
   Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chuncks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
 }
 \usage{
-model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, rastLUTfn = NULL, na.action = "na.omit", numrows = 500, map.sd = FALSE, asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, asciifn.coefv = NULL)
+model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, rastLUTfn = NULL, na.action = "na.omit", numrows = 500, map.sd = FALSE, asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, asciifn.coefv = NULL, n.trees = NULL)
 }
 
 \arguments{
@@ -49,18 +49,20 @@ The names of the additional maps default to:
 
   \item{asciifn.coefv}{ String.  Map Production.  Used if \code{map.sd = TRUE} and \code{response.type = "continuous"}.  Filename of output file for coefficient of variation of trees. The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn.coefv = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map_coefv.txt"}.}
 
+  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
+
 }
 \details{
 
-\code{model.map()} can be run in a traditional R command mode, where all arguments are specified in the function call.  However it can also be used in a full push button mode, where you type in the simple command \code{model.map()}, and GUI pop up windows will ask questions about the type of model, the file locations of the data, etc...
+\code{model.mapmake()} can be run in a traditional R command mode, where all arguments are specified in the function call.  However it can also be used in a full push button mode, where you type in the simple command \code{model.mapmake()}, and GUI pop up windows will ask questions about the type of model, the file locations of the data, etc...
 
-When running \code{model.map()} on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
+When running \code{model.mapmake()} on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
 For map making, the package \code{rgdal} is used to read \code{.img} files. The data for production mapping should be in the form of pixel-based raster layers representing the predictors in the model. If there is more than one predictor or raster layer, the layers must all have the same number of columns and rows. The layers must also have the same extent, projection, and pixel size, for effective model development and accuracy. The layers must also be in either ESRI Grid or ERDAS Imagine image (single or multi-band) raster data formats, having continuous or categorical data values. The R package \code{rgdal} is used to read spatial rasters into R.
 
 When creating maps of non-rectangular study regions there may be large portions of the rectangle where you have no predictors, and are unintrested in making predictions. The suggeted value for the pixels outside the study area is \code{-9999}. These pixels will be ignored in the predictions, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and a prediction will be generated for each pixel. Note: in Imagine image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into R as \code{NA}, and if \code{na.action = "na.roughfix"}, predicitons will be attempted for these pixels. This will cause the computation time to increase, and these predictions will need to be masked out when the final map is imported back into a GIS sytem.
 
-The function \code{model.map()} outputs an ASCII grid file of map information suitable to be imported into a GIS. Small maps can also be imported back into R using the function \code{read.asciigrid()} from the \code{sp} package.
+The function \code{model.mapmake()} outputs an ASCII grid file of map information suitable to be imported into a GIS. Small maps can also be imported back into R using the function \code{read.asciigrid()} from the \code{sp} package.
 }
 \value{
 

@@ -179,3 +179,26 @@ Added table of observed and predicted prevalence to output of 'model.diagnostics
 Removed duplicate pdf from vignette
 
 Added info to help file for model.mapmake() to show that it will take both ESRI Grids and imagine images as predictors.
+
+############ ModelMap 2.0.3 12/10/10 ######################
+
+In 'model.diagnostics()' added option "none" to 'device.type'.
+
+Fixed typos in help files
+
+
+############ ModelMap 2.1.0 01/15/11 ######################
+
+Changed how SGB 'n.trees' argument works to allow options other than OOB for determining best number of trees. Added 'n.trees' argument to 'model.diagnostics()' and 'model.mapmake()' funtions.
+
+Added RMSD to diagnostic plot for continuous models.
+
+Added argument 'keep.data' to 'model.build()'. If 'keep.data=TRUE' then predictor.data is attached to model.obj, to allow for two way partial dependecy plots.
+
+Fixed bug in 'model.diagnostics()' and 'model.mapmake()' that caused models built outside ModelMap using the formula interface to crash.
+
+Added function 'model.interaction.plot().
+
+Added 'var.monotonic' SGB argument to 'model.build()'
+
+############ ModelMap 2.1.1 04/21/11 ######################

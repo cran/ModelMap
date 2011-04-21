@@ -7,12 +7,12 @@
   Takes model object and makes predictions, runs model diagnostics, and creates graphs and tables of the results.  
 }
 \usage{
-model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL, seed = NULL, prediction.type=NULL, MODELpredfn = NULL, na.action = "na.omit", v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, jpeg.res = 72, device.width = 7,  device.height = 7, cex=par()$cex, req.sens, req.spec, FPC, FNC)
+model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL, seed = NULL, prediction.type=NULL, MODELpredfn = NULL, na.action = "na.omit", v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, jpeg.res = 72, device.width = 7,  device.height = 7, cex=par()$cex, req.sens, req.spec, FPC, FNC, n.trees = NULL)
 }
 
 \arguments{
 
-  \item{model.obj}{ \code{R} model object.  The model object to use for prediction, if the model has been previously created.  The model object must be of type RF or SGB.  (Eventually planned to include "GAM".)  If \code{NULL} (the default), a model is generated of type specified by the argument \code{model.type}.  }
+  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type RF or SGB.  (Eventually planned to include "GAM".) }
 
   \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -43,6 +43,7 @@ Current choices:
 \tabular{lllll}{
 	  \tab \tab \tab \code{"default"} \tab default graphics device\cr
 	  \tab \tab \tab \code{"jpeg"} \tab \code{*.jpg} files\cr
+	  \tab \tab \tab \code{"none"} \tab no graphics produced\cr	
 	  \tab \tab \tab \code{"pdf"} \tab \code{*.pdf} files\cr
 	  \tab \tab \tab \code{"postscript"} \tab \code{*.ps} files\cr
 	  \tab \tab \tab \code{"win.metafile"} \tab \code{*.emf} files }
@@ -65,6 +66,8 @@ Current choices:
   \item{FPC}{ Numeric.  Model validation.  The False Positive Cost for threshold optimization for binary response model evaluation. }
 
   \item{FNC}{ Numeric.  Model validation.  The False Negative Cost for threshold optimization for binary response model evaluation. }
+
+  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
 }
 \details{

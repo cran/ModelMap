@@ -21,7 +21,9 @@ model.mapmake<-function(	model.obj=NULL,
 				asciifn=NULL,
 				asciifn.mean=NULL,
 				asciifn.stdev=NULL,
-				asciifn.coefv=NULL
+				asciifn.coefv=NULL,
+			# SGB arguments
+				n.trees=NULL
 ){
 
 ## Note: Must have R version 2.5.1 or greater
@@ -82,17 +84,29 @@ if(is.null(model.obj)){
 
 model.type.long<-attr(model.obj,"class")
 if(is.null(model.type.long)){model.type.long <- "unknown"}
-model.type<-switch(model.type.long,	"randomForest"="RF",
-						"gbm"="SGB",
-						"unknown")
+
+#model.type<-switch(model.type.long,	"randomForest"="RF",
+#						"gbm"="SGB",
+#						"unknown")
+
+if("randomForest"%in%model.type.long){
+	model.type<-"RF"
+}else{
+	if("gbm"%in%model.type.long){
+		model.type<-"SGB"
+	}else{
+		model.type<-"unknown"
+	}
+}
+
 if(model.type=="unknown"){
 	stop("model.obj is of unknown type")}
 	
 print(paste("model.type =",model.type))
 
-if (model.type == "SGB") {
-	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
-}
+#if (model.type == "SGB") {
+#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
+#}
 
 #############################################################################################
 ########################### Extract predList from model.obj #################################
@@ -153,6 +167,8 @@ if(model.type=="RF"){
 if(model.type=="SGB"){
 	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
 if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
+
+
 
 #############################################################################################
 ################################ Select Output Folder #######################################
@@ -218,6 +234,18 @@ if(model.type=="SGB"){library(gbm)}
 #	'gbm'	is only used for SGB models
 #	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
 
+
+#############################################################################################
+############################# SGB + CV: check for n.trees ###################################
+#############################################################################################
+
+if(model.type=="SGB" && is.null(n.trees)){
+	if(!is.null(model.obj$best.iter)){
+		n.trees<-model.obj$best.iter
+	}else{
+		n.trees<-model.obj$n.trees
+	}
+}
 
 
 #############################################################################################
@@ -291,7 +319,8 @@ production.prediction(	model.obj=model.obj,
 				asciifn=asciifn,
 				asciifn.mean=asciifn.mean,
 				asciifn.stdev=asciifn.stdev,
-				asciifn.coefv=asciifn.coefv)
+				asciifn.coefv=asciifn.coefv,
+				n.trees=n.trees)
 
 
 #############################################################################################
