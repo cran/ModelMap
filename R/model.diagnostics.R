@@ -22,15 +22,15 @@ model.diagnostics<-function(	model.obj=NULL,
 				MODELpredfn=NULL,
 				na.action="na.omit",	# also used for mapping
 				v.fold=10,
-				device.type=NULL,	# options: "windows", "jpeg", "postscript", "win.metafile"
+				device.type=NULL,	# options: "default", "jpeg", "none","postscript", "win.metafile"
 				DIAGNOSTICfn=NULL,
 				jpeg.res=72,
 				device.width=7,
 				device.height=7,
 				cex=par()$cex,
-				req.sens,req.spec,FPC,FNC
+				req.sens,req.spec,FPC,FNC,
 			# SGB arguments
-				#n.trees=NULL
+				n.trees=NULL
 ){
 
 ## Note: Must have R version 2.8 or greater
@@ -89,20 +89,31 @@ if(is.null(model.obj)){
 ##################### Extract Model Type from model.obj #############################
 #####################################################################################
 
-
 model.type.long<-attr(model.obj,"class")
 if(is.null(model.type.long)){model.type.long <- "unknown"}
-model.type<-switch(model.type.long,	"randomForest"="RF",
-						"gbm"="SGB",
-						"unknown")
+
+#model.type<-switch(model.type.long,	"randomForest"="RF",
+#						"gbm"="SGB",
+#						"unknown")
+
+if("randomForest"%in%model.type.long){
+	model.type<-"RF"
+}else{
+	if("gbm"%in%model.type.long){
+		model.type<-"SGB"
+	}else{
+		model.type<-"unknown"
+	}
+}
+
 if(model.type=="unknown"){
 	stop("model.obj is of unknown type")}
 	
 print(paste("model.type =",model.type))
 
-if (model.type == "SGB") {
-	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
-}
+#if (model.type == "SGB") {
+#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
+#}
 
 #############################################################################################
 ########################### Extract predList from model.obj #################################
@@ -224,23 +235,6 @@ if (model.type == "RF") {
 
 
 
-#############################################################################################
-############################# SGB + CV: check for n.trees ###################################
-#############################################################################################
-
-#if(model.type="SGB" && prediction.type="CV"){
-#	if(is.null(n.trees)){
-#		n.trees==model.obj$n.trees
-#	}
-#	if(!is.null(model.obj$iter)){
-#		n.trees==NULL}
-#}
-
-n.trees<-NULL
-if(model.type=="SGB"){
-	n.trees<-model.obj$n.trees
-	if(!is.null(model.obj$iter)){n.trees<-NULL}
-}
 
 #############################################################################################
 ################################ Select Output Folder #######################################
@@ -382,9 +376,8 @@ if (is.null(unique.rowname)){
 ############################# Check Device Type #############################################
 #############################################################################################
 
-
 if(is.null(device.type)){
-	device.type <- select.list(c("default","jpeg","pdf","postscript","win.metafile"), title="Diagnostic Output?", multiple = TRUE)
+	device.type <- select.list(c("default","jpeg","none","pdf","postscript","win.metafile"), title="Diagnostic Output?", multiple = TRUE)
 	device.type <- c(device.type,"default")
 }
 if(length(device.type)==0 || is.null(device.type)){
@@ -393,13 +386,17 @@ if(length(device.type)==0 || is.null(device.type)){
 
 if(!is.null(device.type)){
 	device.type[device.type=="windows"]<-"default"
-	if(any(!device.type%in%c("default","jpeg","pdf","postscript","win.metafile"))){
+	if(any(!device.type%in%c("default","jpeg","none","pdf","postscript","win.metafile"))){
 		stop("Illegal 'device.type'. Device types must be one or more of 'default', 'jpeg', 'pdf', 'postscript', or 'win.metafile'")
 	}
 	device.type<-sort(device.type)
 	if("default"%in%device.type){
 		device.type<-c(device.type[device.type!="default"],"default")
 	}
+}
+
+if("none"%in%device.type){
+	device.type<-"none"
 }
 
 #############################################################################################
@@ -413,6 +410,19 @@ if(model.type=="SGB"){library(gbm)}
 
 #	'gbm'	is only used for SGB models
 #	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
+
+
+#############################################################################################
+############################# SGB + CV: check for n.trees ###################################
+#############################################################################################
+
+if(model.type=="SGB" && is.null(n.trees)){
+	if(!is.null(model.obj$best.iter)){
+		n.trees<-model.obj$best.iter
+	}else{
+		n.trees<-model.obj$n.trees
+	}
+}
 
 
 #############################################################################################

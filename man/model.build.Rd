@@ -7,7 +7,7 @@
   Create sophisticated models using either Random Forest or Stochastic Gradient Boosting from training data
 }
 \usage{
-model.build(model.type = NULL, qdata.trainfn = NULL, folder = NULL, MODELfn = NULL, predList = NULL, predFactor = FALSE, response.name = NULL, response.type = NULL, seed=NULL, na.action="na.omit",ntree = 500, mtry = NULL, replace=TRUE, strata=NULL, sampsize = NULL, n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, bag.fraction = 0.5, train.fraction = 1, n.minobsinnode = 10)
+model.build(model.type = NULL, qdata.trainfn = NULL, folder = NULL, MODELfn = NULL, predList = NULL, predFactor = FALSE, response.name = NULL, response.type = NULL, seed=NULL, na.action="na.omit",keep.data = TRUE, ntree = 500, mtry = NULL, replace=TRUE, strata=NULL, sampsize = NULL, n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, bag.fraction = 0.5, train.fraction = 1, n.minobsinnode = 10, var.monotone=NULL)
 }
 
 \arguments{
@@ -35,7 +35,9 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a ctegorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{-9999} (the \code{NODATA} value); (2) \code{na.action = "na.roughfix"} where a missing categorical predictor for a data point or pixel is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor.   }
 
-  \item{ntree}{ Integer.  RF models.  The number of random forest trees for a RF model.  The default is 500 trees. }
+  \item{keep.data}{Logical.  RF and SGB models. Should a copy of the predictor data be included in the model object. Useful for if \code{\link{model.interaction.plot}} will be used later. }
+ 
+ \item{ntree}{ Integer.  RF models.  The number of random forest trees for a RF model.  The default is 500 trees. }
  
   \item{mtry}{ Integer.  RF models.  Number of variables to try at each node of Random Forest trees.  By default, will use the \code{"tuneRF()"} function to optimize \code{mtry}. }
 
@@ -45,7 +47,7 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{sampsize}{ Vector.  RF models.  Size(s) of sample to draw.  For classification, if \code{sampsize} is a vector of the length the number of factor levels \code{strata}, then sampling is stratified by \code{strata}, and the elements of \code{sampsize} indicate the numbers to be drawn from each strata. If argument \code{strata} is not provided, and \code{repsonse.type = "binary"} then sampling is stratified by presence/absence. If argument \code{sampsize} is not provided \code{model.build()} will use the default value from the \code{randomForest} package: \code{if (replace) nrow(data) else ceiling(.632*nrow(data))}. }
 
-  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} Regardless of the value of the \code{n.trees} argument, the \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}.}
+  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.}. If \code{n.trees} is given and \code{train.fraction} is less than 1, then the SGB model is built with the given number of trees, and the best number of trees is calculated with \code{gbm} \code{method="test"}. In both of these cases \code{best.iter} is included in the returned model object. If \code{n.trees} is given and \code{train.fraction = 1}, then the model is built with the given number of trees, and \code{best.iter} is not calculated.  }
 
   \item{shrinkage}{ Numeric. SGB models.  A shrinkage parameter applied to each tree in the expansion. Also known as the learning rate or step-size reduction. }
 
@@ -57,31 +59,38 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{n.minobsinnode}{ Integer.  SGB models.  Minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight. }
 
+  \item{var.monotone}{ String.  SGB models.  an optional vector, the same length as the number of predictors, indicating which variables have a monotone increasing (+1), decreasing (-1), or arbitrary (0) relationship with the outcome. }
 }
+
 \details{
-  This package provides a push button appraoch to complex model building and production mapping.  It contains four functions: a simple function \code{get.test()} that can be used to radomly divide a training dataset into training and test/validation sets; and the workhorse functions \code{model.build()},\code{model.diagnostics()}, and \code{model.map()}.
+ 
+This package provides a push button approach to complex model building and production mapping.  It contains four functions: a simple function \code{get.test()} that can be used to radomly divide a training dataset into training and test/validation sets; and the workhorse functions \code{model.build()},\code{model.diagnostics()}, and \code{model.mapmake()}.
 
 These functions can be run in a traditional R command mode, where all arguments are specified in the function call.  However they can also be used in a full push button mode, where you type in, for example, the simple command \code{model.build()}, and GUI pop up windows will ask questions about the type of model, the file locations of the data, etc...
 
-When running \code{model.map()} on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
+When running the \code{ModelMap} package on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
-Random Forest is implemented through the \code{randomForest} package within \code{R}.  Random Forest is more user friendly than Stochastic Gragient Boosting, as it has fewer parameters to be set by the user, and is less sensitive to tuning of these parameters.  A Random Forest model consists of multiple trees that vote on predictions.  For each tree a random subset of the training data is used to construct the tree, with the remaining data points used to construct out-of-bag (OOB) error estimates.  At each node of the tree a random selection of predictors is chosen to determine the split.  The number of predictors used to select the splits (argument \code{mtry}) is the primary user specified parameter that can affect model performance.  By default this parameter will be automatically optimized using the \code{tuneRF()} function.  Random Forest will not over fit data, therefore the only penalty of increasing the number of trees is computation time.  Random Forest can compute variable importance, an advantage over some "black box" modeling techniques if it is important to understand the ecological relationships underlying a model (Brieman, 2001).
+Random Forest is implemented through the \code{randomForest} package within \code{R}.  Random Forest is more user friendly than Stochastic Gragient Boosting, as it has fewer parameters to be set by the user, and is less sensitive to tuning of these parameters.  A Random Forest model consists of multiple trees that vote on predictions.  For each tree a random subset of the training data is used to construct the tree, with the remaining data points used to construct out-of-bag (OOB) error estimates.  At each node of the tree a random selection of predictors is chosen to determine the split.  The number of predictors used to select the splits (argument \code{mtry}) is the primary user specified parameter that can affect model performance.  
+
+By default \code{mtry} will be automatically optimized using the \code{tuneRF()} function. Note that this is a stochastic process. If there is a chance that models may be combined later with the \code{randomForest} package \code{combine} function then for consistancy it is important to provide the \code{mtry} argument rather that using the default optimization process.
+
+Random Forest will not over fit data, therefore the only penalty of increasing the number of trees is computation time.  Random Forest can compute variable importance, an advantage over some "black box" modeling techniques if it is important to understand the ecological relationships underlying a model (Brieman, 2001).
 
 Stochastic gradient boosting (Friedman 2001, 2002), is related to both boosting and bagging.  Many small classification or regression trees are built sequentially from "pseudo"-residuals (the gradient of the loss function of the previous tree). 
 
 At each iteration, a tree is built from a random sub-sample of the dataset (selected without replacement) and an incremental improvement in the model.  Using only a fraction of the training data increases both the computation speed and the prediction accuracy, while also helping to avoid over-fitting the data.  An advantage of stochastic gradient boosting is that it is not necessary to pre-select or transform predictor variables.  It is also resistant to outliers, as the steepest gradient algorithm emphasizes points that are close to their correct classification.  Stochastic gradient boosting is implemented through the \code{gbm} package within \code{R}.  
 
-One disadvantege of Stochastic Gradient Boosting, compared to Random Forest, is increased number of user specified parameters, and the SGB models tend to be more sensitive to these parameters.  Model fitting parameter options include distribution, interaction depth, bagging fraction, shrinkage rate, and training fraction.  These parameters can be set in the argument list when calling \code{model.map()}.  Values for these parameters other than the defaults can not be set by point and click in the GUI pop up windows, and must be set in the argument list when calling \code{model.map()}.  Friedman (2001, 2002) and Ridgeway (1999) provide guidelines on appropriate settings for model fitting options.
+One disadvantege of Stochastic Gradient Boosting, compared to Random Forest, is increased number of user specified parameters, and the SGB models tend to be more sensitive to these parameters.  Model fitting parameter options include distribution, interaction depth, bagging fraction, shrinkage rate, and training fraction.  These parameters can be set in the argument list when calling \code{model.map()}.  Values for these parameters other than the defaults can not be set by point and click in the GUI pop up windows, and must be set in the argument list when calling \code{model.build()}.  Friedman (2001, 2002) and Ridgeway (1999) provide guidelines on appropriate settings for model fitting options.
 
-Also, unlike Random Forest models, in Stochastic Gradient Boosting, there is a penaly for using too many trees. The default behavior in \code{model.map()} is to increase the number of trees 100 at a time until the model stops improving, then call the \code{gbm} subfunction \code{gbm.perf(method="OOB")} to select the best number of iterations. ALternatively, the \code{model.map()} argument \code{ntrees} can be used to set some large number of trees to be calculated all at once and, again, the \code{gbm.perf(method="OOB")} function will be used to select the best number of trees. Note that the \code{gbm} package warns that \code{"OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive."} The \code{gbm} package offers two alternative techniques for calculating the best number of trees, but these are not yet implemented in the \code{ModelMap} package, as they require the use of a formula interface for model building. 
-
-
+Also, unlike Random Forest models, in Stochastic Gradient Boosting, there is a penalty for using too many trees. The default behavior in \code{model.map()} is to increase the number of trees 100 at a time until the model stops improving, then call the \code{gbm} subfunction \code{gbm.perf(method="OOB")} to select the best number of iterations. Alternatively, the \code{model.build()} argument \code{ntrees} can be used to set some large number of trees to be calculated all at once and, again, the \code{gbm.perf(method="OOB")} function will be used to select the best number of trees. Note that the \code{gbm} package warns that \code{"OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive."} The \code{gbm} package offers two alternative techniques for calculating the best number of trees, but these are not yet implemented in the \code{ModelMap} package, as they require the use of a formula interface for model building. 
 }
+
 \value{
 
 The function will return the model object. Additionally, it will write a text file to disk, in the folder specified by \code{folder}. This file lists the values of each argument as choosen from GUI propts used for the function call.
 
 }
+
 \references{ 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
 

@@ -78,12 +78,48 @@ if(Npred.NA>0){
 	warning(Npred.NA," datapoints not included in diagnostic plots because categorical factored predictor contained levels not found in training data")}
 
 
+### Write out tables ###
+
+if(response.type == "binary"){
+	OPTTHRESHfn<-paste(MODELpredfn,"_optthresholds.csv",sep="")
+	PREDPREVfn<-paste(MODELpredfn,"_prevalence.csv",sep="")
+
+	opt.thresh<-error.threshold.plot(	PRED,opt.methods=optimal.thresholds(),plot.it=FALSE,
+							req.sens=req.sens,req.spec=req.spec,FPC=FPC,FNC=FNC)
+
+	pred.prev<-predicted.prevalence(PRED, threshold = opt.thresh$threshold)
+	pred.prev<-cbind(opt.thresh$opt.methods, pred.prev)
+
+	write.table(	opt.thresh,file=OPTTHRESHfn,sep=",",row.names=FALSE)
+	write.table(	pred.prev,file=PREDPREVfn,sep=",",row.names=FALSE)
+}
+
+
+if(response.type == "continuous"){
+
+	COR.pearson<-cor(PRED$pred,PRED$obs,method="pearson")
+	COR.pearson<-round(COR.pearson,2)
+	
+	COR.spearman<-cor(PRED$pred,PRED$obs,method="spearman")
+	COR.spearman<-round(COR.spearman,2)
+
+	Resid<-PRED$obs-PRED$pred
+	n<-length(Resid)
+	MSE<-mean(Resid^2)
+	RMSD<-(sum((Resid^2))/(n-1))^.5
+	RMSD<-round(RMSD,2)
+
+	lm.pred<-lm(obs~pred,data=PRED)
+	b<-round(lm.pred$coefficients[1],2)
+	m<-round(lm.pred$coefficients[2],2)
+}
+
+### make graphs ###
+
+if(!"none"%in%device.type){
 for(i in 1:length(device.type)){
 
 	### Output filenames ###
-
-	OPTTHRESHfn<-paste(MODELpredfn,"_optthresholds.csv",sep="")
-	PREDPREVfn<-paste(MODELpredfn,"_prevalence.csv",sep="")
 
 	if(device.type[i] == "default"){
 		SCATTERPLOTfn<-paste(MODELpredfn,"_scatterplot",sep="")
@@ -184,41 +220,12 @@ for(i in 1:length(device.type)){
 		presence.absence.summary(PRED,main=main,legend.cex=cex,opt.legend.cex=cex)
 		par(opar)
 
-		if(device.type[i]!="default"){dev.off()}
-		
-		if(i==1){
-			#write.table(optimal.thresholds(PRED),file=OPTTHRESHfn,sep=",",row.names=FALSE)
-
-			opt.thresh<-error.threshold.plot(	PRED,opt.methods=optimal.thresholds(),plot.it=FALSE,
-									req.sens=req.sens,req.spec=req.spec,FPC=FPC,FNC=FNC)
-			pred.prev<-predicted.prevalence(PRED, threshold = opt.thresh$threshold)
-			pred.prev<-cbind(opt.thresh$opt.methods, pred.prev)
-
-			write.table(	opt.thresh,file=OPTTHRESHfn,sep=",",row.names=FALSE)
-			write.table(	pred.prev,file=PREDPREVfn,sep=",",row.names=FALSE)
-		}	
+		if(device.type[i]!="default"){dev.off()}	
 	}
+
 ### Continuous ###
 
 	if(response.type == "continuous"){
-
-		if(i==1){
-			COR.pearson<-cor(PRED$pred,PRED$obs,method="pearson")
-			COR.pearson<-round(COR.pearson,2)
-	
-			COR.spearman<-cor(PRED$pred,PRED$obs,method="spearman")
-			COR.spearman<-round(COR.spearman,2)
-
-			Resid<-PRED$obs-PRED$pred
-			MSE<-mean(Resid^2)
-
-			lm.pred<-lm(obs~pred,data=PRED)
-			b<-round(lm.pred$coefficients[1],2)
-			m<-round(lm.pred$coefficients[2],2)
-
-			print("SCATTERPLOTfn:")
-			print(SCATTERPLOTfn)
-		}
 
 		if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)
 							print("Scatterplot Device")}
@@ -235,7 +242,8 @@ for(i in 1:length(device.type)){
 		abline(lm.pred)
 
 		mtext(main,side=3,line=1.5,cex=1.3*cex)
-	
+
+		mtext(paste("RMSD:",RMSD," ",sep=""),side=1,line=-4.5,adj=1,cex=.8*cex)	
 		mtext(paste("pearson's cor: ",COR.pearson," ",sep=""),side=1,line=-3.5,adj=1,cex=.8*cex)
 		mtext(paste("spearman's cor: ",COR.spearman," ",sep=""),side=1,line=-2.5,adj=1,cex=.8*cex)
 		mtext(paste("obs = ",m,"(pred) + ",b," ",sep=""),side=1,line=-1.5,adj=1,cex=.8*cex)
@@ -246,7 +254,7 @@ for(i in 1:length(device.type)){
 	}
 }
 }
-
+}
 
 #############################################################################################
 ###################################### Get Rasts ############################################
@@ -304,12 +312,15 @@ model.SGB<-function(	qdata,
                  	 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
 				train.fraction = 1.0,       	# fraction of data for training,
-                 	 	n.minobsinnode = 10         	# minimum total weight needed in each node
+                 	 	n.minobsinnode = 10,         	# minimum total weight needed in each node
+				keep.data=TRUE,
+				var.monotone = NULL
 ){
 
-## This function generates a presence/absence (binary categorical) model using gbm.
+
+## This function generates a model using gbm.
 ##	Inputs: Full dataset, training indices, predictor names, response name, and seed (optional)
-##	Output: Random Forest model
+##	Output: SGB model
 
 if(!is.null(seed)){
 	set.seed(seed)}
@@ -323,6 +334,11 @@ qdata.y<-qdata[,response.name]
 if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
 
 if(is.null(n.trees)){
+
+	if(keep.data==FALSE){
+		warning("keep.data reset to TRUE because required by gbm.more() function needed for OOB determination of optimal number of trees.")}
+
+
 	SGB <- gbm.fit(	x=qdata.x,
 				y=qdata.y,        
 				distribution=distribution,
@@ -331,11 +347,13 @@ if(is.null(n.trees)){
 				interaction.depth=interaction.depth,		
 				bag.fraction = bag.fraction,          	
 				train.fraction = train.fraction,       	           		
-				n.minobsinnode = n.minobsinnode)
+				n.minobsinnode = n.minobsinnode,
+				keep.data=TRUE,
+				var.monotone=var.monotone)
 
 	# check performance using an out-of-bag estimator
 	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
-     
+      
 	# iterate until a sufficient number of trees are fit
 
 	while(SGB$n.trees - best.iter < 10){
@@ -343,8 +361,8 @@ if(is.null(n.trees)){
       	SGB <- gbm.more(SGB,100)          
       	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
 	}
-	SGB$iter <- TRUE
-
+	SGB$best.iter <- best.iter
+	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
 
 }else{
 	SGB <- gbm.fit(	x=qdata.x,
@@ -355,7 +373,16 @@ if(is.null(n.trees)){
 				interaction.depth=interaction.depth,		
 				bag.fraction = bag.fraction,          	
 				train.fraction = train.fraction,       	           		
-				n.minobsinnode = n.minobsinnode)
+				n.minobsinnode = n.minobsinnode,
+				keep.data=keep.data,
+				var.monotone=var.monotone)
+	if(train.fraction<1){
+		SGB$best.iter <- suppressWarnings(gbm.perf(SGB,method="test",plot.it=FALSE))
+		if(SGB$best.iter>0.9*n.trees){
+			warning("Best number of trees is ", SGB$best.iter, " and total number trees tested was ", n.trees, ". You may want to explore increasing the 'n.trees' argument.")
+		}
+	}
+
 }
 
 SGB$response<-response.name
@@ -376,14 +403,14 @@ prediction.SGB<-function(	prediction.type,
 					train,
 					response.name=deparse(substitute(SGB$response.name)),
 					SGB,
-					na.action="na.omit"
+					na.action="na.omit",
+					n.trees
 					){
 
-## This function makes predictions to test data for Random Forest presence/absence (binary 
-## categorical) model.
+## This function makes predictions for SGB model.
 ##	Inputs: Training data, training data indices, predictor names, response variable name,
 ##			the Random Forest model and what to do if NAs are in predictors (default).
-##	Output: Random Forest prediction object.
+##	Output: Observed and predicted values.
 
 response.type<-switch(SGB$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")
 
@@ -412,15 +439,9 @@ if(prediction.type=="TRAIN"){
 		}
 	}
 
-	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
-
-	#print(qdata.x)
-	print(paste("best.iter",best.iter))
-	#print(SGB)
-
 	pred<-predict.gbm(	object=SGB,
 					newdata=qdata.x,
-					n.trees=best.iter,
+					n.trees=n.trees,
 					type="response",
 					single.tree=FALSE)
 
@@ -488,10 +509,9 @@ if(prediction.type=="TEST"){
 
 	## make predictions
 	pred<-rep(-9999,nrow(qdata.x))
-	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
 	pred[not9]<-predict.gbm(	object=SGB,
 						newdata=qdata.x.not9,
-						n.trees=best.iter,
+						n.trees=n.trees,
 						type="response",
 						single.tree=FALSE)
 }
@@ -596,7 +616,7 @@ prediction.rF.binary<-function(	prediction.type,
 ## categorical) model.
 ##	Inputs: Training data, training data indices, predictor names, response variable name,
 ##			the Random Forest model and what to do if NAs are in predictors (default).
-##	Output: Random Forest prediction object.
+##	Output: Observed and predicted values.
 
 if(is.null(response.name)){
 	stop("must provide response name")}
@@ -772,7 +792,7 @@ prediction.rF.continuous<-function(	prediction.type,
 ## This function makes predictions to test data for Random Forest continuous model.
 ##	Inputs: Training data, training data indices, predictor names, response variable name,
 ##			the Random Forest model and what to do if NAs are in predictors (default).
-##	Output: Random Forest prediction object.
+##	Output: Observed and predicted values.
 
 print("MAKING PREDICTIONS SUBFUNCTION")
 
@@ -887,6 +907,7 @@ create.model<-function(	qdata,
 				response.name=NULL,
 				response.type,			# "binary", "continuous",
 				seed=NULL,
+				keep.data=TRUE,
 
 			# RF arguments:
 				ntree=500,
@@ -901,8 +922,11 @@ create.model<-function(	qdata,
                   	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
 				train.fraction = 1.0,       	# fraction of data for training,
-                  	n.minobsinnode = 10         	# minimum total weight needed in each node
+                  	n.minobsinnode = 10,         	# minimum total weight needed in each node
+				var.monotone = NULL
+
 ){
+
 
 ### Set Seed ###
 if(!is.null(seed)){
@@ -946,8 +970,9 @@ if(model.type=="SGB"){
                   		interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
 					bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
 					train.fraction=train.fraction,      # fraction of data for training,
-                  		n.minobsinnode=n.minobsinnode      # minimum total weight needed in each node
-					)
+                  		n.minobsinnode=n.minobsinnode,      # minimum total weight needed in each node
+					keep.data=keep.data,
+					var.monotone = var.monotone)
 
 }
 
@@ -974,7 +999,7 @@ prediction.model<-function(	model.obj,
 					v.fold=FALSE,
 
 				# SGB arguments
-					n.trees=NULL
+					n.trees
 ){
 
 
@@ -1002,7 +1027,8 @@ if(prediction.type!="CV"){
 						qdata=qdata,
 						response.name=response.name,
 						SGB=model.obj,
-						na.action=na.action)
+						na.action=na.action,
+						n.trees=n.trees)
 	}
 }else{
 	print(paste("Begining ",v.fold,"-fold cross validation:",sep=""))
@@ -1091,7 +1117,8 @@ if(prediction.type!="CV"){
 								qdata=qdata[-train.cv,],
 								response.name=response.name,
 								SGB=SGB.cv,
-								na.action=na.action)
+								na.action=na.action,
+								n.trees=n.trees)
 		}
 		PRED.cv$VFold<-i
 		PRED<-rbind(PRED,PRED.cv)
@@ -1125,7 +1152,8 @@ production.prediction<-function(	model.obj,
 						asciifn,
 						asciifn.mean,
 						asciifn.stdev,
-						asciifn.coefv){
+						asciifn.coefv,
+						n.trees){
 
 
 
@@ -1384,10 +1412,9 @@ while (!final){
 				test_pred[not9]<-predict(model.obj, preds.not9)}
 		}
 		if(model.type=="SGB"){
-			best.iter <- suppressWarnings(gbm.perf(model.obj,method="OOB",plot.it=FALSE))
 			test_pred[not9]<-predict.gbm(	object=model.obj,
 								newdata=preds.not9,
-								n.trees=best.iter,
+								n.trees=n.trees,
 								type="response",
 								single.tree=FALSE)
 		}

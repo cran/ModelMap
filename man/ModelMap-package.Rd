@@ -12,8 +12,8 @@ This package will create sophisticated models of training data and validate the 
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 2.0.2\cr
-Date: \tab 2010-06-12
+Version: \tab 2.1.1\cr
+Date: \tab 2011-04-21
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, and therefore it is in the public domain and not subject to copyright.\cr
 }
@@ -22,7 +22,7 @@ This package provides a push button appraoch to complex model building and produ
 
 It contains two simple functions that can be used before beginning the model building process: \link{get.test} that can be used to radomly divide a training dataset into training and test/validation sets; and \link{build.rastLUT} that uses GUI prompts to walk a user through the process of setting up a Raster look up table to link predictors from the training data with the rasters used for map contruction.
 
-It also contains three functions used for the model building and map contruction process itself: \link{model.build}, \link{model.diagnostics}, and \link{model.mapmake}.
+It also contains four functions used for the model building and map contruction process itself: \link{model.build}, \link{model.diagnostics},\link{model.interaction.plot} and \link{model.mapmake}.
 
 \code{ModelMap} can be run in a traditional R command mode, where all arguments are specified in the function call. However it can also be used in a full push button mode, where you type in the simple command such as \link{model.build}, and GUI pop up windows ask questions about the type of model, the file locations of the data, etc...
 
@@ -33,6 +33,8 @@ Stochastic gradient boosting (Friedman 2001, 2002), is related to both boosting 
 For Presence-Absence data, the package \code{PresenceAbsence} is used for model validation.
 
 For map making, the \code{rgdal} is used to read \code{.img} files.
+
+For interaction plots, the \code{fields} package is used to produce image plots.
 }
 \author{
 Author: Elizabeth Freeman and Tracey Frescino
@@ -43,6 +45,8 @@ Maintainer: Elizabeth Freeman <eafreeman@fs.fed.us>
 \references{
 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
+
+Elith, J., Leathwick, J. R. and Hastie, T. (2008). A working guide to boosted regression trees. Journal of Animal Ecology. 77:802-813.
 
 Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
 
