@@ -4,10 +4,13 @@
 
 \title{ Map Making }
 \description{
-  Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chuncks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
+  Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chunks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
 }
 \usage{
-model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, rastLUTfn = NULL, na.action = "na.omit", numrows = 500, map.sd = FALSE, asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, asciifn.coefv = NULL, n.trees = NULL)
+model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, 
+rastLUTfn = NULL, na.action = NULL, numrows = 500, map.sd = FALSE, 
+asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, 
+asciifn.coefv = NULL, make.img = TRUE, n.trees = NULL)
 }
 
 \arguments{
@@ -27,7 +30,7 @@ Example of comma-delimited file:
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb2,} \tab \code{2}\cr
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb3,} \tab \code{3}}}
 
-  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a ctegorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{-9999} (the \code{NODATA} value); (2) \code{na.action = "na.roughfix"} where a missing categorical predictor for a data point or pixel is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor.   }
+  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{-9999} (the \code{NODATA} value); (2) \code{na.action = "na.roughfix"} where a missing categorical predictor for a data point or pixel is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor.   }
 
   \item{numrows}{ Integer.  Map Production.  The number of rows to be predicted at a time.}
 
@@ -49,6 +52,8 @@ The names of the additional maps default to:
 
   \item{asciifn.coefv}{ String.  Map Production.  Used if \code{map.sd = TRUE} and \code{response.type = "continuous"}.  Filename of output file for coefficient of variation of trees. The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn.coefv = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map_coefv.txt"}.}
 
+  \item{make.img}{ Logical.  Map Production.  Will function make Imagine Image files in addition to ASCII grid files of map output.}
+
   \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
 }
@@ -62,11 +67,16 @@ For map making, the package \code{rgdal} is used to read \code{.img} files. The 
 
 When creating maps of non-rectangular study regions there may be large portions of the rectangle where you have no predictors, and are unintrested in making predictions. The suggeted value for the pixels outside the study area is \code{-9999}. These pixels will be ignored in the predictions, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and a prediction will be generated for each pixel. Note: in Imagine image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into R as \code{NA}, and if \code{na.action = "na.roughfix"}, predicitons will be attempted for these pixels. This will cause the computation time to increase, and these predictions will need to be masked out when the final map is imported back into a GIS sytem.
 
-The function \code{model.mapmake()} outputs an ASCII grid file of map information suitable to be imported into a GIS. Small maps can also be imported back into R using the function \code{read.asciigrid()} from the \code{sp} package.
+The function \code{model.mapmake()} outputs an ASCII grid file and Imagine Image file of map information suitable to be imported into a GIS. Small maps can also be imported back into R using the function \code{read.asciigrid()} from the \code{sp} package.
+
+For Binary response models the output is in the form of predicted probability of presence for each pixel. For Continuous response models the output is the predicted value for each pixel. For Categorical response models the map output depends on the category labels. If the categorical response variable is numeric, the map output will use the original numeric categories. If the categories are non-numeric, map output is in the form of integer class codes for each pixel, coded for each level of the factored response, and a CSV file containing a look up table is also generated to associate the integer codes with the original values of the response categories. 
+
+The first predictor from \code{predList} is used to determine projection of output Imagine Image file.
+
 }
 \value{
 
-The function does not return a value,  instead it writes text files of map information (suitable for importing into a GIS) to the specified folder.
+The function does not return a value,  instead it writes  Asci grid file and Imagine image file of map information (suitable for importing into a GIS) to the specified folder.
 
 }
 \references{ 
@@ -82,8 +92,7 @@ Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
  }
 
 \author{ Elizabeth Freeman and Tracey Frescino }
-\note{ 
-}
+
 \seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.diagnostics}}}
 \examples{
 
@@ -100,6 +109,11 @@ qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package 
 
 # Define folder for all output:
 folder=getwd()	
+
+
+#identifier for individual training and test data points
+
+unique.rowname="ID"
 
 
 ###########################################################################
@@ -151,11 +165,11 @@ response.type="binary"
 # present in the data to be predicted (either the validation/test set
 # or in the image file) that were not present in the original training data.
 # Choices:
-#       na.action = "na.omit"
+#       na.action =  "na.omit"
 #                    Any validation datapoint or image pixel with a value for any
 #                    categorical predictor not found in the training data will be
 #                    returned as NA.
-#       na.action = "na.roughfix"
+#       na.action =  "na.roughfix" 
 #                    Any validation datapoint or image pixel with a value for any
 #                    categorical predictor not found in the training data will have
 #                    the most common category for that predictor substituted,
@@ -190,12 +204,14 @@ response.type="continuous"
 model.obj = model.build( model.type="RF",
                        qdata.trainfn=qdata.trainfn,
                        folder=folder,		
+                       unique.rowname=unique.rowname,		
                        MODELfn=MODELfn,
                        predList=predList,
                        predFactor=predFactor,
                        response.name=response.name,
                        response.type=response.type,
-                       seed=seed
+                       seed=seed,
+                       na.action="na.roughfix"
 )
 
 

@@ -6,7 +6,9 @@
   Uses random selection to split a dataset into training and test data sets
 }
 \usage{
-get.test(proportion.test, qdatafn = NULL, seed = NULL, folder=NULL, qdata.trainfn = paste(strsplit(qdatafn, split = ".csv")[[1]], "_train.csv", sep = ""), qdata.testfn = paste(strsplit(qdatafn, split = ".csv")[[1]], "_test.csv", sep = ""))
+get.test(proportion.test, qdatafn = NULL, seed = NULL, folder=NULL, 
+qdata.trainfn = paste(strsplit(qdatafn, split = ".csv")[[1]], "_train.csv", sep = ""), 
+qdata.testfn = paste(strsplit(qdatafn, split = ".csv")[[1]], "_test.csv", sep = ""))
 }
 
 \arguments{
@@ -23,12 +25,9 @@ This function should be run once, before starting analysis to create training an
 \value{
 Outputs a training data file and test data file. Unless \code{qdata.trainfn} or \code{qdata.testfn} are specified, the output will be located in the same folder as the original data file (qdatafn). The output will have the same rows and columns as the original data.
 }
-\references{}
-\author{ Elizabeth Freeman }
-\note{  
 
-}
-\seealso{ }
+\author{ Elizabeth Freeman }
+
 \examples{
 
 qdatafn<-system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")

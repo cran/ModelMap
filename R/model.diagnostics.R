@@ -20,7 +20,7 @@ model.diagnostics<-function(	model.obj=NULL,
 			# Model Evaluation Arguments
 				prediction.type=NULL,
 				MODELpredfn=NULL,
-				na.action="na.omit",	# also used for mapping
+				na.action=NULL,	# also used for mapping
 				v.fold=10,
 				device.type=NULL,	# options: "default", "jpeg", "none","postscript", "win.metafile"
 				DIAGNOSTICfn=NULL,
@@ -155,14 +155,14 @@ if(model.type=="RF"){
 
 
 #############################################################################################
-################## Extract response.name and response.type from model.obj ###################
+######################### Extract response.name from model.obj ##############################
 #############################################################################################
 
 
 if(!is.null(model.obj$response)){
 	model.response.name<-model.obj$response
-	print(paste("     model.response.name =",model.response.name))
-	print(paste("     response.name =",response.name))
+	#print(paste("     model.response.name =",model.response.name))
+	#print(paste("     response.name =",response.name))
 	if(is.null(response.name)){
 		response.name<-model.response.name
 	}else{
@@ -183,13 +183,23 @@ if (is.null(response.name)){
 print(paste("response.name =",response.name))
 
 
-## extract response.type from model.obj
+#############################################################################################
+######################## Extract  response.type from model.obj ##############################
+#############################################################################################
 
 if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")}
+	response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
+	if(response.type=="classification"){
+		if(identical(levels(model.obj$y),c("0","1"))){
+			response.type<-"binary"
+		}else{
+			response.type<-"categorical"}}}
 if(model.type=="SGB"){
 	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
 if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
+
+print(paste("response.type=",response.type))
+
 
 
 #############################################################################################
@@ -224,16 +234,13 @@ if (model.type == "RF") {
 	if(prediction.type=="CV"){
 
 		if(!is.null(model.obj$call$strata)){
-			stop("random forest arguments 'strata' and 'sampsize' not currently supported by MOdelMap for cross validation")
+			stop("random forest arguments 'strata' and 'sampsize' not currently supported by ModelMap for cross validation")
 		}
 		if(!is.null(model.obj$call$sampsize)){
-			stop("random forest arguments 'strata' and 'sampsize' not currently supported by MOdelMap for cross validation")
+			stop("random forest arguments 'strata' and 'sampsize' not currently supported by ModelMap for cross validation")
 		}
 	}
 }
-
-
-
 
 
 #############################################################################################
@@ -252,8 +259,7 @@ if(is.null(folder)){
 #############################################################################################
 
 
-print("folder:")
-print(folder)
+print(paste("folder =",folder))
 
 ## MODELfn
 if(is.null(MODELfn)){
@@ -298,7 +304,6 @@ if (prediction.type %in% c("CV","TRAIN","OOB")){
 	}else{
 		qdata<-read.table(file=qdata.trainfn,sep=",",header=TRUE,check.names=FALSE,as.is=TRUE)
 	}
-
 }
 
 #############################################################################################
@@ -346,12 +351,17 @@ if(any(missing.predictors)){
 
 
 #############################################################################################
-######################## Deal with factored predictors ######################################
+######################## Deal with factored response ########################################
 #############################################################################################
 
+if(response.type=="categorical"){
+	if(!is.factor(qdata[,response.name])){
+		qdata[,response.name]<-factor(qdata[,response.name])}
 
+	#levels.qdata<-levels(qdata[,response.name])
+	#levels.model<-levels(model.obj$y)
 
-
+}
 
 #############################################################################################
 ######################## Select unique row identifier #######################################
@@ -360,7 +370,15 @@ if(any(missing.predictors)){
 if (is.null(unique.rowname)){
 	unique.rowname <- select.list(c(names(qdata),"row_index"), title="Select unique row identifier")	
 	if(unique.rowname!="row_index" && unique.rowname!=""){
+
+		#if(class(RF$na.action)=="omit")
+		print(paste("A: rownames length =",length(rownames(qdata)) ))
+		print(paste("A: qdata length =",length(qdata[,unique.rowname]) ))
+
 		rownames(qdata)<-qdata[,unique.rowname]
+
+
+
 	}	
 }else{
 	if(!(unique.rowname%in%names(qdata))){
@@ -368,9 +386,181 @@ if (is.null(unique.rowname)){
 		unique.rowname<-FALSE
 	}
 	if(unique.rowname!=FALSE){
+		print(paste("B: rownames length =",length(rownames(qdata))))
+		print(paste("B: qdata length =",length(qdata[,unique.rowname])))
 		rownames(qdata)<-qdata[,unique.rowname]
 	}
 }
+
+
+#############################################################################################
+######################### Drop unused columns of qdata ######################################
+#############################################################################################
+
+qdata<-qdata[,c(predList,response.name)]
+
+#############################################################################################
+########## Check for factored predictors with levels not found in training data #############
+#############################################################################################
+	
+if(!is.null(model.obj$levels)){
+	invalid.levels<-model.obj$levels
+
+	for(p in names(model.obj$levels)){
+		valid.levels<-c(model.obj$levels[[p]],NA)
+		invalid.levels[[p]]<-unique(qdata[,p][!qdata[,p]%in%valid.levels] )
+		qdata[,p]<-factor(qdata[,p],levels=model.obj$levels[[p]])
+		if(length(invalid.levels[[p]])>0){
+			warning(paste(	"categorical factored predictor",p,"contains levels",paste(invalid.levels[[p]],collapse=", "),
+						"not found in training data, these categories will be treated as NA and either omited or replaced"))
+		}
+	}
+}
+
+#############################################################################################
+################################ Load Libraries #############################################
+#############################################################################################
+
+## Loads necessary libraries.
+
+if(model.type=="RF" ){library(randomForest)}
+if(model.type=="SGB"){library(gbm)}
+
+#	'gbm'	is only used for SGB models
+#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
+
+#############################################################################################
+############################### Determine NA.ACTION #########################################
+#############################################################################################
+
+###create logical vector of datarows containing NA in predictors or reponses###
+
+NA.pred<-apply(qdata[,predList],1,function(x){any(is.na(x))})
+NA.resp<-is.na(qdata[,response.name])
+NA.data<-NA.pred|NA.resp
+
+
+#print(any(NA.data))
+
+
+###Check Model Object for na.action###
+
+#NA.ACTION is character string. Choices: "omit", "rough.fix".
+#na.action is the actual function, no quotes.
+#model.NA.ACTION and model.na.action are similar but extracted from model object,
+#   and need to be checked against 'model.diagnostics(na.action)'.
+
+model.NA.ACTION<-NULL
+model.na.action<-NULL
+NA.ACTION<-NULL
+
+if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
+
+	
+	###extract na.action from model.obj and check if valid, and if argument is NULL, default to option from model.obj###
+	if(!is.null(model.obj$na.action)){
+		model.NA.ACTION<-class(model.obj$na.action)
+		print(paste("model.NA.ACTION =",model.NA.ACTION))
+		if(!model.NA.ACTION%in%c("omit","roughfix")){
+			warning(paste("Model Object was built with 'na.action'",model.NA.ACTION,"which is not supported by model map"))
+			model.NA.ACTION<-NULL
+		}else{
+			model.na.action<-switch(model.NA.ACTION,omit=na.omit,roughfix=na.roughfix)
+			if(is.null(na.action)){			#if model.obj has na.action and function call does not then use action from model.obj
+				NA.ACTION<-model.NA.ACTION	#if this step is reached then whole next section not needed
+				na.action<-model.na.action
+			}
+		}
+	}
+
+
+
+	###Check if na.action from argument is valid###
+
+	NAvalid<-c("na.omit","na.roughfix")
+	NAwarn<-"ModelMap currently supports only \"na.omit\" and \"na.roughfix\" for 'na.action'"
+
+	if(is.null(NA.ACTION)){	
+		if(is.null(na.action)){
+			na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
+			if(na.action=="" || is.null(na.action)){
+				stop("NA found in data, therefore na.action is required")}
+			if(!na.action%in%NAvalid){stop(NAwarn)}
+		}else{
+			if(is.function(na.action)){
+				 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+			}else{
+				if(!na.action%in%NAvalid){stop(NAwarn)}
+			}
+		}
+
+		NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
+		#turn na.action into function
+		na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
+	}
+
+	###Check for impossible combo of model na.action, diagnostics na.action, and prediction.type=OOB
+	if(!is.null(model.NA.ACTION)){
+		if(model.NA.ACTION=="omit" && NA.ACTION=="roughfix" && prediction.type=="OOB"){
+			warning("'model.obj' was created with 'na.action=\"na.omit\"', OOB predictions not available on data rows containing NA, defaulting to 'na.action=\"na.omit\"'")
+			NA.ACTION<-"omit"
+			na.action<-na.omit
+		}
+		
+	}
+	if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
+}
+
+				#print("NA.ACTION:")
+				#print(NA.ACTION)
+				#print("na.action:")
+				#print(na.action)
+				#print("model.NA.ACTION:")
+				#print(model.NA.ACTION)
+				#print("model.na.action:")
+				#print(model.na.action)
+#############################################################################################
+################################ Deal with NA's #############################################
+#############################################################################################
+
+#print("starting dealing with NA")
+
+if(any(NA.data)){
+
+	###na.omit###
+
+	if(NA.ACTION=="omit"){
+		print("Omiting data points with NA predictors or NA response")
+		warning(paste(sum(NA.data), "data point(s) with NA values for prdictor or response omitted"))
+		qdata<-na.action(qdata)
+	}
+	
+
+	###na.roughfix###
+
+	if(NA.ACTION=="roughfix"){
+		print("Replacing NA predictors and responses with median value or most common category")
+		if(any(NA.resp)){warning(paste(sum(NA.data), "data point(s) with NA values (including", sum(NA.resp),"point(s) with NA response) replaced with median/most common response"))
+		}else{warning(paste(sum(NA.data), "data point(s) with NA values replaced with median/most common value"))}
+		qdata<-na.action(qdata)
+
+		na.ac<-(1:nrow(qdata))[NA.data]
+		names(na.ac)<-rownames(qdata)[NA.data]
+		class(na.ac)<-NA.ACTION
+		attr(qdata,"na.action")<-na.ac
+	}
+}
+
+#print("done dealing with NA")
+
+
+##for OOB models, check number of rows is equal to data used in building model
+if(prediction.type=="OOB"){
+	if( nrow(qdata)!= length(model.obj$y)){
+		stop("prediction.type is OOB, but number of rows in qdata.train does not match dataset used to build model")
+	}
+}
+
 
 #############################################################################################
 ############################# Check Device Type #############################################
@@ -399,17 +589,6 @@ if("none"%in%device.type){
 	device.type<-"none"
 }
 
-#############################################################################################
-################################ Load Libraries #############################################
-#############################################################################################
-
-## Loads necessary libraries.
-
-if(model.type=="RF" || na.action=="na.roughfix"){library(randomForest)}
-if(model.type=="SGB"){library(gbm)}
-
-#	'gbm'	is only used for SGB models
-#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
 
 
 #############################################################################################
@@ -430,12 +609,13 @@ if(model.type=="SGB" && is.null(n.trees)){
 #############################################################################################
 
 
-print("Starting validation predictions")
-
 if(!is.null(seed)){
 	set.seed(seed)}
 
-PRED <- prediction.model(	model.obj=model.obj,
+
+#print("starting predictions")
+
+PRED <- prediction.model(		model.obj=model.obj,
 						model.type=model.type,
 						qdata=qdata,
 						folder=folder,		# No ending slash, to output to working dir = getwd()
@@ -446,15 +626,19 @@ PRED <- prediction.model(	model.obj=model.obj,
 					# Model Evaluation Arguments
 						prediction.type=prediction.type,
 						MODELpredfn=MODELpredfn,
-						na.action=na.action,			# also used for mapping
 						v.fold=v.fold,
+
+						na.action=na.action,			
+						NA.ACTION=NA.ACTION,
+						model.na.action=model.na.action,			
+						model.NA.ACTION=model.NA.ACTION,
 
 					# SGB arguments
 						n.trees=n.trees
 						)
 
 
-print("starting diagnostics")
+#print("starting diagnostics")
 
 diagnostics.function(	model.obj=model.obj,
 				model.type=model.type,
@@ -485,7 +669,8 @@ diagnostics.function(	model.obj=model.obj,
 ARGfn<-paste(MODELfn,"_model_diagnostics_arguments.txt",sep="")
 
 A<-formals(model.diagnostics)
-A<-mget(names(A),ifnotfound="NULL",envir=as.environment(-1))
+envir<-as.environment(-1)
+A<-mget(names(A),ifnotfound="NULL",envir=envir)
 
 ARGfn<-paste(MODELfn,"_arguments.txt",sep="")
 
@@ -501,8 +686,7 @@ A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
 
-print("ARGfn:")
-print(ARGfn)
+#print(paste("ARGfn =",ARGfn))
 
 capture.output(print(A),file=ARGfn)
 

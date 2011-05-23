@@ -202,3 +202,53 @@ Added function 'model.interaction.plot().
 Added 'var.monotonic' SGB argument to 'model.build()'
 
 ############ ModelMap 2.1.1 04/21/11 ######################
+
+
+############ ModelMap 2.2.1 11/01/11 ######################
+
+Added option "categorical" to 'response.type' for RF models. Note, in previous versions option "categorical" could be included in function arguments, but would be modeled as binary response. Now it will be true multiple categorical response.
+
+Added function 'model.importance.plot'.
+
+Changed behavior of 'dev.type = "none' so that now a graph is made, but a new device is not opened. This will allow 'model.interaction.plot()' and 'model.importance.plot()' to be used in conjunction with 'par(mfrow='
+
+
+############ ModelMap 2.2.2 12/01/11 ######################
+
+Fixed bug in 'model.interaction.plot' that occured when categorical response variable had numeric categories
+
+Minor edits in Vignette
+
+############ ModelMap 2.3.0 01/20/12 ######################
+
+Fixed bugs in way ModelMap handles NA values. Also modified NA behavior to more closely follow standardized NA behavior in models such as lm() and glm().
+
+This required adding required arguments 'unique.rowname' and 'na.action' to 'model.build()' function.
+
+If the model has been built outside of ModelMap, 'model.mapmake()' now requires 'na.action' regardess of whether the map images contain missing values. Since the predictor maps are read in chunks, there is no simple way to precheck for NA's before starting map production. If the model was built in ModelMap and 'na.action' is not provided, then 'model.mapmake()' will default to the na.action used to build the model.
+
+Added model argument 'PLOTfn' to function 'model.interaction.plot()'. MODELfn will have the interaction variables pasted onto it. PLOTfn will be used as is with only .jped, etc added to the end.
+
+Added response.type="categorical" for RF models.
+
+Added category specific diagnostic plots to 'model.diagnostics()'
+
+Added additional arguments to 'model.importance.plot()' to specify category and importance types of each model. 
+
+'model.mapmake()' now outputs both ascii grid file and imagine image files of maps. This requires raster package.
+
+############# ModelMap 2.3.1 05/17/12 ######################
+
+Fixed bugs in response type categorical that occured when categories were number codes instead of character strings.
+
+Fixed bug when GUI prompt was used with new 'na.action' code
+
+Moved Vignette from 'ModelMap\inst\doc' to 'ModelMap\inst\vignette'
+
+Moved Vignette data from 'ModelMap\inst\external\vignetteexamples' to 'ModelMap\inst\vignette'
+
+
+
+
+
+

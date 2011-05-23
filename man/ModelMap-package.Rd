@@ -6,16 +6,17 @@
 Modeling and Map production using Random Forest and Stochastic Gradient Boosting
 }
 \description{
-This package will create sophisticated models of training data and validate the models with an independant test set, cross validation, or in the case of Random Forest Models, with Out OF Bag (OOB) predictions on the training data. It will creat graphs and tables of the model validation results. It will apply these models to GIS .img files of predictors to create detailed prediction surfaces. It will handle large predictor files for map making, by reading in the \code{.img} files in chuncks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chenk of data.
+The \code{ModelMap} package creates sophisticated models of training data and validates the models with an independant test set, cross validation, or in the case of Random Forest Models, with Out OF Bag (OOB) predictions on the training data. The package creates graphs and tables of the model validation results. It applies these models to GIS .img files of predictors to create detailed prediction surfaces. The package handles large predictor files for map making by reading in the predictor \code{.img} files in chunks, and writing the predictions for each data chunk to the \code{.txt} file, before reading the next chunk of predictor data.
 }
 \details{
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 2.1.1\cr
-Date: \tab 2011-04-21
+Version: \tab 2.3.1\cr
+Date: \tab 2011-05-23
 \cr
-License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, and therefore it is in the public domain and not subject to copyright.\cr
+License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, 
+and therefore it is in the public domain and not subject to copyright.\cr
 }
 
 This package provides a push button appraoch to complex model building and production mapping. It contains five functions. 
@@ -58,9 +59,4 @@ Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
 }
 
 \keyword{ package }
-\seealso{
 
-}
-\examples{
-
-}
