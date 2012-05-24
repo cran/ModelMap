@@ -27,6 +27,22 @@
 \DefineVerbatimEnvironment{Scode}{Verbatim}{fontshape=sl} 
 \newenvironment{Schunk}{}{} 
 
+%% Set PDF 1.5 and compression, including object compression
+%% Needed for MiKTeX -- most other distributions default to this
+\ifx\pdfoutput\undefined
+\else
+  \ifx\pdfoutput\relax
+  \else
+    \ifnum\pdfoutput>0
+      % PDF output
+      \pdfminorversion=5
+      \pdfcompresslevel=9
+      \pdfobjcompresslevel=2
+    \fi
+  \fi
+\fi
+
+
 %% special latex commands
 \makeatletter
 \newcommand\code{\bgroup\@makeother\_\@makeother\~\@makeother\$\@codex}
@@ -137,11 +153,11 @@ In a \proglang{Windows} environment, if \code{qdata.testfn = NULL} (default), a 
 
 There are three circumstances that can lead to having missing predictor values.  First, there are true missing values for predictors within the study area. Second, there are categorical predictors with categories that are present in the test or mapping data but not in the training data. And finally, portions of the mapping rectangle lie outside of the study area. Each of the three cases is handled slightly differently by \pkg{ModelMap}.
 
-In the first instance, true \code{NODATA} values in the test set or within the study area for production mapping could be caused by data collection errors. These are data points or pixels for which you may still need be interested in a prediction based on the other remaining predictors. These missing values should be coded as \code{NA}. (Note: in \proglang{Imagine} image files, values of the specified \code{NODATA} value will be read into \proglang{R} as \code{NA}.) The argument \code{na.action} will determine how these \code{NA} pixels will be treated. There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any \code{NA} predictors is returned as \code{-9999}; (2) \code{na.action = "na.roughfix"} where before making predictions, a missing categorical predictor is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor and a warning message is generated. 
+In the first instance, true mising data values in the test set or within the study area for production mapping could be caused by data collection errors. These are data points or pixels for which you may still need be interested in a prediction based on the other remaining predictors. These missing values should be coded as \code{NA} in the training or test data. In \proglang{Imagine} image files, pixels of the specified \code{NODATA} value will be read into \proglang{R} as \code{NA}. The argument \code{na.action} will determine how these \code{NA} pixels will be treated. There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any \code{NA} predictors is omitted from the model building process and the diagnostic predictions, or returned as \code{-9999} in the map predictions; (2) \code{na.action = "na.roughfix"} where before making predictions, a missing categorical predictor is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor. 
 
-The second type of missing value occurs when using categorical predictors. There may be cases where a category is found in the validation test set or in the map region that was not present in the training data. This is a particularly common occurrence when using cross-validation on a small dataset. Again, the argument \code{na.action} will determine how these data points or pixels are treated. If \code{na.action = "na.omit"}, no prediction will be made for these locations. If \code{na.action = "na.roughfix"}, the most common category will be substituted for the unknown category. In either instance, a warning will be generated with a list of the categories that were missing from the training data. After examining these categories, you may decide that rather than ignoring these locations or substituting the most common category, a better option would be to collapse similar categories into larger groupings. In this case you would need to pre-process your data and run the predictions again.  
+The second type of missing value occurs when using categorical predictors. There may be cases where a category is found in the validation test set or in the map region that was not present in the training data. This is a particularly common occurrence when using cross-validation on a small dataset. Again, the argument \code{na.action} will determine how these data points or pixels are treated. If \code{na.action = "na.omit"}, no prediction will be made for these locations. If \code{na.action = "na.roughfix"}, the most common category will be substituted for the unknown category. In either instance, a warning will be generated with a list of the categories that were missing from the training data. After examining these categories, you may decide that rather than omitting these locations or substituting the most common category, a better option would be to collapse similar categories into larger groupings. In this case you would need to pre-process your data and run the models and predictions again.  
 
-The final type of missing predictor occurs when creating maps of non-rectangular study regions. There may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and a prediction will be generated for each pixel. 
+The final type of missing predictor occurs when creating maps of non-rectangular study regions. There may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and if \code{na.action = "na.roughfix"} a prediction will be generated for each pixel. 
 
 Note: in \proglang{Imagine} image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into \proglang{R} as \code{NA}, and if \code{na.action = "na.roughfix"}, predictions will be attempted for these pixels. This will cause the computation time to increase, and these predictions will need to be masked out when the final map is imported back into a GIS. 
 
@@ -181,7 +197,7 @@ In a windows environment, the function \code{build.rastLUT()} may be used to hel
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Examples}
 
-These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building three types models: Random Forest with continuous response; Random Forest with binary response; and, Stochastic Gradient Boosting with binary response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species. 
+These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building four models: Random Forest with continuous response; Random Forest with binary response; Random Forest with categorical response; and, Stochastic Gradient Boosting with binary response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species. 
 
 Next, model validation diagnostics are performed with three techniques: an independent test set; Out Of Bag estimation; and cross-validation. Independent test set validation and cross-validation work for both Random Forest and Stochastic Gradient Boosting models. Out Of Bag estimation is only available for Random Forest models. (Note: in an actual model comparison study, rather than a package demonstration, the models would be compared with the same validation technique, rather than mixing techniques.)
 
@@ -194,13 +210,16 @@ Finally, spatial maps are produced by applying these models to remote sensing ra
 \subsection{Example dataset}
 
 
-The dataset is from a pilot study in Nevada launched in 2004 involving acquisition and photo-interpretation of large-scale aerial photography, the Nevada Photo-Based Inventory Pilot (NPIP) \citep{Frescino09}. 
+The dataset is from a pilot study in Nevada launched in 2004 involving acquisition and photo-interpretation of large-scale aerial photography, the Nevada Photo-Based Inventory Pilot (NPIP) \citep{Frescino09}. The data files for these examples are included in the \pkg{ModelMap} package instalation in the \proglang{R} library dirrectory. The datasets are under the 'external' then under 'vignetteexamples'.
 
 The predictor data set consists of 6 predictor variables: 5 continuous variables, and 1 categorical variable \mbox{(Table \ref{tab:one})}. The predictor layers are 250-meter resolution, pixel-based raster layers including Moderate Resolution Imaging Spectro-radiometer (MODIS) satellite imagery \citep{justice02}, a Landsat Thematic Mapper-based, thematic layer of predicted land cover, National Land Cover Dataset (NLCD) \citep{homer04}, and a topographic layer of elevation from the National Elevation Dataset  \citep{gesch02}. 
 
+The continuous response variables are percent cover of Pinyon and Sage. The binary response variables are presence of Pinyon and Sage. The categorical response variable is the vegetation category: TREE, SHRUB, OTHERVEG, and NONVEG.  
 The MODIS data included 250-meter, 16-day, cloud-free, composites of MODIS imagery for April 6, 2005: visible-red (RED) and near-infrared (NIR) bands and 2 vegetation indices, normalized difference vegetation index (NDVI) and enhanced vegetation index (EVI)  \citep{huete02}. The land cover and topographic layers were 30-meter products re-sampled to 250 meter using majority and mean summaries, respectively.
 
 The rectangular subset of Nevada chosen for these maps contains a small mountain range surrounded by plains, and was deliberately selected to lie along the edge of the study region to illustrate how \pkg{ModelMap} handles unsampled regions of a rectangle \mbox{(Figure \ref{fig:ExElev})}.
+
+ 
 
 \begin{table}
 \begin{center}
@@ -219,7 +238,7 @@ RED2005097&	Continuous&	MODIS Band 1 (Red)\\
 \hline
 \end{tabular}
 \end{center}
-\caption{\label{tab:one}Predictor variable}
+\caption{\label{tab:one}Predictor variables}
 \end{table}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -236,21 +255,38 @@ Example 1 builds Random Forest models for two continuous response variables: Per
 
 \subsubsection{Set up}
 
-Begin by defining some of the arguments for our model.
+After installing the \pkg{ModelMap} package, find the sample datasets from the \proglang{R} istallation and copy them to your working directory. The data consists of five files and is located in the vignette directory of \pkg{ModelMap}, for example, in \verb+C:\R\R-2.15.0\library\ModelMap\vignettes+.
 
-After installing the \pkg{ModelMap} package, download the sample datasets and save them in the working directory for \proglang{R}.
+There are 5 files:
+
+\begin{tabular}{lll}
+
+ & & VModelMapData.csv\\
+ & & VModelMapData\_LUT.csv\\
+ & & VModelMapData\_dem\_ELEVM\_250.img\\
+ & & VModelMapData\_modis\_STK2005097.img\\
+ & & VModelMapData\_nlcd\_NLCD01\_250.img\\
+
+\end{tabular}
 
 <<Ex1 set options,echo=FALSE>>=
 options(prompt = "R> ")
+options(width = 75)
+options(continue=" ")
 pdf("Vplots.pdf")
 @
 
-Start by loading the \pkg{ModelMap} package.
+<<Ex1 set width,echo=false>>=
+options(width=60)
+@
+
+Load the \pkg{ModelMap} package.
 
 <<Ex1 load package, results=hide>>=
 library("ModelMap")
 @
 
+Next define some of the arguments for the models.
 
 Specify model type. The choices are \code{"RF"} for Random Forest models, and \code{"SGB"} for Stochastic Gradient boosting models.
 
@@ -293,19 +329,21 @@ MODELfn.b    <- "VModelMapEx1b"
 Define the predictors and define which predictors are categorical. Example 1 uses five continuous predictors: the four predictor layers from the MODIS imagery plus the topographic elevation layer. As none of the chosen predictors are categorical set \code{predFactor} to \code{FALSE}.
 
 <<Ex1 Define predictors, results=hide>>=
-predList <- c(	"ELEV250",
-								"EVI2005097","NDV2005097","NIR2005097","RED2005097"
-								)
+predList <- c( "ELEV250",
+                "EVI2005097",
+                "NDV2005097",
+                "NIR2005097",
+                "RED2005097")
 predFactor <- FALSE
 @
 
 
-Define the response variable, and whether it is continuous or binary. 
+Define the response variable, and whether it is continuous, binary or categorical. 
 
 <<Ex1 Define response, results=hide>>=
 response.name.a <- "PINYON"
 response.name.b <- "SAGE"
-response.type <- "continuous"
+response.type   <- "continuous"
 @
 
 Define the seeds for each model.
@@ -329,7 +367,8 @@ Now create the models. The \code{model.build()} function returns the model objec
 <<Ex1 Create Model, results=hide>>=
 model.obj.ex1a <- model.build( model.type=model.type,
                                qdata.trainfn=qdata.trainfn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
                                MODELfn=MODELfn.a,
                                predList=predList,
                                predFactor=predFactor,
@@ -339,7 +378,8 @@ model.obj.ex1a <- model.build( model.type=model.type,
            
 model.obj.ex1b <- model.build( model.type=model.type,
                                qdata.trainfn=qdata.trainfn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
                                MODELfn=MODELfn.b,
                                predList=predList,
                                predFactor=predFactor,
@@ -358,7 +398,11 @@ Model predictions on an independent test set are not stochastic, it is not neces
 
 The \code{model.diagnostics()} function returns a data frame of observed and predicted values. This data frame is also saved as a CSV file. This function also runs model diagnostics, and creates graphs and tables of the results. The graphics are saved as files of the file type specified by \code{device.type}. 
 
-For a continuous response model, the model validation diagnostics graphs are the variable importance plot \mbox{(Figure \ref{fig:Ex1aVarImp} and Figure \ref{fig:Ex1bVarImp})}, and a scatter plot of observed verses predicted values, labeled with the Pearson's and Spearman's correlation coefficients and the slope and intercept of the linear regression line \mbox{(Figure \ref{fig:Ex1aScatterplot} and Figure \ref{fig:Ex1bScatterplot})}. In example 1, the diagnostic plots are saved as PDF files. 
+For a continuous response model, the model validation diagnostics graphs are the variable importance plot \mbox{(Figure \ref{fig:Ex1aVarImp} and Figure \ref{fig:Ex1bVarImp})}, and a scatter plot of observed verses predicted values, labeled with the Pearson's and Spearman's correlation coefficients and the slope and intercept of the linear regression line \mbox{(Figure \ref{fig:Ex1aScatterplot} and Figure \ref{fig:Ex1bScatterplot})}. 
+
+For Random forest models, the model diagnostic graphs also include the out of bag model error as a function of the number of trees\mbox{(Figure \ref{fig:Ex1aErrNtree} and Figure \ref{fig:Ex1bErrNtree})}
+
+In example 1, the diagnostic plots are saved as PDF files. 
 
 These diagnostics show that while the most important predictor variables are similar for both models, the correlation coefficients are considerably higher for the Pinyon percent cover model as compared to the Sage model.
 
@@ -369,7 +413,7 @@ model.pred.ex1a <- model.diagnostics( model.obj=model.obj.ex1a,
                                       MODELfn=MODELfn.a,
                                       unique.rowname=unique.rowname,
                              # Model Validation Arguments
-                  				            prediction.type="TEST",
+                                      prediction.type="TEST",
                                       device.type=c("pdf"),
                                       cex=1.2)
            
@@ -413,6 +457,116 @@ model.pred.ex1b <- model.diagnostics( model.obj=model.obj.ex1b,
 \caption{\label{fig:Ex1bScatterplot}Example 1 - Observed verses predicted values for Sage percent cover (RF model).}
 \end{figure}
 
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx1a_pred_error}
+\end{center}
+\caption{\label{fig:Ex1aErrNtree}Example 1 - Out of Bag error as a function of number of trees for Pinyon (RF model).}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx1b_pred_error}
+\end{center}
+\caption{\label{fig:Ex1bErrNtree}Example 1 - Out of Bag error as a function of number of trees for Sage (RF model).}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Comparing Variable Importance}
+
+The \code{model.importance.plot()} function uses a back-to-back barplot to compare variable importance between two models built from the same predictor variables \mbox{(Figure \ref{fig:Ex1CompImp})}. Variable Importance is calculated in various ways depending on the model type, the response type and the importance type. Importance measures are summarized in \mbox{(Table \ref{tab:two})}.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Model&	Response&	Importance Type								& Measured By\\
+\hline
+SGB& continuous &	1 - permutation               & reduction in predictive performance \\
+SGB& binary     &	1 - permutation               & reduction in predictive performance \\
+SGB& continuous &	2 - gradient of loss function & reduction of squared error \\
+SGB& binary     &	2 - gradient of loss function & reduction in sum of squared error \\
+\hline
+RF & continuous &	1 - permutation               & Percent Increase in MSE \\
+RF & binary     &	1 - permutation               & Mean Decrease in Accuracy \\
+RF & categorical&	1 - permutation               & Mean Decrease in Accuracy \\
+RF & continuous &	2 - node impurity             & Residual Sum of Squares \\
+RF & binary     &	2 - node impurity             & Mean Decrease in Gini \\
+RF & categorical&	2 - node impurity             & Mean Decrease in Gini \\
+\hline
+\end{tabular}
+\end{center}
+\caption{\label{tab:two}Importance Measures}
+\end{table}
+
+
+<<Ex1 Compare Importance Plots, results=hide>>=
+model.importance.plot( model.obj.1=model.obj.ex1a,
+                       model.obj.2=model.obj.ex1b,
+                       model.name.1="Pinyon",
+                       model.name.2="Sage",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Variable Importance",
+                       device.type="pdf",
+                       PLOTfn="VModelMapEx1CompareImportance",
+                       folder=folder)
+												
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx1CompareImportance.pdf}
+\end{center}
+\caption{\label{fig:Ex1CompImp}Example 1 - Variable Importances for Pinyon verses Sage percent cover models.}
+\end{figure}
+
+The \code{model.importance.plot()} function can also be used to compare the two types of variable importance  \mbox{(Figure \ref{fig:Ex1CompImpType})}. 
+
+<<Ex1CompImpType,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+model.importance.plot( model.obj.1=model.obj.ex1a,
+                       model.obj.2=model.obj.ex1a,
+                       model.name.1="",
+                       model.name.2="",
+                       imp.type.1=1,
+                       imp.type.2=2,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon",
+                       device.type="none",
+                       cex=0.9) 
+                      
+model.importance.plot( model.obj.1=model.obj.ex1b,
+                       model.obj.2=model.obj.ex1b,
+                       model.name.1="",
+                       model.name.2="",
+                       imp.type.1=1,
+                       imp.type.2=2,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Comparison of Importance Types",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1CompImpTypeFig,fig=TRUE,echo=FALSE, width=7.5,height=7.5>>=
+<<Ex1CompImpType>>
+@
+\end{center}
+\caption{\label{fig:Ex1CompImpType}Example 1 - Variable Importances Types for continuous response models - the relative importance of predictor variables as measured by the mean decrease in accuracy from randomly permuting each predictor as compared to the decrease in node impurities from splitting on the variable.}
+\end{figure}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Interaction Plots}
 
@@ -423,41 +577,41 @@ The \code{model.interaction.plot()} function provides two graphical options: an 
 The \code{x} and \code{y} arguments are used to specify the predictor variables for the X and Y axis. The predictors can be specified by name, or by number, with the numbers referring to the order the variables appear in \code{predList}.
 
 <<Ex1 Interaction Plots, results=hide>>=
-model.interaction.plot(	model.obj.ex1a,
-												x="NIR2005097",
-												y="RED2005097",
-												main=response.name.a,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.a,
-												folder=folder)
+model.interaction.plot( model.obj.ex1a,
+                        x="NIR2005097",
+                        y="RED2005097",
+                        main=response.name.a,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.a,
+                        folder=folder)
 												
-model.interaction.plot(	model.obj.ex1b,
-												x="NIR2005097",
-												y="RED2005097",
-												main=response.name.b,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.b,
-												folder=folder)
+model.interaction.plot( model.obj.ex1b,
+                        x="NIR2005097",
+                        y="RED2005097",
+                        main=response.name.b,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.b,
+                        folder=folder)
 														
-model.interaction.plot(	model.obj.ex1a,
-												x=1,
-												y=3,
-												main=response.name.a,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.a,
-												folder=folder)
+model.interaction.plot( model.obj.ex1a,
+                        x=1,
+                        y=3,
+                        main=response.name.a,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.a,
+                        folder=folder)
 												
-model.interaction.plot(	model.obj.ex1b,
-												x=1,
-												y=3,
-												main=response.name.b,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.b,
-												folder=folder)
+model.interaction.plot( model.obj.ex1b,
+                        x=1,
+                        y=3,
+                        main=response.name.b,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.b,
+                        folder=folder)
 @
 
 
@@ -488,6 +642,8 @@ model.interaction.plot(	model.obj.ex1b,
 \end{center}
 \caption{\label{fig:Ex1bIntElevNdv}Example 1 - Interaction plot for Sage percent cover (RF model), showing interactions between elevation and a satellite based predictor (ELEV250 and NDV2005097). Image plot, with darker green indicating higher percent cover. Here we do see an interaction between the two predictors. At low elevations, predicted Sage cover is low throughout the range of NDV, and particularly low at mid-values. At mid elevations, predicted Sage cover is high throughout the range of NDV. At high elevations NDV has a strong influence on predicted Sage cover with high cover tied to low to mid values of NDV.}
 \end{figure}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Map production}
 
@@ -516,12 +672,11 @@ legend.colors<-col.ramp[c(100,75,50,25,1)]
 
 image(mapgrid, col = col.ramp,zlim=zlim,asp=1,bty="n")
 
-legend(	x=max(mapgrid$x),y=max(mapgrid$y),
-	    	legend=legend.label,
-		    fill=legend.colors,
-		    bty="n",
-		    cex=1.2
-)
+legend( x=max(mapgrid$x),y=max(mapgrid$y),
+        legend=legend.label,
+        fill=legend.colors,
+        bty="n",
+        cex=1.2)
 mtext("Elevation of Study Region",side=3,line=1,cex=1.5)
 par(opar)
 @
@@ -544,8 +699,11 @@ The \code{model.mapmake()} uses a look up table to associate the predictor varia
 Although in typical user applications the raster look up table must include the full path for predictor rasters, the table provided for the examples will be incomplete when initially downloaded, as the working directory of the user is unknown and will be different on every computer. This needs to be corrected by pasting the full paths to the user's working directory to the first column, using the value from \code{folder} defined above.
 
 <<Ex1 update raster LUT, results=hide>>=
-rastLUTfn   <- "VModelMapData_LUT.csv"
-rastLUTfn     <- read.table(rastLUTfn,header=FALSE,sep=",",stringsAsFactors=FALSE)
+rastLUTfn     <- "VModelMapData_LUT.csv"
+rastLUTfn     <- read.table(  rastLUTfn,
+                              header=FALSE,
+                              sep=",",
+                              stringsAsFactors=FALSE)
 rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 @
 
@@ -559,19 +717,21 @@ numrows=500
 
 <<Ex1 Produce Maps, results=hide>>=
 
-model.mapmake( 	model.obj=model.obj.ex1a,
+model.mapmake(  model.obj=model.obj.ex1a,
                 folder=folder,           
                 MODELfn=MODELfn.a,
                 rastLUTfn=rastLUTfn,
+                na.action="na.omit",
              # Mapping arguments
                 numrows=numrows,
                 map.sd=TRUE)
             
 
-model.mapmake( 	model.obj=model.obj.ex1b,
+model.mapmake(  model.obj=model.obj.ex1b,
                 folder=folder,           
                 MODELfn=MODELfn.b,
                 rastLUTfn=rastLUTfn,
+                na.action="na.omit",
              # Mapping arguments
                 numrows=numrows,
                 map.sd=TRUE)
@@ -609,12 +769,11 @@ mtext(response.name.a,side=3,line=1,cex=1.2)
 image(mapgrid.b, col = col.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend(	x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
-		    cex=1.2
-)
+		    cex=1.2)
 mtext("Percent Cover",side=3,line=1,cex=1.5,outer=T)
 par(opar)
 @
@@ -651,12 +810,11 @@ mtext(response.name.a,side=3,line=1,cex=1.2)
 image(mapgrid.b, col = stdev.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend(	x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
-		    cex=1.2
-)
+		    cex=1.2)
 mtext("Standard Deviation of Percent Cover",side=3,line=1,cex=1.5,outer=T)
 par(opar)
 @
@@ -691,12 +849,11 @@ mtext(response.name.a,side=3,line=1,cex=1.2)
 image(mapgrid.b, col = coefv.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend(	x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
-		    cex=1.2
-)
+		    cex=1.2)
 mtext("Coefficient of Variation of Percent Cover",side=3,line=1,cex=1.5,outer=T)
 par(opar)
 @
@@ -754,13 +911,16 @@ MODELfn.b    <- "VModelMapEx2b"
 Define the predictors. These are the five continuous predictors from the first example, plus one categorical predictor layer, the thematic layer of predicted land cover classes from the National Land Cover Dataset. The argument \code{predFactor} is used to specify the categorical predictor.
 
 << Ex2 Define predictors, results=hide>>=
-predList <- c(	"ELEV250","NLCD01_250",
-								"EVI2005097","NDV2005097","NIR2005097","RED2005097"
-								)
+predList <- c( "ELEV250",
+               "NLCD01_250",
+               "EVI2005097",
+               "NDV2005097",
+               "NIR2005097",
+               "RED2005097")
 predFactor <- c("NLCD01_250")
 @
 
-Define the data column to use as the response, and if it is continuous or binary. Since \code{response.type = "binary"} this variable will be automatically translated so that zeros are treated as Absent and any value greater than zero is treated as Present. 
+Define the data column to use as the response, and if it is continuous, binary or categorical. Since \code{response.type = "binary"} this variable will be automatically translated so that zeros are treated as Absent and any value greater than zero is treated as Present. 
 
 <<Ex2 Define response, results=hide>>=
 response.name.a <- "PINYON"
@@ -790,8 +950,11 @@ numrows=500
 Define raster look up table.
 
 <<Ex2 update raster LUT, results=hide>>=
-rastLUTfn   <- "VModelMapData_LUT.csv"
-rastLUTfn     <- read.table(rastLUTfn,header=FALSE,sep=",",stringsAsFactors=FALSE)
+rastLUTfn     <- "VModelMapData_LUT.csv"
+rastLUTfn     <- read.table( rastLUTfn,
+                             header=FALSE,
+                             sep=",",
+                             stringsAsFactors=FALSE)
 rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 @
 
@@ -804,7 +967,8 @@ Create the model.  Because Out-Of-Bag predictions will be used for model diagnos
 <<Ex2 Create Model, results=hide>>=
 model.obj.ex2a <- model.build( model.type=model.type,
                                qdata.trainfn=qdatafn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,               
                                MODELfn=MODELfn.a,
                                predList=predList,
                                predFactor=predFactor,
@@ -814,7 +978,8 @@ model.obj.ex2a <- model.build( model.type=model.type,
            
 model.obj.ex2b <- model.build( model.type=model.type,
                                qdata.trainfn=qdatafn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,               
                                MODELfn=MODELfn.b,
                                predList=predList,
                                predFactor=predFactor,
@@ -851,7 +1016,7 @@ model.pred.ex2a <- model.diagnostics( model.obj=model.obj.ex2a,
                                       MODELfn=MODELfn.a,
                                       unique.rowname=unique.rowname,
                              # Model Validation Arguments
-                  				            prediction.type="OOB",
+                                      prediction.type="OOB",
                                       device.type=c("jpeg","pdf","postscript"),
                                       cex=1.2)
            
@@ -869,19 +1034,29 @@ model.pred.ex2b <- model.diagnostics( model.obj=model.obj.ex2b,
 Take a closer look at the text file of thresholds optimized by multiple criteria. These thresholds are used later to display the mapped predictions, so read this file into \proglang{R} now. 
 
 <<Ex2 Optimal Threshold Table, results=hide>>=
-opt.thresh.a <- read.table(paste(MODELfn.a,"_pred_optthresholds.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+opt.thresh.a <- read.table( paste(MODELfn.a,"_pred_optthresholds.csv",sep=""),
+                            header=TRUE,
+                            sep=",",
+                            stringsAsFactors=FALSE)
 opt.thresh.a[,-1]<-signif(opt.thresh.a[,-1],2)
 
-opt.thresh.b <- read.table(paste(MODELfn.b,"_pred_optthresholds.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+opt.thresh.b <- read.table( paste(MODELfn.b,"_pred_optthresholds.csv",sep=""),
+                            header=TRUE,
+                            sep=",",
+                            stringsAsFactors=FALSE)
 opt.thresh.b[,-1]<-signif(opt.thresh.b[,-1],2)
 
 
-pred.prev.a <- 
-read.table(paste(MODELfn.a,"_pred_prevalence.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+pred.prev.a <- read.table( paste(MODELfn.a,"_pred_prevalence.csv",sep=""),
+                           header=TRUE,
+                           sep=",",
+                           stringsAsFactors=FALSE)
 pred.prev.a[,-1]<-signif(pred.prev.a[,-1],2)
 
-pred.prev.b <- 
-read.table(paste(MODELfn.b,"_pred_prevalence.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+pred.prev.b <- read.table( paste(MODELfn.b,"_pred_prevalence.csv",sep=""),
+                           header=TRUE,
+                           sep=",",
+                           stringsAsFactors=FALSE)
 pred.prev.b[,-1]<-signif(pred.prev.b[,-1],2)
 @
 
@@ -949,6 +1124,80 @@ In the Error Rate verses Threshold plot sensitivity, specificity and Kappa are p
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Comparing Variable Importance}
+
+The \code{model.importance.plot()} function uses a back-to-back barplot to compare variable importance between two models built from the same predictor variables \mbox{(Figure \ref{fig:Ex2CompImp})}. 
+
+<<Ex2 Compare Importance Plots, results=hide>>=
+model.importance.plot( model.obj.1=model.obj.ex2a,
+                       model.obj.2=model.obj.ex2b,
+                       model.name.1="Pinyon",
+                       model.name.2="Sage",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Variable Importance",
+                       device.type="pdf",
+                       PLOTfn="VModelMapEx2CompareImportance",
+                       folder=folder)
+												
+@
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx2CompareImportance.pdf}
+\end{center}
+\caption{\label{fig:Ex2CompImp}Example 2 - Variable Importances for Pinyon verses Sage presence models.}
+\end{figure}
+
+Because a binary response model is a two-class example of a categorical response model, we can use categorical tools to investigate the class specific variable importances. \mbox{(Figure \ref{fig:Ex2CompImpPA})} compares the relative importance of the predictor variables inr predicting Presences to their importances in predicting Absences.
+
+<<Ex2CompImpPA,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+model.importance.plot( model.obj.1=model.obj.ex2a,
+                       model.obj.2=model.obj.ex2a,
+                       model.name.1="Absence",
+                       model.name.2="Presence",
+                       class.1="0",
+                       class.2="1",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Variable Importance",
+                       device.type="none",
+                       cex=0.9)
+	
+
+model.importance.plot( model.obj.1=model.obj.ex2b,
+                       model.obj.2=model.obj.ex2b,
+                       model.name.1="Absence",
+                       model.name.2="Presence",
+                       class.1="0",
+                       class.2="1",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Variable Importance",
+                       device.type="none",
+                       cex=0.9)	                       
+mtext("Presence-Absence Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex2CompImpPAFig,fig=TRUE,echo=FALSE, width=7.5,height=7.5>>=
+<<Ex2CompImpPA>>
+@
+\end{center}
+\caption{\label{fig:Ex2CompImpPA}Example 3 - Relative variable importances (permutation based) for predicting Presences verses predicting Absences for Pinyon ans Sage.}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Interaction Plots}
 
 Here we will look at how the \code{model.interaction.plot()} function works with a factored predictor variable.  
@@ -958,45 +1207,47 @@ In image plots the levels of the factored predictor are shown as vertical or hor
 In 3-D perspective plots the levels are represented by ribbons across the prediction surface.
 
 <<Ex2 Interaction Plots, results=hide>>=
-model.interaction.plot(	model.obj.ex2a,
-												x="ELEV250",
-												y="NLCD01_250",
-												main=response.name.a,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.a,
-												folder=folder)
+model.interaction.plot( model.obj.ex2a,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name.a,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.a,
+                        folder=folder)
 
 
-model.interaction.plot(	model.obj.ex2b,
-												x="ELEV250",
-												y="NLCD01_250",
-												main=response.name.b,
-												plot.type="image",
-												device.type="pdf",
-												MODELfn=MODELfn.b,
-												folder=folder)	
+model.interaction.plot( model.obj.ex2b,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name.b,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn.b,
+                        folder=folder)	
 																									
-model.interaction.plot(	model.obj.ex2a,
-												x="ELEV250",
-												y="NLCD01_250",
-												main=response.name.a,
-												plot.type="persp",
-												device.type="pdf",
-												MODELfn=MODELfn.a,
-												folder=folder,
-												theta=300,phi=55)
+model.interaction.plot( model.obj.ex2a,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name.a,
+                        plot.type="persp",
+                        device.type="pdf",
+                        MODELfn=MODELfn.a,
+                        folder=folder,
+                        theta=300,
+                        phi=55)
 
 
-model.interaction.plot(	model.obj.ex2b,
-												x="ELEV250",
-												y="NLCD01_250",
-												main=response.name.b,
-												plot.type="persp",
-												device.type="pdf",
-												MODELfn=MODELfn.b,
-												folder=folder,
-												theta=300,phi=55)
+model.interaction.plot( model.obj.ex2b,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name.b,
+                        plot.type="persp",
+                        device.type="pdf",
+                        MODELfn=MODELfn.b,
+                        folder=folder,
+                        theta=300,
+                        phi=55)
 @
 
 
@@ -1004,7 +1255,7 @@ model.interaction.plot(	model.obj.ex2b,
 \begin{center}
 \includegraphics{VModelMapEx2a_image_ELEV250_NLCD01_250}
 \end{center}
-\caption{\label{fig:Ex2aImageElevNlcd}Example 2 - Interaction plot for Pinyon presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Image plot, with darker green indicating higher probability of presence. Here we see that in most NLCD classes predicted Pinyon presence is strongly tied to elevation, with low presence below 2000m, and moderate presence at higher elevations. However in NLCD class 42, predicted presence is higher at all elevations.}
+\caption{\label{fig:Ex2aImageElevNlcd}Example 2 - Interaction plot for Pinyon presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Image plot, with darker green indicating higher probability of presence. Here we see that in all NLCD classes predicted Pinyon presence is strongly tied to elevation, with low presence below 2000m, and moderate presence at higher elevations.}
 \end{figure}
 
 \begin{figure}
@@ -1018,14 +1269,14 @@ model.interaction.plot(	model.obj.ex2b,
 \begin{center}
 \includegraphics{VModelMapEx2a_persp_ELEV250_NLCD01_250}
 \end{center}
-\caption{\label{fig:Ex2aPerspElevNlcd}Example 2 - Interaction plot for Pinyon presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Perspective plot, with probability or presence shown on the Z axis. In the perspective plot it is easier to see that while predicted Pinyon presence is influenced by both elevation and NLCD class, the shape of the relationship between elevation and presence is similar in all NLCD classes, and therefore there appears to be little 2-way interaction between these predictors. }
+\caption{\label{fig:Ex2aPerspElevNlcd}Example 2 - Interaction plot for Pinyon presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Perspective plot, with probability or presence shown on the Z axis. In the perspective plot (as compared to the image plot) it is easier to see that while predicted Pinyon presence is influenced by both elevation and NLCD class, the shape of the relationship between elevation and presence is similar in all NLCD classes, and while the overall probability is higher in some classes, the curves relating probability to elevation are generally parallel from class to class. Therefore there appears to be little 2-way interaction between these predictors. }
 \end{figure}
 
 \begin{figure}
 \begin{center}
 \includegraphics{VModelMapEx2b_persp_ELEV250_NLCD01_250}
 \end{center}
-\caption{\label{fig:Ex2bPerspElevNlcd}Example 2 - Interaction plot for Sage presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Perspective plot, with probability or presence shown on the Z axis. Here we can see that while all NLCD classes have low predicted Sage presence at low elevation, in NLCD class 50 at mid elevations predicted presence shoots higher than the other classes, and does not drop as far as the other classes at high elevations. This can be seen in the differing shape of the relationship curve for this class. }
+\caption{\label{fig:Ex2bPerspElevNlcd}Example 2 - Interaction plot for Sage presence-absence (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Perspective plot, with probability or presence shown on the Z axis. Here we can see that while all NLCD classes have low predicted Sage presence at low elevation, in NLCD class 50 at mid elevations predicted presence shoots higher than the other classes, and then does not drop as far as the other classes at high elevations. Resulting in a different shape of the elevation verses probability curve for class 50. }
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Map production}
@@ -1038,18 +1289,18 @@ model.mapmake( model.obj=model.obj.ex2a,
                folder=folder,           
                MODELfn=MODELfn.a,
                rastLUTfn=rastLUTfn,
+               na.action="na.omit",
           # Mapping arguments
-               numrows=numrows,
-               na.action = "na.omit")
+               numrows=numrows)
             
 
-model.mapmake(  model.obj=model.obj.ex2b,
-                folder=folder,           
-                MODELfn=MODELfn.b,
-                rastLUTfn=rastLUTfn,
+model.mapmake( model.obj=model.obj.ex2b,
+               folder=folder,           
+               MODELfn=MODELfn.b,
+               rastLUTfn=rastLUTfn,
+               na.action="na.omit",
           # Mapping arguments
-                numrows=numrows,
-                na.action = "na.omit")
+               numrows=numrows)
 @
 
 When working with categorical predictors, sometimes there are categories in the prediction data (either the test set, or the map data) not found in the training data. In this case, there were three classes for the predictor \code{NLCD01_250} that were not present in the training data. With the default \code{na.action = "na.omit"} the \code{model.mapmake()} function generated the following warnings, and these pixels will show up as blank pixels in the maps.
@@ -1072,16 +1323,16 @@ Begin by mapping the probability surface, in other words, the probability that t
 First Define a color ramp. For this map, pixels with a high probability of presence will display as green, low probability will display as brown, and model uncertainty (probabilities near 50\%) will display as yellow. Notice that the map for Pinyon, is mostly dark green and dark brown, with a thin dividing line of yellow. With a high quality model, most of the pixels are assigned high or low probabilities. The map for Sage, however, is mostly yellow, with only occasional areas of green and brown. With poor quality models, many of the pixels are inderminate, and assigned probabilities near 50\%. 
 
 <<Ex2 define color sequence, results=hide>>=
-h=c(	seq(10,30,length.out=10),
-	    seq(31,40,length.out=10),
-    	seq(41,90,length.out=60),
-	    seq(91,100,length.out=10),
-	    seq(101,110,length.out=10))
-l =c(	seq(25,40,length.out=10),
-	    seq(40,90,length.out=35),
-	    seq(90,90,length.out=10),
-	    seq(90,40,length.out=35),
-	    seq(40,10,length.out=10))
+h=c( seq(10,30,length.out=10),
+      seq(31,40,length.out=10),
+      seq(41,90,length.out=60),
+      seq(91,100,length.out=10),
+      seq(101,110,length.out=10))
+l =c( seq(25,40,length.out=10),
+      seq(40,90,length.out=35),
+      seq(90,90,length.out=10),
+      seq(90,40,length.out=35),
+      seq(40,10,length.out=10))
 probpres.ramp <- hcl(h = h, c = 80, l = l)
 @
 
@@ -1102,11 +1353,11 @@ mtext(response.name.a,side=3,line=1,cex=1.2)
 image(mapgrid.b, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend(	x=max(mapgrid.b$x),y=max(mapgrid.b$y),
-		legend=legend.label,
-		fill=legend.colors,
-		bty="n",
-		cex=1.2)
+legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+    legend=legend.label,
+    fill=legend.colors,
+    bty="n",
+    cex=1.2)
 				    
 mtext("Probability of Presence",side=3,line=1,cex=1.5,outer=T)
 par(opar)
@@ -1135,13 +1386,18 @@ for(i in 1:4){
 	thresh<-opt.thresh.a$threshold[opt.thresh.a$opt.methods==criteria[i]]
 	presencegrid<-mapgrid
 	presencegrid$z <- ifelse(presencegrid$z>thresh,1,0)
-	image(	presencegrid, col=c("white","forestgreen"),zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+	image( presencegrid,
+	       col=c("white","forestgreen"),
+	       zlim=c(0,1),
+	       asp=1,
+	       bty="n",
+	       xaxt="n", yaxt="n")
 	if(i==2){
-		legend(	x=max(mapgrid$x),y=max(mapgrid$y),
-						legend=c("Present","Absent"),
-						fill=c("forestgreen","white"),
-						bty="n",
-						cex=1.2)}
+		legend( x=max(mapgrid$x),y=max(mapgrid$y),
+		        legend=c("Present","Absent"),
+		        fill=c("forestgreen","white"),
+		        bty="n",
+		        cex=1.2)}
 	mtext(criteria.labels[i],side=3,line=2,cex=1.2)
 	mtext(paste("threshold =",thresh),side=3,line=.5,cex=1)
 }
@@ -1169,13 +1425,18 @@ for(i in 1:4){
 	thresh<-opt.thresh.b$threshold[opt.thresh.b$opt.methods==criteria[i]]
 	presencegrid<-mapgrid
 	presencegrid$z <- ifelse(presencegrid$z>thresh,1,0)
-	image(	presencegrid, col=c("white","forestgreen"),zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+	image( presencegrid,
+	       col=c("white","forestgreen"),
+	       zlim=c(0,1),
+	       asp=1,
+	       bty="n",
+	       xaxt="n",yaxt="n")
 	if(i==2){
-		legend(	x=max(mapgrid$x),y=max(mapgrid$y),
-						legend=c("Present","Absent"),
-						fill=c("forestgreen","white"),
-						bty="n",
-						cex=1.2)}
+		legend( x=max(mapgrid$x),y=max(mapgrid$y),
+            legend=c("Present","Absent"),
+            fill=c("forestgreen","white"),
+            bty="n",
+            cex=1.2)}
 	mtext(criteria.labels[i],side=3,line=2,cex=1.2)
 	mtext(paste("threshold =",thresh),side=3,line=.5,cex=1)
 }
@@ -1196,19 +1457,20 @@ par(opar)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example 3 - Stochastic Gradient Boosting - Binary Response}
 
-Example 3 models the same data as previous examples, but this time with Stochastic Gradient Boosting. Stochastic Gradient Boosting does not have the option of out-of-bag estimates for model validation. To use all of the data for model building and avoid setting aside an independent test set use cross-validation for model validation. 
 
-(Note: in the \pkg{gbm} package, the function \code{gbm.perf()} offers the optional argument \code{method = "OOB"}, however, this argument specifies the technique to be used to estimated the best number of trees (\code{n.trees}), and is not a method for SGB model prediction.)
+\subsection{Example 3 - Random Forest - Categorical Response}
+
+Example 3 builds a categorical response model for vegetation category. The response variable consists of four categories: TREE, SHRUB, OTHERVEG, and NONVEG. This model will use the same predictors as Model 2. Out-of-bag estimates are used for model validation.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Set up}
 
+
 Define model type. 
 
 << Ex3 Define model type, results=hide>>=
-model.type <- "SGB"
+model.type <- "RF"
 @
 
 Define data.
@@ -1226,33 +1488,32 @@ folder <- getwd()
 Define model filenames.
 
 << Ex3 Define model filename, results=hide>>=
-MODELfn.a    <- "VModelMapEx3a"
-MODELfn.b    <- "VModelMapEx3b"
+MODELfn    <- "VModelMapEx3"
 @
 
-Example 3 uses the same predictors as example 2.
+Define the predictors. These are the five continuous predictors from the first example, plus one categorical predictor layer, the thematic layer of predicted land cover classes from the National Land Cover Dataset. The argument \code{predFactor} is used to specify the categorical predictor.
 
 << Ex3 Define predictors, results=hide>>=
-predList <- c(	"ELEV250","NLCD01_250",
-								"EVI2005097","NDV2005097","NIR2005097","RED2005097"
-								)
+predList <- c( "ELEV250",
+               "NLCD01_250",
+               "EVI2005097",
+               "NDV2005097",
+               "NIR2005097",
+               "RED2005097")
 predFactor <- c("NLCD01_250")
 @
 
-
-Define the response variable, and whether it is continuous or binary. 
+Define the data column to use as the response, and if it is continuous, binary or categorical.  
 
 <<Ex3 Define response, results=hide>>=
-response.name.a <- "PINYON"
-response.name.b <- "SAGE"
-response.type <- "binary"
+response.name <- "VEGCAT"
+response.type <- "categorical"
 @
 
 Define the seeds for each model.
 
 <<Ex3 set seed, results=hide>>=
-seed.a <- 42
-seed.b <- 43
+seed <- 44
 @
 
 Define the column that contains unique identifiers.
@@ -1270,8 +1531,429 @@ numrows=500
 Define raster look up table.
 
 <<Ex3 update raster LUT, results=hide>>=
+rastLUTfn     <- "VModelMapData_LUT.csv"
+rastLUTfn     <- read.table( rastLUTfn,
+                             header=FALSE,
+                             sep=",",
+                             stringsAsFactors=FALSE)
+rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
+@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Model creation}
+
+Create the model.  Because Out-Of-Bag predictions will be used for model diagnostics, the full dataset can be used as training data. To do this, set \code{qdata.trainfn <- qdatafn}, \code{qdata.testfn <- FALSE} and \code{v.fold = FALSE}. 
+
+<<Ex3 Create Model, results=hide>>=
+model.obj.ex3 <- model.build( model.type=model.type,
+                               qdata.trainfn=qdatafn,
+                               folder=folder,
+                               unique.rowname=unique.rowname,               
+                               MODELfn=MODELfn,
+                               predList=predList,
+                               predFactor=predFactor,
+                               response.name=response.name,
+                               response.type=response.type,
+                               seed=seed)
+           
+@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Model Diagnostics}
+
+Make Out-Of-Bag model predictions on the training data and run the diagnostics on these predictions.  Save JPEG, PDF, and PS versions of the diagnostic plots. 
+
+Out of Bag model predictions for a Random Forest model are not stochastic, so it is not necessary to set the seed.
+
+Since this is a categorical response model model diagnostics include a CSV file the observed and predicted values, as well as a CSV file of the confusion matrix and its associated Kappa value. 
+
+<<Ex3 Model Diagnostics, results=hide>>=
+model.pred.ex3 <- model.diagnostics( model.obj=model.obj.ex3,
+                                      qdata.trainfn=qdatafn,
+                                      folder=folder,           
+                                      MODELfn=MODELfn,
+                                      unique.rowname=unique.rowname,
+                             # Model Validation Arguments
+                                      prediction.type="OOB",
+                                      device.type="pdf",
+                                      cex=1.2)
+           
+@
+
+Take a closer look at the text file output for the confusion matrix. Read this file into \proglang{R} now. 
+
+<<Ex3 Confusion Matrix Show>>=
+CMX.CSV <- read.table(   paste( MODELfn,"_pred_cmx.csv",sep=""),
+                                header=FALSE,
+                                sep=",",
+                                stringsAsFactors=FALSE)
+
+CMX.CSV
+@
+
+This table is designed to be easily interpreted in Excel, but is not very workable for carrying out analysis in R.  The \code{model.diagnostics()} function also outputs a CSV file of the observed and predicted values. 
+
+<<Ex3 Observed and Predicted Show>>=
+PRED <-read.table(   paste( MODELfn,"_pred.csv",sep=""),
+                            header=TRUE,
+                            sep=",",
+                            stringsAsFactors=TRUE)
+head(PRED)
+@
+
+For categorical models, this file contains the observed category for each location, the category predicted by majority vote, as well as one column for each category observed in the data, giving the proportion of trees that voted for that category.
+
+To calculate the confusion matrix from this file we will use the observed and predicted columns. The \code{read.table()} function will convert columns containing character strings to factors. If the categories had been numerical, the \code{as.factor()} function can be used to convert the columns to factors. Because there may be catergories present in the observed data that are missing from the predictions (and vice versa), to get a symetric confusion matrix it is important to make sure all levels are present in both factors. 
+
+The following code will work for both numerical and character categories:
+
+<<Ex3 Prevalence Table Show>>=
+#
+#these lines are needed for numeric categories, redundant for character categories
+#
+PRED$pred<-as.factor(PRED$pred)
+PRED$obs<-as.factor(PRED$obs)
+#
+#adjust levels so all values are included in both observed and predicted
+#
+LEVELS<-unique(c(levels(PRED$pred),levels(PRED$obs)))
+PRED$pred<-factor(PRED$pred,levels=LEVELS)
+PRED$obs<- factor(PRED$obs, levels=LEVELS)
+#
+#calculate confusion matrix
+#
+CMX<-table( predicted=PRED$pred, observed= PRED$obs)
+CMX
+@
+
+To find Kappa for the confusion matrix, the \pkg{PresenceAbsence} package function \code{Kappa()} is used. Note that while most of the functions in the \pkg{PresenceAbsence} package are only applicable to binary confusion matrices, the \code{Kappa()} function will work on any size confusion matrix.
+
+<<Ex3 Kappa Show>>=
+CMX.KAPPA<-Kappa(CMX)
+CMX.KAPPA
+@
+
+As in continuous and binary models, the \code{model.diagnostics()} function creats the variable importance graph \mbox{(Figure \ref{fig:Ex3VarImp}).} 
+ 
+ \begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx3_pred_importance}
+\end{center}
+\caption{\label{fig:Ex3VarImp} Example 3 - Variable importance graph for vegetation category.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Comparing Variable Importance}
+
+In example 1 the \code{model.importance.plot()} function was used to compare the importance between two continuous Random Forest models, for percent cover of Pinyon and of Sage. Here we will compare the variable importances of the binary models from Example 2 with the categorical model we have just created in example 3 \mbox{(Figure \ref{fig:Ex3Comp}).} We are examining the question ``Are the same predictors important for determining vegetaion category as were important for determining species presence?'' Keep in mind that to use \code{model.importance.plot()} the two models must be built from the same predictor variables. For example, we could not use it to compare the models from Example 1 and Example 3, because in Example 1 \code{"NLCD01_250"} was not included in the predictors.
+
+<<Ex3CompImp,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+model.importance.plot( model.obj.1=model.obj.ex2a,
+                       model.obj.2=model.obj.ex3,
+                       model.name.1="Pinyon",
+                       model.name.2="VEGCAT",
+                       type.label=FALSE,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Presence vs VEGCAT",
+                       device.type="none",
+                       cex=0.9)
+                      
+model.importance.plot( model.obj.1=model.obj.ex2b,
+                       model.obj.2=model.obj.ex3,
+                       model.name.1="Sage",
+                       model.name.2="VEGCAT",
+                       type.label=FALSE,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Presence vs VEGCAT",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex3CompImpFig,fig=TRUE,echo=FALSE, width=7.5,height=7.5>>=
+<<Ex3CompImp>>
+@
+\end{center}
+\caption{\label{fig:Ex3Comp}Example 3 - Comparison of variable importances between categorical model of vegetation category (VEGCAT) and binary models for Pinyon presence and Sage presence.}
+\end{figure}
+
+With categorical models the \code{model.importance.plot()} function also can be usde to compare the variable importance between categories of the same model. The importance measure used for category specific importance is the relative influence of each variable, calculated by randomly permuting each predictor variable, and looking at the decrease in model accuracy associated with each predictor. 
+
+<<Ex3CompCatImp,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+model.importance.plot( model.obj.1=model.obj.ex3,
+                       model.obj.2=model.obj.ex3,
+                       model.name.1="SHRUB",
+                       model.name.2="TREE",
+                       class.1="SHRUB",
+                       class.2="TREE",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="VEGCAT - SHRUB vs. TREE",
+                       device.type="none",
+                       cex=0.9) 
+                      
+model.importance.plot( model.obj.1=model.obj.ex3,
+                       model.obj.2=model.obj.ex3,
+                       model.name.1="OTHERVEG",
+                       model.name.2="NONVEG",
+                       class.1="OTHERVEG",
+                       class.2="NONVEG",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="VEGCAT - OTHERVEG vs. NONVEG",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Category Specific Variable Importance",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex3CompCatImpFig,fig=TRUE,echo=FALSE, width=7.5,height=7.5>>=
+<<Ex3CompCatImp>>
+@
+\end{center}
+\caption{\label{fig:Ex3CompCat}Example 3 - Category specific comparison of variable importances for the model of vegetation category (VEGCAT). National Land Cover DATA (NLCD) and elevation (ELEV) are the most important predictor variables for both TREE and SHRUB categories, though the relative importance of the remote sensing bands differs between these two categories. ELEV is relativly less important for the NONVEG and OTHERVEG categories, while ELEV is important for classifying OTHERVEG but relativly unimportant for the classifying NONVEG. In other words, if the model lost the information contained in NLCD and ELEV, the predictions for TREE and SHRUB categories would suffer, but there would be less of an effect on the prediction accuracy for NONVEG. The predictions for OTHERVEG would suffer if NLCD were removed from the model, but would lose relativly little accuracy if ELEV were removed.}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Interaction Plots}
+
+We will look at how the \code{model.interaction.plot()} function behaves with a categorical response variable. With categorical models, interactions can affect one prediction category, without influencing other categories.  For example, if modelling disturbance type, it is possible that landslides might be influenced by an interaction between soil type and slope, while fires might be influenced by both variables individually, but without any interaction.
+
+Therefore when calling \code{model.interaction.plot()} it is neccessary to specify a particular category. The function then will graph how the probability of that category varies as a function of the two specified predictor variables. 
+
+Here we look at the interaction between elevation and land cover class for two of our response categories \mbox{(Figure \ref{fig:Ex3SHRUBElevNlcd}, Figure \ref{fig:Ex3NONVEGElevNlcd} ).}
+
+
+<<Ex3 Interaction Plots, results=hide>>=
+model.interaction.plot( model.obj.ex3,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn,
+                        folder=folder,
+                        response.category="SHRUB")
+
+	
+																									
+model.interaction.plot( model.obj.ex3,
+                        x="ELEV250",
+                        y="NLCD01_250",
+                        main=response.name,
+                        plot.type="image",
+                        device.type="pdf",
+                        MODELfn=MODELfn,
+                        folder=folder,
+                        response.category="NONVEG")
+
+@
+
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx3_SHRUB_image_ELEV250_NLCD01_250}
+\end{center}
+\caption{\label{fig:Ex3SHRUBElevNlcd}Example 3 - Interaction plot for SHRUB vegetation category (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Image plot, with darker green indicating higher probability of being assigned to the specified category. Here we see the direct effect of  NLCD class: SHRUB has a low probability of being assigned to landcover class 42. We also see a direct effect of elevation, with SHRUB having a slightly higher probability of being assigned to middle elevations. There is little evidence of interaction between these two predictors, since relationship of probability to elevation is similar for all land cover classes.}
+\end{figure}
+
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx3_NONVEG_image_ELEV250_NLCD01_250}
+\end{center}
+\caption{\label{fig:Ex3NONVEGElevNlcd}Example 3 - Interaction plot for NONVEG vegetation category (RF model), showing interactions between elevation and National Land Cover Dataset classes (ELEV250 and NLCD01\_250). Image plot, with darker green indicating higher probability of being assigned to the specified category. NONVEG has a much higher chance of being assigned than SHRUB in all combinations of the two predictor variables, reflecting its higher prevalence in the training data (56\% as opposed to 19\%). NONVEG does show some interaction between landcover class and elevation. In all land cover classes NONVEG has a higher chance of being predicted at low elevations, but while in most land cover classes the probability goes down at elevations above 1400m, in land cover class 42 NONVEG matains a high chance of being predicted to over 2000m. }
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Map production}
+
+The function \code{model.mapmake()} creates an ascii text files and an imagine image file of predictions for each map pixel. 
+
+<<Ex3 Produce Maps, results=hide>>=
+
+model.mapmake( model.obj=model.obj.ex3,
+               folder=folder,           
+               MODELfn=MODELfn,
+               rastLUTfn=rastLUTfn,
+               na.action="na.omit",
+          # Mapping arguments
+               numrows=numrows)
+            
+@
+
+With categorical models, the \code{model.mapmake()} function outputs a map file, using integer codes for each category, along with a table relating these codes to the original categories. In this example \code{na.action} was set to \code{"na.omit"}, therefore pixels with factored predictors with values not found in the training data will be omited from the map. 
+
+Take a look at the codes:
+
+<<Ex3 Code key Show>>=
+
+MAP.CODES<-read.table( paste(MODELfn,"_map_key.csv",sep=""),
+                       header=TRUE,
+                       sep=",",
+                       stringsAsFactors=FALSE)
+
+MAP.CODES           
+@
+
+Column one gives the row number for each code. Column two gives the category names. Column three gives the integer codes used to represent each category in the map output. In this example the categories in the training data are character strings, and \code{model.mapmake()} assigned the integers 1 through the Number of categories. If the training data categories were already numeric codes, for example, \code{c(30,42,50,80)}, then \code{model.mapmake()} would keep the original values in the map output, and columns two and three would contain the same values.
+
+Next we define a color for each category. The \code{colors()} function will generate a list of the possible color names. Some are quite poetical.
+
+<<Ex3 define color sequence, results=hide>>=
+
+MAP.CODES$colors<-c("bisque3","springgreen2","paleturquoise1","green4")
+MAP.CODES
+@
+
+
+
+Import the map output and transform the map output values to the row indices of the map codes. 
+
+Note that here in example 3, where the categories are character strings, the integer codes from from column three are already the same as the row indices from column one, so this step is not strictly neccessary. However, if the categories in the training data had been unevenly spaced numeric codes, for example, \code{c(30,42,50,80)}, then \code{model.mapmake()} would keep the original values in the output. In this case, to produce a map in R with the \code{image()} function (as opposed to viewing the image in a GIS environment) it is neccessary to replace each category name with an evenly spaced index number in order to match each category to a color.
+
+<<Ex3 Import data, results=hide>>=
+
+mapgrid <- read.asciigrid(paste(MODELfn,"_map.txt",sep=""),as.image=TRUE)
+mapgrid$z[]<-MAP.CODES$row[match(mapgrid$z[],MAP.CODES$integercode)]
+@
+
+Produce the map \mbox{(Figure \ref{fig:Ex3Map})}.
+
+<<Ex3ProductionMaps,include=TRUE,width=7.5,height=10, results=hide>>=
+
+opar <- par(mfrow=c(1,1),mar=c(3,3,2,1),oma=c(0,0,3,8),xpd=NA)
+
+image(mapgrid, col = MAP.CODES$colors,zlim=c(1,nrow(MAP.CODES)),asp=1,bty="n",xaxt="n",yaxt="n")
+
+mtext(response.name,side=3,line=1,cex=1.2)
+
+legend( x=max(mapgrid$x),y=max(mapgrid$y),
+        legend=MAP.CODES$category,
+        fill=MAP.CODES$colors,
+        bty="n",
+        cex=1.2)
+				    
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex3ProductionMapsFig,fig=TRUE,echo=FALSE, width=7.5,height=10>>=
+<<Ex3ProductionMaps>>
+@
+\end{center}
+\caption{\label{fig:Ex3Map}Example 3 - Map of predicted vegetation category (RF model). The white pixels found just below the center of this map idicate pixels with factored predictor variables that have values not found in the training data.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example 4 - Stochastic Gradient Boosting - Binary Response}
+
+Example 4 models the same data as previous examples, but this time with Stochastic Gradient Boosting. Stochastic Gradient Boosting does not have the option of out-of-bag estimates for model validation. To use all of the data for model building and avoid setting aside an independent test set use cross-validation for model validation. 
+
+(Note: in the \pkg{gbm} package, the function \code{gbm.perf()} offers the optional argument \code{method = "OOB"}, however, this argument specifies the technique to be used to estimated the best number of trees (\code{n.trees}), and is not a method for SGB model prediction.)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Set up}
+
+Define model type. 
+
+<< Ex4 Define model type, results=hide>>=
+model.type <- "SGB"
+@
+
+Define data.
+
+<<Ex4 Define training and test files, results=hide>>=
+qdatafn <- "VModelMapData.csv"
+@
+
+Define \code{folder}.
+
+<<Ex4 define folder, results=hide>>=
+folder <- getwd()
+@
+
+Define model filenames.
+
+<< Ex4 Define model filename, results=hide>>=
+MODELfn.a    <- "VModelMapEx4a"
+MODELfn.b    <- "VModelMapEx4b"
+@
+
+Example 4 uses the same predictors as example 2.
+
+<< Ex4 Define predictors, results=hide>>=
+predList <- c( "ELEV250",
+               "NLCD01_250",
+               "EVI2005097",
+               "NDV2005097",
+               "NIR2005097",
+               "RED2005097")
+predFactor <- c("NLCD01_250")
+@
+
+
+Define the response variable, and whether it is continuous, binary or categorical. 
+
+<<Ex4 Define response, results=hide>>=
+response.name.a <- "PINYON"
+response.name.b <- "SAGE"
+response.type <- "binary"
+@
+
+Define the seeds for each model.
+
+<<Ex4 set seed, results=hide>>=
+seed.a <- 42
+seed.b <- 43
+@
+
+Define the column that contains unique identifiers.
+
+<<Ex4 Define Identifier, results=hide>>=
+unique.rowname <- "ID"
+@
+
+Define numrows.
+
+<<Ex4 Define numrows, results=hide>>=
+numrows=500
+@
+
+Define raster look up table.
+
+<<Ex4 update raster LUT, results=hide>>=
 rastLUTfn   <- "VModelMapData_LUT.csv"
-rastLUTfn     <- read.table(rastLUTfn,header=FALSE,sep=",",stringsAsFactors=FALSE)
+rastLUTfn     <- read.table( rastLUTfn,
+                             header=FALSE,
+                             sep=",",
+                             stringsAsFactors=FALSE)
 rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 @
 
@@ -1280,10 +1962,11 @@ rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 
 Create the model and run the model validation diagnostics, this time saving JPEG, PDF, and PS versions of the diagnostic plots. 
 
-<<Ex3 Create Model, results=hide>>=
-model.obj.ex3a <- model.build( model.type=model.type,
+<<Ex4 Create Model, results=hide>>=
+model.obj.ex4a <- model.build( model.type=model.type,
                                qdata.trainfn=qdatafn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,               
                                MODELfn=MODELfn.a,
                                predList=predList,
                                predFactor=predFactor,
@@ -1291,9 +1974,10 @@ model.obj.ex3a <- model.build( model.type=model.type,
                                response.type=response.type,
                                seed=seed.a)
            
-model.obj.ex3b <- model.build( model.type=model.type,
+model.obj.ex4b <- model.build( model.type=model.type,
                                qdata.trainfn=qdatafn,
-                               folder=folder,           
+                               folder=folder,
+                               unique.rowname=unique.rowname,               
                                MODELfn=MODELfn.b,
                                predList=predList,
                                predFactor=predFactor,
@@ -1309,7 +1993,7 @@ Make cross validation model predictions on the training data and run the diagnos
 
 Model predictions using cross validation are stochastic, so it is necessary to set the seed.
 
-This time, set  \code{na.action = "na.roughfix"}. With this option, if the categorical predictor \code{NLCD01_250} has categories present in the validation data that were not present in the training data, the most common category from the training data will be substituted for the new, unknown category. When running cross-validation, this can be a common occurrence, especially if it is a small dataset with many categories. When this does occur, \code{model.map()} will generate warnings:
+This time, set  \code{na.action = "na.roughfix"}. Even though the original dataset does not contain NA values, with cross-validation, a categorical predictor \code{NLCD01_250} may have categories present in one of the folds that were not present in any of the other folds. The roughfix option will subsitute the most common category from the training data for the new, unknown category. When running cross-validation, this can be a common occurrence, especially if it is a small dataset with many categories. When this does occur, \code{model.map()} will generate warnings:
 
 \begin{Schunk}
 \begin{Soutput}
@@ -1325,20 +2009,20 @@ This time, set  \code{na.action = "na.roughfix"}. With this option, if the categ
 
 Again, the \code{model.diagnostics()} function creates diagnostic graphs and saves a file of observed and predicted values. In the case of Cross Validation predictions, there is an additional column listing the assigned fold for each data point. Variable importance was almost identical for the SGB model and the RF model in Example 2. The AUC for Pinyon also very similar for the two models (0.95 for SGB verses 0.97 for RF). The SGB model for Sage, however, had a stronger AUC than the RF model (0.80 for SGB verse 0.70 for RF). 
 
-<<Ex3 Model Diagnostics, results=hide>>=
-model.pred.ex3a <- model.diagnostics( model.obj=model.obj.ex3a,
+<<Ex4 Model Diagnostics, results=hide>>=
+model.pred.ex4a <- model.diagnostics( model.obj=model.obj.ex4a,
                                       qdata.trainfn=qdatafn,
                                       folder=folder,           
                                       MODELfn=MODELfn.a,
                                       unique.rowname=unique.rowname,
                                       seed=44,
                              # Model Validation Arguments
-                  				            prediction.type="CV",
+                                      prediction.type="CV",
                                       device.type=c("jpeg","pdf","postscript"),
                                       cex=1.2,
                                       na.action = "na.roughfix")
            
-model.pred.ex3b <- model.diagnostics( model.obj=model.obj.ex3b,
+model.pred.ex4b <- model.diagnostics( model.obj=model.obj.ex4b,
                                       qdata.trainfn=qdatafn,
                                       folder=folder,           
                                       MODELfn=MODELfn.b,
@@ -1356,147 +2040,195 @@ model.pred.ex3b <- model.diagnostics( model.obj=model.obj.ex3b,
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3a_pred_importance}
+\includegraphics{VModelMapEx4a_pred_importance}
 \end{center}
-\caption{\label{fig:Ex3aVarImp}Example 3 - Variable importance graph for Pinyon presence (SGB model).}
+\caption{\label{fig:Ex4aVarImp}Example 4 - Variable importance graph for Pinyon presence (SGB model).}
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_pred_importance}
+\includegraphics{VModelMapEx4b_pred_importance}
 \end{center}
-\caption{\label{fig:Ex3bVarImp}Example 3 - Variable importance graph for Sage presence (SGB model).}
+\caption{\label{fig:Ex4bVarImp}Example 4 - Variable importance graph for Sage presence (SGB model).}
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3a_pred_thresholdplots}
+\includegraphics{VModelMapEx4a_pred_thresholdplots}
 \end{center}
-\caption{\label{fig:Ex3aThresh}Example 3 - Model quality and threshold selection graphs for Pinyon presence (SGB model).}
+\caption{\label{fig:Ex4aThresh}Example 4 - Model quality and threshold selection graphs for Pinyon presence (SGB model).}
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_pred_thresholdplots}
+\includegraphics{VModelMapEx4b_pred_thresholdplots}
 \end{center}
-\caption{\label{fig:Ex3bThresh}Example 3 - Model quality and threshold selection graphs for Sage presence (SGB model).}
+\caption{\label{fig:Ex4bThresh}Example 4 - Model quality and threshold selection graphs for Sage presence (SGB model).}
 \end{figure}
 
-<<Ex3 Optimal Threshold Table, results=hide>>=
-opt.thresh.a <- read.table(paste(MODELfn.a,"_pred_optthresholds.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+<<Ex4 Optimal Threshold Table, results=hide>>=
+opt.thresh.a <- read.table( paste(MODELfn.a,"_pred_optthresholds.csv",sep=""),
+                            header=TRUE,
+                            sep=",",
+                            stringsAsFactors=FALSE)
 opt.thresh.a[,-1]<-signif(opt.thresh.a[,-1],2)
 
-opt.thresh.b <- read.table(paste(MODELfn.b,"_pred_optthresholds.csv",sep=""),header=TRUE,sep=",",stringsAsFactors=FALSE)
+opt.thresh.b <- read.table( paste(MODELfn.b,"_pred_optthresholds.csv",sep=""),
+                            header=TRUE,
+                            sep=",",
+                            stringsAsFactors=FALSE)
 opt.thresh.b[,-1]<-signif(opt.thresh.b[,-1],2)
 @
 
 Here are the optimized thresholds for Pinyon:
 
-<<Ex3a Optimal Threshold Table Show>>=
+<<Ex4a Optimal Threshold Table Show>>=
 opt.thresh.a
 @
 
 And for Sage:
 
-<<Ex3b Optimal Threshold Table Show>>=
+<<Ex4b Optimal Threshold Table Show>>=
 opt.thresh.b
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Comparing Variable Importance}
+
+In previous examples the \code{model.importance.plot()} function was used to compare the importance between RF models for different response variables. Here we will compare the variable importances of two models for the same response variable, one an RF model and the other an SGB model. We will compare the the binary RF models from Example 2 with the SGB models we have just created \mbox{(Figure \ref{fig:Ex4Comp}).} 
+
+<<Ex4CompImp,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+model.importance.plot( model.obj.1=model.obj.ex2a,
+                       model.obj.2=model.obj.ex4a,
+                       model.name.1="RF",
+                       model.name.2="SGB",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Presence",
+                       device.type="none",
+                       cex=0.9)
+                      
+model.importance.plot( model.obj.1=model.obj.ex2b,
+                       model.obj.2=model.obj.ex4b,
+                       model.name.1="RF",
+                       model.name.2="SGB",
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Presence",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex4CompImpFig,fig=TRUE,echo=FALSE, width=7.5,height=7.5>>=
+<<Ex4CompImp>>
+@
+\end{center}
+\caption{\label{fig:Ex4Comp}Example 4 - Comparison of variable importances between RF and SGB binary models for Pinyon presence and Sage presence.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Interaction Plots}
 
-Here we will look at how the \code{pred.means} argument can be used in the \code{model.interaction.plot()} function for a more detailed examination of interactions between predictor variables.  For example, whecking for 30way interactions. The default behavior in \code{model.interaction.plot()} is to fix the unused predictor variables at either their means (for continuous predictors) or their most common value (for categorical predictors).  The \code{pred.means} argument allows setting these variables to other values. 
+We will look at how the \code{pred.means} argument can be used in the \code{model.interaction.plot()} function for a more detailed examination of interactions between predictor variables.  For example, when checking for 30way interactions. The default behavior in \code{model.interaction.plot()} is to fix the unused predictor variables at either their means (for continuous predictors) or their most common value (for categorical predictors).  The \code{pred.means} argument allows setting these variables to other values. 
 
-Here we look at the effect of two remote sensing bands on Sage presence at two different elevations within two of the NLCD cover classes.
+Here we look at the effect of two remote sensing bands on Sage presence at two different elevations within two of the NLCD cover classes\mbox{(Figure \ref{fig:Ex4bPerspEviNdv1},Figure \ref{fig:Ex4bPerspEviNdv2},Figure \ref{fig:Ex4bPerspEviNdv3},Figure \ref{fig:Ex4bPerspEviNdv4}).}
 
-<<Ex2 Interaction Plots, results=hide>>=
+<<Ex4 Interaction Plots, results=hide>>=
 ELEV<-c(1600,2100)
 NCLD<-c(30,80)
 
 for(j in ELEV){
 for(k in NCLD){
-			pred.means<-list(j,k)
-			names(pred.means)<-c("ELEV250","NLCD01_250")
-			model.interaction.plot(	model.obj.ex3b,
-							x="EVI2005097",
-							y="NDV2005097",
-							main=paste(response.name.b," (ELEV=",j,"  NCLD=",k,")",sep=""),
-							plot.type="persp",
-							device.type="pdf",
-							pred.means=pred.means,
-							theta=65,phi=25,
-							MODELfn=paste(MODELfn.b,"ELEV",j,"NCLD",k,sep="_"),
-							folder=folder
-						)
-		}}
-
+      pred.means<-list(j,k)
+      names(pred.means)<-c("ELEV250","NLCD01_250")
+      model.interaction.plot( model.obj.ex4b,
+                              x="EVI2005097",
+                              y="NDV2005097",
+                              main=paste(response.name.b," (ELEV=",j,"  NCLD=",k,")",sep=""),
+                              plot.type="persp",
+                              device.type="pdf",
+                              pred.means=pred.means,
+                              theta=65,phi=25,
+                              MODELfn=paste(MODELfn.b,"ELEV",j,"NCLD",k,sep="_"),
+                              folder=folder)
+}}
 
 @
 
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_ELEV_1600_NCLD_30_persp_EVI2005097_NDV2005097}
+\includegraphics{VModelMapEx4b_ELEV_1600_NCLD_30_persp_EVI2005097_NDV2005097}
 \end{center}
-\caption{\label{fig:Ex3bPerspEviNdv1}Example 3 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two remote sensing bands (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 30. Here we see that predicted Sage presence increases as NDV increases to 2500, then drops only slightly as NDV increases beyond 3000. Also, predicted presence is highest at mid values of EVI, and lowest at low values of EVI. }
+\caption{\label{fig:Ex4bPerspEviNdv1}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two remote sensing bands (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 30. Here we see that predicted Sage presence increases as NDV increases to 2500, then drops only slightly as NDV increases beyond 3000. Also, predicted presence is highest at mid values of EVI, and lowest at low values of EVI. }
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_ELEV_1600_NCLD_80_persp_EVI2005097_NDV2005097}
+\includegraphics{VModelMapEx4b_ELEV_1600_NCLD_80_persp_EVI2005097_NDV2005097}
 \end{center}
-\caption{\label{fig:Ex3bPerspEviNdv2}Example 3 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 80. Here, in NLCD class 80, predicted Sage presence is still highest at mid values of NDV, but falls sharply at high values of this predictor. Predicted presence is still highest at mid values of EVI, but in contrast to NLCD class 30, there is little difference between high and low values of this predictor. }
+\caption{\label{fig:Ex4bPerspEviNdv2}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 80. Here, in NLCD class 80, predicted Sage presence is still highest at mid values of NDV, but falls sharply at high values of this predictor. Predicted presence is still highest at mid values of EVI, but in contrast to NLCD class 30, there is little difference between high and low values of this predictor. }
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_ELEV_2100_NCLD_30_persp_EVI2005097_NDV2005097}
+\includegraphics{VModelMapEx4b_ELEV_2100_NCLD_30_persp_EVI2005097_NDV2005097}
 \end{center}
-\caption{\label{fig:Ex3bPerspEviNdv3}Example 3 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 30. At this combination of elevation and NLCD, NDV has much less influence on predicted Sage presence. There is a slight drop off of predicted presence at high values of this predictor, but otherwise the graph is flat along this axis. The effect of EVI is also different at this elevation when compared to the same NLCD class at the lower elevation. The rise in presence for mid-values of EVI is much weaker, and there is a slight drop off of predicted presence for high vales of EVI, which is the opposite effect as was seen at the lower elevation.  }
+\caption{\label{fig:Ex4bPerspEviNdv3}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 30. At this combination of elevation and NLCD, NDV has much less influence on predicted Sage presence. There is a slight drop off of predicted presence at high values of this predictor, but otherwise the graph is flat along this axis. The effect of EVI is also different at this elevation when compared to the same NLCD class at the lower elevation. The rise in presence for mid-values of EVI is much weaker, and there is a slight drop off of predicted presence for high vales of EVI, which is the opposite effect as was seen at the lower elevation.  }
 \end{figure}
 
 \begin{figure}
 \begin{center}
-\includegraphics{VModelMapEx3b_ELEV_2100_NCLD_80_persp_EVI2005097_NDV2005097}
+\includegraphics{VModelMapEx4b_ELEV_2100_NCLD_80_persp_EVI2005097_NDV2005097}
 \end{center}
-\caption{\label{fig:Ex3bPerspEviNdv4}Example 3 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 80. At this combination of elevation and NLCD, there is a sharp drop in predicted Sage presence with high values of NDV. This is similar to what was seen in this class at lower elevation, however, at the lower elevation there was also a drop in predicted presence with low NDV, which is not seen here. In NLCD class 80 the drop in predicted Sage presence at high EVI is even stronger than that seen in class 30. }
+\caption{\label{fig:Ex4bPerspEviNdv4}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 80. At this combination of elevation and NLCD, there is a sharp drop in predicted Sage presence with high values of NDV. This is similar to what was seen in this class at lower elevation, however, at the lower elevation there was also a drop in predicted presence with low NDV, which is not seen here. In NLCD class 80 the drop in predicted Sage presence at high EVI is even stronger than that seen in class 30. }
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Map production}
 
 Run \code{model.mapmake()} to create the maps. 
 
-<<Ex3 Produce Maps, results=hide>>=
+<<Ex4 Produce Maps, results=hide>>=
 
-model.mapmake( model.obj=model.obj.ex3a,
+model.mapmake( model.obj=model.obj.ex4a,
                folder=folder,           
                MODELfn=MODELfn.a,
                rastLUTfn=rastLUTfn,
+               na.action="na.roughfix",
           # Mapping arguments
                map=TRUE,
-               numrows=numrows,
-               na.action = "na.roughfix")
+               numrows=numrows)
             
 
-model.mapmake( model.obj=model.obj.ex3b,
+model.mapmake( model.obj=model.obj.ex4b,
                folder=folder,           
                MODELfn=MODELfn.b,
                rastLUTfn=rastLUTfn,
+               na.action="na.roughfix",
           # Mapping arguments
                map=TRUE,
-               numrows=numrows,
-               na.action = "na.roughfix")
+               numrows=numrows)
 @
 
-Map the probability surface (the probability that the species is present at each grid point) \mbox{(Figure \ref{fig:Ex3ProbSurf})}, using the color ramp defined in example 2.
+Map the probability surface (the probability that the species is present at each grid point) \mbox{(Figure \ref{fig:Ex4ProbSurf})}, using the color ramp defined in example 2.
 
-<<Ex3 define color sequence, results=hide>>=
-h=c(	seq(10,30,length.out=10),
+<<Ex4 define color sequence, results=hide>>=
+h=c(  seq(10,30,length.out=10),
 	    seq(31,40,length.out=10),
     	seq(41,90,length.out=60),
 	    seq(91,100,length.out=10),
 	    seq(101,110,length.out=10))
-l =c(	seq(25,40,length.out=10),
+l =c( seq(25,40,length.out=10),
 	    seq(40,90,length.out=35),
 	    seq(90,90,length.out=10),
 	    seq(90,40,length.out=35),
@@ -1504,7 +2236,7 @@ l =c(	seq(25,40,length.out=10),
 probpres.ramp <- hcl(h = h, c = 80, l = l)
 @
 
-<<Ex3ProbabilitySurface,include=TRUE,width=7.5,height=5.7, results=hide>>=
+<<Ex4ProbabilitySurface,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
 mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_map.txt",sep=""),as.image=TRUE)
@@ -1519,11 +2251,11 @@ mtext(response.name.a,side=3,line=1,cex=1.2)
 image(mapgrid.b, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend(	x=max(mapgrid.b$x),y=max(mapgrid.b$y),
-		legend=legend.label,
-		fill=legend.colors,
-		bty="n",
-		cex=1.2)
+legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+        legend=legend.label,
+        fill=legend.colors,
+        bty="n",
+        cex=1.2)
 				    
 mtext("Probability of Presence",side=3,line=1,cex=1.5,outer=T)
 par(opar)
@@ -1531,11 +2263,11 @@ par(opar)
 
 \begin{figure}
 \begin{center}
-<<Ex3ProductionMapsFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
-<<Ex3ProbabilitySurface>>
+<<Ex4ProductionMapsFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex4ProbabilitySurface>>
 @
 \end{center}
-\caption{\label{fig:Ex3ProbSurf}Example 3 - Probability surface maps for Pinyon and Sage presence (SGB models)}
+\caption{\label{fig:Ex4ProbSurf}Example 4 - Probability surface maps for Pinyon and Sage presence (SGB models)}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

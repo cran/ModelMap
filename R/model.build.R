@@ -13,9 +13,10 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
 				predList=NULL,
 				predFactor=FALSE,
 				response.name=NULL,
-				response.type=NULL,		# "binary", "continuous",
+				response.type=NULL,	# "binary", "continuous",
+				unique.rowname=NULL,	# Row identifier
 				seed=NULL,
-				na.action="na.omit",
+				na.action=NULL,
 				keep.data = TRUE,
 			# RF arguments:
 				ntree=500,
@@ -81,6 +82,24 @@ if(model.type=="" || is.null(model.type)){
 if(!model.type%in%c("RF","SGB")){
 	stop("ModelMap currently supports only RF and SGB for model.type")}
 
+
+#############################################################################################
+################################# Select Response Type ######################################
+#############################################################################################
+
+## If model.obj null, ask for response.type
+
+if(is.null(response.type)){
+	response.type <- select.list(c("continuous","binary","categorical"), title="Select response type.")}
+if(response.type=="" || is.null(response.type)){
+	stop("response.type is required")}	
+
+if(response.type=="categorical" && model.type=="SGB"){
+	stop("Categorical response only supported for Random Forest models")}
+
+if(!response.type%in%c("continuous","binary","categorical")){
+	stop("ModelMap currently supports only continuous, binary and categorical for response.type")}
+
 #############################################################################################
 ################################ Select Output Folder #######################################
 #############################################################################################
@@ -97,8 +116,7 @@ if(is.null(folder)){
 #############################################################################################
 
 
-print("folder:")
-print(folder)
+print(paste("folder =", folder))
 
 ## MODELfn
 if(is.null(MODELfn)){
@@ -144,17 +162,6 @@ if (is.null(response.name)){
 
 print(paste("response.name =",response.name))
 
-## If model.obj null, ask for response.type
-
-if(is.null(response.type)){
-	response.type <- select.list(c("continuous","binary"), title="Select response type.")}
-if(response.type=="" || is.null(response.type)){
-	stop("response.type is required")}
-if(response.type=="categorical"){response.type<-"binary"}	
-
-if(!response.type%in%c("continuous","binary")){
-	stop("ModelMap currently supports only continuous and binary for response.type")}
-
 #############################################################################################
 ##################################### Check Strata ##########################################
 #############################################################################################
@@ -170,21 +177,6 @@ if(!is.null(strata)){
 }  
 
 
-#############################################################################################
-################################ Load Libraries #############################################
-#############################################################################################
-
-## Loads necessary libraries.
-
-print("loading libraries")
-
-if(model.type=="RF" || na.action=="na.roughfix"){library(randomForest)}
-if(model.type=="SGB"){library(gbm)}
-
-#	'gbm'	is only used for SGB models
-#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
-
-
 
 #############################################################################################
 ################################### Select Predictors #######################################
@@ -194,7 +186,7 @@ if(model.type=="SGB"){library(gbm)}
 ##	pop-up window user selection. If the predictor list is NULL, allows user to  
 ##	select the predictors from collumn names of training data
 
-print("Select predictors")
+#print("Select predictors")
 
 if(is.null(predList)){
 
@@ -219,9 +211,9 @@ if(is.null(predList)){
 ############################## Select Factored Predictors ###################################
 #############################################################################################
 
-print("About to pick factored predictors")
-print("predFactor:")
-print(predFactor)
+#print("Select factored predictors")
+#print(paste("     predFactor =",predFactor)
+
 
 factored.qdata<-sapply(qdata[,match(predList,names(qdata))],is.factor)
 character.qdata<-sapply(qdata[,match(predList,names(qdata))],is.character)
@@ -251,16 +243,127 @@ if(!any(predFactor==FALSE)){
 }
 
 #############################################################################################
-###################################### Deal with NA #########################################
+######################## Select unique row identifier #######################################
 #############################################################################################
 
+if (is.null(unique.rowname)){
+	unique.rowname <- select.list(c(names(qdata),"row_index"), title="Select unique row identifier")	
+	if(unique.rowname!="row_index" && unique.rowname!=""){
+		rownames(qdata)<-qdata[,unique.rowname]
+	}	
+}else{
+	if(!(unique.rowname%in%names(qdata))){
+		warning("unique.rowname",unique.rowname,"not found in qdata, row index numbers will be used instead")
+		unique.rowname<-FALSE
+	}
+	if(unique.rowname!=FALSE){
+		rownames(qdata)<-qdata[,unique.rowname]
+	}
+}
 
-if(na.action=="na.roughfix"){
-	warning("Replacing NA predictors with median value or most common category")
-	qdata[,predList]<-na.roughfix(qdata[,predList])
+#############################################################################################
+######################### Drop unused columns of qdata ######################################
+#############################################################################################
+
+qdata<-qdata[,c(predList,response.name)]
+
+#############################################################################################
+################################ Load Libraries #############################################
+#############################################################################################
+
+## Loads necessary libraries.
+
+#print("loading libraries")
+
+if(model.type=="RF" ){library(randomForest)}
+if(model.type=="SGB"){library(gbm)}
+
+#	'gbm'	is only used for SGB models
+#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
+
+#############################################################################################
+############################### Determine NA.ACTION #########################################
+#############################################################################################
+
+###create logical vector of datarows containing NA in predictors or reponses###
+
+NA.pred<-apply(qdata[,predList],1,function(x){any(is.na(x))})
+NA.resp<-is.na(qdata[,response.name])
+NA.data<-NA.pred|NA.resp
+
+### if any NA in data ###
+
+#NA.ACTION is character string. Choices: "omit", "rough.fix".
+#na.action is the actual function, no quotes.
+
+if(any(NA.data)){
+
+	###Check if na.action is valid###
+
+	NAvalid<-c("na.omit","na.roughfix")
+	NAwarn<-"ModelMap currently supports only \"na.omit\" and \"na.roughfix\" for 'na.action'"
+
+	if(is.null(na.action)){
+		na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
+		if(na.action=="" || is.null(na.action)){
+			stop("NA found in data, therefore na.action is required")}
+		if(!na.action%in%NAvalid){stop(NAwarn)}
+	}else{
+		if(is.function(na.action)){
+			 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+		}else{
+			if(!na.action%in%NAvalid){stop(NAwarn)}
+		}
+	}
+
+	#make NA.ACTION characters without "na."
+	NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
+	#turn na.action into function
+	na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
+
+	if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
 }
 
 
+
+#############################################################################################
+################################ Deal with NA's #############################################
+#############################################################################################
+
+if(any(NA.data)){
+
+	###na.omit###
+
+	if(NA.ACTION=="omit"){
+		print("Omiting data points with NA predictors or NA response")
+		warning(paste(sum(NA.data), "data point(s) with NA values for prdictor or response omitted"))
+		qdata<-na.action(qdata)
+	}
+	
+
+	###na.roughfix###
+
+	if(NA.ACTION=="roughfix"){
+		
+		#for(i in 1:ncol(qdata)){
+		#	print(names(qdata)[i])
+		#	print(mode(qdata[,i]))
+		#}
+
+
+
+		print("Replacing NA predictors and responses with median value or most common category")
+		if(any(NA.resp)){warning(paste(sum(NA.data), "data point(s) with NA values (including", sum(NA.resp),"point(s) with NA response) replaced with median/most common response"))
+		}else{warning(paste(sum(NA.data), "data point(s) with NA values replaced with median/most common value"))}
+
+		qdata<-na.roughfix(qdata)
+
+		na.ac<-(1:nrow(qdata))[NA.data]
+		names(na.ac)<-rownames(qdata)[NA.data]
+		class(na.ac)<-NA.ACTION
+		attr(qdata,"na.action")<-na.ac
+	}
+}
 
 #############################################################################################
 ####################################### Build Model #########################################
@@ -269,7 +372,7 @@ if(na.action=="na.roughfix"){
 if(!is.null(seed)){
 	set.seed(seed)}
 
-print("About to create model")
+#print("About to create model")
 
 if (model.type=="RF"){
 	model.obj<-create.model(qdata=qdata,
@@ -314,7 +417,17 @@ if(model.type=="SGB"){
 ################# add a copy of the predictor data to the model object ######################
 #############################################################################################
 
-if(keep.data){model.obj$predictor.data<-qdata[,predList]}
+#if(keep.data){model.obj$predictor.data<-qdata[,predList]}
+
+if(keep.data){model.obj$predictor.data<-qdata}
+
+#############################################################################################
+########################## add 'na.action' to the model object ##############################
+#############################################################################################
+
+if(sum(NA.data>0)){
+	model.obj$na.action<-attr(qdata,"na.action")
+}
 
 #############################################################################################
 ################################## Write a list of argumets #################################
@@ -334,8 +447,8 @@ if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
 A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
-print("ARGfn:")
-print(ARGfn)
+#print(paste("ARGfn =",ARGfn))
+
 
 capture.output(print(A),file=ARGfn)
 

@@ -4,9 +4,11 @@ model.interaction.plot <-
 function(	model.obj=NULL,
 		x = NULL,					# the first variable to be plotted
 		y = NULL,					# the second variable to be plotted
+		response.category=NULL,			# for categorical response, which category to show in plot 
 		qdata.trainfn=NULL,			# if RF model was built outside ModelMap, need to supply training data 
 		folder=NULL,				# No ending slash, to output to working dir = getwd()
 		MODELfn=NULL,
+		PLOTfn=NULL,
 		pred.means = NULL,			# allows specification of values for other variables
 		xlab = NULL,				# allows manual specification of the x label
 		ylab = NULL,				# and y label
@@ -174,10 +176,18 @@ n.preds <- length(predList)
 ### Extract Response Type from model.obj ###
 
 if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")}
+	response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
+	if(response.type=="classification"){
+		if(identical(levels(model.obj$y),c("0","1"))){
+			response.type<-"binary"
+		}else{
+			response.type<-"categorical"}}}
 if(model.type=="SGB"){
 	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
 if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
+
+
+### Extract Response Name from model.obj ###
 
 if(!is.null(model.obj$response)){
 	response.name<-model.obj$response
@@ -185,13 +195,22 @@ if(!is.null(model.obj$response)){
 	response.name<-""
 }
 
-### check output filename ###
+### check response.category ###
 
-## MODELfn
-if(is.null(MODELfn)){
-	MODELfn<- paste(model.type,"_",response.type,"_",response.name,sep="")}
+if(response.type=="categorical"){
+	if(is.null(response.category)){
+		response.levels<-levels(model.obj$y)
+		response.category <- select.list(response.levels, title="Select response category.")
+		if(response.category=="" || is.null(response.category)){
+			stop("Must choose response category.")
+		}
+	}
+	response.category<-as.character(response.category)
+}	
 
-if(identical(basename(MODELfn),MODELfn)){MODELfn<-paste(folder,"/",MODELfn,sep="")}
+
+
+
 
 ### define x labels ###
 
@@ -384,6 +403,11 @@ if(model.type=="RF"){
 	if(response.type=="binary"){
 		prediction<-predict(model.obj, pred.frame,type="vote")[,"1"]
 	}
+
+	if(response.type=="categorical"){
+		prediction<-predict(model.obj, pred.frame,type="vote")[,response.category]
+	}
+
 	if(response.type=="continuous"){
 		prediction<-predict(model.obj, pred.frame)
 	}
@@ -406,7 +430,7 @@ max.pred <- max(prediction)
 cat("maximum value = ",round(max.pred,2),"\n")
 
 if (is.null(z.range)) {
-	if (response.type == "binary") {
+	if (response.type == "binary" || response.type == "categorical") {
 		z.range <- c(0,1)
 	} 
 	if(response.type == "poisson"){
@@ -456,34 +480,53 @@ if (smooth == "average") {  #apply a 3 x 3 smoothing average
 ###################################  Plot ##############################################
 ########################################################################################
 
+### check output filename ###
 
-if(!"none"%in%device.type){
-for(i in 1:length(device.type)){
-
-#####################################################################################
-	### Output filenames ###
-
-if(device.type[i] == "default"){
+if(is.null(PLOTfn)){
+	if(is.null(MODELfn)){
+		if(response.type=="categorical"){
+			PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",response.category,"_",plot.type,"_",x.name,"_",y.name,sep="")
+		}else{
+			PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",plot.type,"_",x.name,"_",y.name,sep="")
+		}
+	}else{
+		if(response.type=="categorical"){
+			PLOTfn<- paste(MODELfn,"_",response.category,"_",plot.type,"_",x.name,"_",y.name,sep="")
+		}else{
+			PLOTfn<- paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,sep="")
+		}
+	}
 }
 
+if(identical(basename(PLOTfn),PLOTfn)){PLOTfn<-paste(folder,"/",PLOTfn,sep="")}
+
+### loop thru devices ###
+
+#if(!"none"%in%device.type){
+for(i in 1:length(device.type)){
+
+### Output filenames ###
+
 if(device.type[i] == "jpeg"){
-	INTERACTIONfn<-paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,".jpg",sep="")
+	INTERACTIONfn<-paste(PLOTfn,".jpg",sep="")
 }
 
 if(device.type[i] == "pdf"){
-	INTERACTIONfn<-paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,".pdf",sep="")
+	INTERACTIONfn<-paste(PLOTfn,".pdf",sep="")
 }
 
 if(device.type[i] == "postscript"){
-	INTERACTIONfn<-paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,".ps",sep="")
+	INTERACTIONfn<-paste(PLOTfn,".ps",sep="")
 }
 
 if(device.type[i] == "win.metafile"){
-	INTERACTIONfn<-paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,".emf",sep="")
+	INTERACTIONfn<-paste(PLOTfn,".emf",sep="")
 }
 
+###################################################################
+
 if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)}
-if(device.type[i]=="jpeg"){jpeg(filename=INTERACTIONfn,width = device.width, height = device.height, res=jpeg.res, unit="in")}
+if(device.type[i]=="jpeg"){jpeg(filename=INTERACTIONfn,width = device.width, height = device.height, res=jpeg.res, units="in")}
 if(device.type[i]=="postscript"){postscript(file=INTERACTIONfn,width = device.width, height = device.height)}
 if(device.type[i]=="pdf"){pdf(file=INTERACTIONfn,width = device.width, height = device.height)}
 if(device.type[i]=="win.metafile"){win.metafile(filename=INTERACTIONfn,width = device.width, height = device.height, 
@@ -492,6 +535,10 @@ if(device.type[i]=="win.metafile"){win.metafile(filename=INTERACTIONfn,width = d
 ###################################################################################
 
 if (plot.type=="image") {
+
+	zlab<-""
+	if(response.type=="categorical"){
+		zlab<-paste("probability of", response.category)}
 
 	require(fields)
 
@@ -515,14 +562,15 @@ if (plot.type=="image") {
 		xaxt=xaxt,yaxt=yaxt,
 		col=col.ramp,
 		...)
-		
+	
+	
 	if(xaxt=="n"){
 		par(xpd=TRUE)
 		x.loc<-unclass(x.var)
 		offset1<-y.delta*.02       		
 		offset2<-y.delta*.04			
 		text(x=x.loc,y=ylim[1]-offset2,labels=x.var,pos=1, offset=0,xpd=TRUE)
-		mtext("(catagorical)",side=1,line=1.8)
+		mtext("(categorical)",side=1,line=1.8)
 		for(j in 1:length(x.loc)){lines(c(x.loc[j],x.loc[j]),c(ylim[1],ylim[1]-offset1    ) )  }
 		par(xpd=FALSE)
 	}
@@ -533,16 +581,23 @@ if (plot.type=="image") {
 		offset1<-x.delta*.02
 		offset2<-x.delta*.04
 		text(x=xlim[1]-offset2,y=unclass(y.var),labels=y.var,pos=2, offset=0,xpd=TRUE)
-		mtext("(catagorical)",side=2,line=2)
+		mtext("(categorical)",side=2,line=2)
 		for(j in 1:length(y.loc)){lines(c(xlim[1],xlim[1]-offset1),c(y.loc[j],y.loc[j])) }
 		par(xpd=FALSE)
 	}
+	par(xpd=TRUE)
+	mtext(zlab,side=4,line=4.5)
+	par(xpd=FALSE)
 }
 if(plot.type=="persp"){
 
+	zlab<-"fitted value"
+	if(response.type=="categorical"){
+		zlab<-paste("probability of", response.category)}
+
     	if(!any(is.factor(x.var),is.factor(y.var))){
     		persp(x=unclass(x.var), y=unclass(y.var), z=pred.matrix, zlim= z.range,      	# input vars
-      		xlab = xlab, ylab = ylab, zlab = "fitted value",   				# labels
+      		xlab = xlab, ylab = ylab, zlab = zlab,   						# labels
       		theta=theta, phi=phi, r = sqrt(10), d = 3,               			# viewing pars
       		ticktype = ticktype, mgp = c(4,1,0), ...)   
     
@@ -579,11 +634,12 @@ if(plot.type=="persp"){
 			x.tloc<-x.loc
 		}
 		
-		X1<-xlim[MM$X[a]]
-		X2<-xlim[MM$X[a]]+0.08*PN$X[a]*(xlim[2]-xlim[1])
-		X3<-xlim[MM$X[a]]+0.15*PN$X[a]*(xlim[2]-xlim[1])
-		X4<-xlim[MM$X[a]]+0.30*PN$X[a]*(xlim[2]-xlim[1])
-		X5<-xlim[MM$X[a]]+0.4*PN$X[a]*(xlim[2]-xlim[1])
+		#distances for Y axis
+		X1<-xlim[MM$X[a]]							#inner tick
+		X2<-xlim[MM$X[a]]+0.08*PN$X[a]*(xlim[2]-xlim[1])	#outer tick
+		X3<-xlim[MM$X[a]]+0.15*PN$X[a]*(xlim[2]-xlim[1]) 	#axis values
+		X4<-xlim[MM$X[a]]+0.30*PN$X[a]*(xlim[2]-xlim[1]) 	#axis label
+		X5<-xlim[MM$X[a]]+0.4*PN$X[a]*(xlim[2]-xlim[1])  	#catagorical tag
 	
 		if(is.factor(y.var)){
 			y.loc<-unclass(y.var)
@@ -603,6 +659,8 @@ if(plot.type=="persp"){
 			y.dloc<-unclass(y.var)
 			y.tloc<-y.loc
 		}
+
+		#distances for X axis
 		Y1<-ylim[MM$Y[a]]
 		Y2<-ylim[MM$Y[a]]+0.08*PN$Y[a]*(ylim[2]-ylim[1])
 		Y3<-ylim[MM$Y[a]]+0.15*PN$Y[a]*(ylim[2]-ylim[1])
@@ -649,7 +707,7 @@ if(plot.type=="persp"){
 		text(XY$x,XY$y,xlab,adj=.5,srt=srt,font=2)
 		if(is.factor(x.var)){
 			XY<-trans3d(mean(x.loc),Y5,z.range[1],VT)
-			text(XY$x,XY$y,"(catagorical)",adj=.5,srt=srt,font=2)}
+			text(XY$x,XY$y,"(categorical)",adj=.5,srt=srt,font=2)}
 
 
 
@@ -669,7 +727,7 @@ if(plot.type=="persp"){
 		text(XY$x,XY$y,ylab,adj=.5,srt=srt,font=2)
 		if(is.factor(y.var)){
 			XY<-trans3d(X5,mean(y.loc),z.range[1],VT)
-			text(XY$x,XY$y,"(catagorical)",adj=.5,srt=srt,font=2)}
+			text(XY$x,XY$y,"(categorical)",adj=.5,srt=srt,font=2)}
 
 		### z axis labels ###
 		#ticks#
@@ -680,10 +738,11 @@ if(plot.type=="persp"){
 		XY<-trans3d(ZX3,ZY3,z.loc,VT)
 		text(XY$x,XY$y,format(z.loc),adj=1)
 		#label#
+		
 		srt<-atan((max(XY$y)-min(XY$y))/(max(XY$x)-min(XY$x)))
 		srt<-(srt*180)/pi
 		XY<-trans3d(ZX4,ZY4,mean(z.loc),VT)
-		text(XY$x,XY$y,"fitted values",adj=.5,srt=180-srt,font=2)
+		text(XY$x,XY$y,zlab,adj=.5,srt=180-srt,font=2)
 
 		par(xpd=TRUE)
 
@@ -691,8 +750,9 @@ if(plot.type=="persp"){
 }
 #################################################################################
 
-if(device.type[i]!="default"){dev.off()}
-}}
+if(!device.type[i]%in%c("default","none")){dev.off()}
+}
+#}
 #################################################################################
 
 }

@@ -7,7 +7,12 @@
   Takes model object and makes predictions, runs model diagnostics, and creates graphs and tables of the results.  
 }
 \usage{
-model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL, seed = NULL, prediction.type=NULL, MODELpredfn = NULL, na.action = "na.omit", v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, jpeg.res = 72, device.width = 7,  device.height = 7, cex=par()$cex, req.sens, req.spec, FPC, FNC, n.trees = NULL)
+model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, 
+folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL,
+ seed = NULL, prediction.type=NULL, MODELpredfn = NULL, na.action = NULL,
+ v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, jpeg.res = 72,
+ device.width = 7,  device.height = 7, cex=par()$cex, req.sens, req.spec,
+ FPC, FNC, n.trees = NULL)
 }
 
 \arguments{
@@ -32,7 +37,7 @@ model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, f
 
   \item{MODELpredfn}{ String.  Model validation.  A character string used to construct the output file names for the validation diagnostics, for example the prediction \code{*.csv} file, and the graphics \code{*.jpg}, \code{*.pdf} and \code{*.ps} files.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{MODELpredfn = NULL} (the default), a default name is created by pasting \code{modelfn} and \code{"_pred"}.}
 
-  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a ctegorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{-9999} (the \code{NODATA} value); (2) \code{na.action = "na.roughfix"} where a missing categorical predictor for a data point or pixel is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor.   }
+  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction or response data or if there is a level or class of a categorical predictor variable in the validation test set, but not in the training data set.  By default, \code{model.daignostics()} will use the same \code{na.action} as was given to \code{model.build}. There are 2 options: (1) \code{na.action = "na.omit"} where any data point with \code{NA} or any new levels for any of the factored predictors is removed from the data; (2) \code{na.action = "na.roughfix"} where a missing categorical predictor or response is replaced with the most common category, and a missing continuous predictor or response is replaced with the median. Note: it is not recomended that \code{na.roughfix} be used for missing responses (a warning will be generated).  }
 
   \item{v.fold}{ Integer (or logical \code{FALSE}).  Model validation.  The number of cross validation folds to use when making validation predictions on the training data.  Only used if  \code{prediction.type = "CV"}.}
 
@@ -42,11 +47,11 @@ Current choices:
 
 \tabular{lllll}{
 	  \tab \tab \tab \code{"default"} \tab default graphics device\cr
-	  \tab \tab \tab \code{"jpeg"} \tab \code{*.jpg} files\cr
-	  \tab \tab \tab \code{"none"} \tab no graphics produced\cr	
-	  \tab \tab \tab \code{"pdf"} \tab \code{*.pdf} files\cr
-	  \tab \tab \tab \code{"postscript"} \tab \code{*.ps} files\cr
-	  \tab \tab \tab \code{"win.metafile"} \tab \code{*.emf} files }
+	  \tab \tab \tab \code{"jpeg"} \tab *.jpg files\cr
+	  \tab \tab \tab \code{"none"} \tab no graphics device generated\cr	
+	  \tab \tab \tab \code{"pdf"} \tab *.pdf files\cr
+	  \tab \tab \tab \code{"postscript"} \tab *.ps files\cr
+	  \tab \tab \tab \code{"win.metafile"} \tab *.emf files }
  }
 
   \item{DIAGNOSTICfn}{ String.  Model validation.  Name used as base to create names for output files from model validation diagnostics.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}.  Defaults to \code{DIAGNOSTICfn = MODELfn} followed by the appropriate suffixes (i.e. \code{".csv"}, \code{".jpg"}, etc...). }
@@ -78,9 +83,11 @@ Current choices:
 
 When running \code{model.map()} on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
-Diagnostic predictions are made my one of four methods, and a text file is generated consisting of three collumns: Observation ID, observed values and predicted values. If \code{predition.type = "CV")} a forth collumn indicates which cross-fold each observation fell into. 
+Diagnostic predictions are made my one of four methods, and a text file is generated consisting of three columns: Observation ID, observed values and predicted values. If \code{predition.type = "CV")} an additional column indicates which cross-fold each observation fell into. If the models response type is categorical then in addition a column giving the category predicted by majority vote, there are also categories for each possible response category giving the proportion of trees that predicted that category.
 
-A variable importance graph is made. 
+A variable importance graph is made. If \code{response.type = "categorical"}, category specific graphs are generated for variable importance. These show how much the model accuracy for each category is affected when the values of each predictor variable is randomly permuted.
+
+If \code{model.type = "RF"}, the OOB error is plotted as a function of number of trees in the model. If \code{response.type = "binary"} or If \code{response.type = "categorical"} category specific graphs are generated for  OOB error as a function of number of trees.
 
 If \code{response.type = "binary"}, a summary graph is made using the \code{PresenceAbsence} package and a \code{*.csv} spreadsheets are created of optimized thresholds by several methods with their associated error statistics, and predicted prevalence.
 
@@ -89,7 +96,15 @@ If \code{response.type = "continuous"} a scatterplot of observed vs.  predicted 
 }
 \value{
 
-The function will return a dataframe of the row ID, and the Observed and predicted values. If \code{prediction.type = "CV"} the dataframe also includes a collumn indicating which cross-validation fold each datapoint was in.
+The function will return a dataframe of the row ID, and the Observed and predicted values. 
+
+For Binary response models the predicted probability of presence is returned. 
+
+For Categorical Response models the predicted catagory (by majority vote) is returned as well as a column for each category giving the probability of that category. If neccessary, \code{\link{make.names}} is applied to the categories to create valid column names.
+
+For Continuous responce models the predicted value is returned. 
+
+If \code{prediction.type = "CV"} the dataframe also includes a column indicating which cross-validation fold each datapoint was in. 
 
 }
 \references{ 
@@ -107,8 +122,7 @@ Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
  }
 
 \author{ Elizabeth Freeman and Tracey Frescino }
-\note{ 
-}
+
 \seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.mapmake}}}
 \examples{
 ###########################################################################
@@ -125,6 +139,10 @@ qdata.testfn = system.file("external", "helpexamples","DATATEST.csv", package = 
 
 # Define folder for all output:
 folder=getwd()	
+
+#identifier for individual training and test data points
+
+unique.rowname="ID"
 
 
 ###########################################################################
@@ -176,11 +194,11 @@ response.type="binary"
 # present in the data to be predicted (either the validation/test set
 # or in the image file) that were not present in the original training data.
 # Choices:
-#       na.action = "na.omit"
+#       na.action =  "na.omit"
 #                    Any validation datapoint or image pixel with a value for any
 #                    categorical predictor not found in the training data will be
 #                    returned as NA.
-#       na.action = "na.roughfix"
+#       na.action =  "na.roughfix"
 #                    Any validation datapoint or image pixel with a value for any
 #                    categorical predictor not found in the training data will have
 #                    the most common category for that predictor substituted,
@@ -215,21 +233,19 @@ response.type="continuous"
 model.obj = model.build( model.type="RF",
                        qdata.trainfn=qdata.trainfn,
                        folder=folder,		
+                       unique.rowname=unique.rowname,	
                        MODELfn=MODELfn,
                        predList=predList,
                        predFactor=predFactor,
                        response.name=response.name,
                        response.type=response.type,
-                       seed=seed
+                       seed=seed,
+                       na.action="na.roughfix"
 )
 
 ###########################################################################
 #### Then Run this code make validation predictions and diagnostics: ######
 ###########################################################################
-
-### Define identifier for individual training and test data points ###
-
-unique.rowname="ID"
 
 
 ### for Out-of-Bag predictions ###

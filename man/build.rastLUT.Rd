@@ -9,7 +9,8 @@
 }
 
 \usage{
-build.rastLUT(imageList=NULL,predList=NULL,qdata.trainfn=NULL,rastLUTfn=NULL,folder=NULL)
+build.rastLUT(imageList=NULL,predList=NULL,qdata.trainfn=NULL,
+rastLUTfn=NULL,folder=NULL)
 }
 
 \arguments{
@@ -34,12 +35,9 @@ Finally, the function steps through each band of each raster, and the user selec
 \value{
 Returns a data frame containing the raster Look-Up-Table. Also Writes a \code{.csv} file containing the raster Look-Up-Table.
 }
-\references{}
-\author{ Elizabeth Freeman }
-\note{  
 
-}
-\seealso{ }
+\author{ Elizabeth Freeman }
+
 \examples{
 
 folder<-system.file("external", "helpexamples", package = "ModelMap")

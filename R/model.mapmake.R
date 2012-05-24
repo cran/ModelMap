@@ -9,12 +9,12 @@
 
 
 
-model.mapmake<-function(	model.obj=NULL,
+model.mapmake<-function(model.obj=NULL,
 				folder=NULL,		# No ending slash, to output to working dir = getwd()
 				MODELfn=NULL,
 				rastLUTfn=NULL,
 			# Model Evaluation Arguments
-				na.action="na.omit",	# also used for mapping
+				na.action=NULL,	# also used for mapping
 			# Mapping arguments
 				numrows = 500,		# Only used if mapping. Number of rows predicted at a time.				
 				map.sd=FALSE,		# Only used if mapping. Generates 3 additional maps (mean,sd,coefvar)
@@ -22,6 +22,7 @@ model.mapmake<-function(	model.obj=NULL,
 				asciifn.mean=NULL,
 				asciifn.stdev=NULL,
 				asciifn.coefv=NULL,
+				make.img=TRUE,
 			# SGB arguments
 				n.trees=NULL
 ){
@@ -146,7 +147,7 @@ if(model.type=="RF"){
 
 
 #############################################################################################
-###################### Extract response.type from model.obj #################################
+###################### Extract response.name from model.obj #################################
 #############################################################################################
 
 if(is.null(MODELfn) && is.null(asciifn)){
@@ -160,14 +161,25 @@ if(is.null(MODELfn) && is.null(asciifn)){
 	}
 }
 
-## extract response.type from model.obj
+#############################################################################################
+###################### Extract response.type from model.obj #################################
+#############################################################################################
 
 if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="binary","unknown")}
+	response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
+	if(response.type=="classification"){
+		if(identical(levels(model.obj$y),c("0","1"))){
+			response.type<-"binary"
+		}else{
+			response.type<-"categorical"}}}
 if(model.type=="SGB"){
 	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
 if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
 
+if(response.type=="categorical"){
+	
+}
+	
 
 
 #############################################################################################
@@ -227,13 +239,81 @@ if(identical(basename(asciifn.coefv),asciifn.coefv)){asciifn.coefv<-paste(folder
 ## Loads necessary libraries.
 
 library(rgdal)
-if(model.type=="RF" || na.action=="na.roughfix"){library(randomForest)}
+library(raster)
+
+if(model.type=="RF" ){library(randomForest)}
 if(model.type=="SGB"){library(gbm)}
+#if(response.type=="categorical"){library(gdata)}
 
 # Note:	'rgdal' is only used to make map
 #	'gbm'	is only used for SGB models
 #	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
+#	'gdata' is used for mapping levels of categorical reponse variables
 
+
+#############################################################################################
+############################### Determine NA.ACTION #########################################
+#############################################################################################
+
+
+###Check Model Object for na.action###
+
+#NA.ACTION is character string. Choices: "omit", "rough.fix".
+#na.action is the actual function, no quotes.
+#model.NA.ACTION and model.na.action are similar but extracted from model object,
+#   and need to be checked against 'model.diagnostics(na.action)'.
+
+model.NA.ACTION<-NULL
+model.na.action<-NULL
+NA.ACTION<-NULL
+
+
+###extract na.action from model.obj and check if valid, and if argument is NULL, default to option from model.obj###
+if(!is.null(model.obj$na.action)){
+	model.NA.ACTION<-class(model.obj$na.action)
+	if(!model.NA.ACTION%in%c("omit","roughfix")){
+		warning(paste("Model Object was built with 'na.action'",model.NA.ACTION,"which is not supported by model map"))
+		model.NA.ACTION<-NULL
+	}else{
+		model.na.action<-switch(model.NA.ACTION,omit=na.omit,roughfix=na.roughfix)
+		if(is.null(na.action)){             #if model.obj has na.action and function call does not then use action from model.obj
+			NA.ACTION<-model.NA.ACTION	#if this step is reached then whole next section not needed
+			na.action<-model.na.action
+		}
+	}
+}
+
+###Check if na.action from argument is valid###
+
+NAvalid<-c("na.omit","na.roughfix")
+NAwarn<-"ModelMap currently supports only \"na.omit\" and \"na.roughfix\" for 'na.action'"
+
+if(is.null(NA.ACTION)){	
+	if(is.null(na.action)){
+		na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
+		if(na.action=="" || is.null(na.action)){
+			stop("NA found in data, therefore na.action is required")}
+		if(!na.action%in%NAvalid){stop(NAwarn)}
+	}else{
+		if(is.function(na.action)){
+			 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+		}else{
+			if(!na.action%in%NAvalid){stop(NAwarn)}
+		}
+	}
+	print(paste("NA.ACTION =",NA.ACTION))
+	print(paste("na.action =",na.action))
+
+	#make NA.ACTION characters without "na."
+	NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
+	#turn na.action into function
+	na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
+}
+
+	print(paste("NA.ACTION =",NA.ACTION))
+	print(paste("is function na.action =",is.function(na.action)))
+
+if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
 
 #############################################################################################
 ############################# SGB + CV: check for n.trees ###################################
@@ -276,7 +356,7 @@ if(is.matrix(rastLUTfn)!=TRUE && is.data.frame(rastLUTfn)!=TRUE){
 	}
 }
 
-### Read in training data
+### if rastLUT is filename, read in lookup table
 
 if(is.matrix(rastLUTfn)==TRUE || is.data.frame(rastLUTfn)==TRUE){
 	rastLUT<-rastLUTfn
@@ -313,6 +393,7 @@ production.prediction(	model.obj=model.obj,
 				model.type=model.type,
 				rastLUT=rastLUT,
 				na.action=na.action,
+				NA.ACTION=NA.ACTION,
 				response.type=response.type,
 				numrows=numrows,	
 				map.sd=map.sd,
@@ -320,9 +401,29 @@ production.prediction(	model.obj=model.obj,
 				asciifn.mean=asciifn.mean,
 				asciifn.stdev=asciifn.stdev,
 				asciifn.coefv=asciifn.coefv,
+				make.img=make.img,
 				n.trees=n.trees)
 
 
+#############################################################################################
+############## If response/type=="categorical Write a key to levels #########################
+#############################################################################################
+
+if(response.type=="categorical"){
+	#mapkey<-mapLevels(model.obj$y)
+
+	Ylev<-levels(model.obj$y)
+
+	if(any(is.na(suppressWarnings(as.numeric(Ylev))))){
+		mapkey<-data.frame(row=1:length(Ylev), category=Ylev,integercode=1:length(Ylev))
+	}else{
+		mapkey<-data.frame(row=1:length(Ylev), category=Ylev,integercode=as.numeric(Ylev))
+	}
+
+	MapKeyfn<-paste(MODELfn,"_map_key.csv",sep="")
+	write.table(mapkey,file=MapKeyfn,sep=",",row.names=FALSE)
+}
+	
 #############################################################################################
 ################################## Write a list of argumets #################################
 #############################################################################################
