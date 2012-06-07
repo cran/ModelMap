@@ -3,8 +3,8 @@ Type: Package
 Title: Creates Random Forest and Stochastic Gradient Boosting Models,
         and applies them to GIS .img files to build detailed prediction
         maps.
-Version: 2.3.1
-Date: 2011-05-23
+Version: 2.3.2
+Date: 2012-06-07
 Depends: R (>= 2.13.0), randomForest, PresenceAbsence, rgdal, fields,
         raster, survival, lattice, splines, gbm
 Author: Elizabeth Freeman, Tracey Frescino
@@ -20,6 +20,6 @@ Description: This package will create sophisticated models of training
         chuncks, and output to the .txt file the prediction for each
         data chunk, before reading the next chenk of data.
 License: Unlimited
-Packaged: 2012-05-23 23:36:17 UTC; eafreeman
+Packaged: 2012-06-07 18:36:36 UTC; eafreeman
 Repository: CRAN
-Date/Publication: 2012-05-24 06:24:11
+Date/Publication: 2012-06-08 06:29:07

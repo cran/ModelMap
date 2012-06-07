@@ -248,7 +248,7 @@ Moved Vignette from 'ModelMap\inst\doc' to 'ModelMap\inst\vignette'
 Moved Vignette data from 'ModelMap\inst\external\vignetteexamples' to 'ModelMap\inst\vignette'
 
 
+############# ModelMap 2.3.2 05/17/12 ######################
 
-
-
+Fixed package vignette
 
