@@ -12,8 +12,8 @@ The \code{ModelMap} package creates sophisticated models of training data and va
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 2.3.1\cr
-Date: \tab 2011-05-23
+Version: \tab 2.3.2\cr
+Date: \tab 2012-06-07
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, 
 and therefore it is in the public domain and not subject to copyright.\cr
