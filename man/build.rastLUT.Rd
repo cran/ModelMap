@@ -5,7 +5,7 @@
 \title{Build a raster Look-UP-Table for training dataset}
 
 \description{
-  GUI prompts will help the user build a Look-Up-Table to associat predictor variable with their corresponding spatial rasters.
+  GUI prompts will help the user build a Look-Up-Table to associated predictor variable with their corresponding spatial rasters.
 }
 
 \usage{
@@ -29,7 +29,7 @@ Second, if \code{"predList"} or \code{"qdatatrainfn"}  are not given, the user s
 
 Third, if \code{"imageList"} is not provided, the user selects the rasters.
 
-Finally, the function steps through each band of each raster, and the user selects the apropriate predictor.
+Finally, the function steps through each band of each raster, and the user selects the appropriate predictor.
 
 }
 \value{

@@ -2,9 +2,9 @@
 
 \alias{model.importance.plot}
 
-\title{Compares the variable importances of two models with a back to back barchart.}
+\title{Compares the variable importance of two models with a back to back barchart.}
 
-\description{Takes two models and produces a back to back bar chart to compare the importances of the predictor variables. Models can be any combination of Random Forest or Stochastic Gradient Boosting, as long as both models have the same predictor variables. }
+\description{Takes two models and produces a back to back bar chart to compare the importance of the predictor variables. Models can be any combination of Random Forest or Stochastic Gradient Boosting, as long as both models have the same predictor variables. }
 
 \usage{
 model.importance.plot(model.obj.1 = NULL, model.obj.2 = NULL, 
@@ -27,17 +27,17 @@ device.width = 7, device.height = 7,cex=par()$cex,...)
 
   \item{class.1}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.1 = NULL} overall relative influence used for plot.}
 
-  \item{class.2}{String. For binary and categorical random forest models. If the name a class is specified,the class-specific relative influence is used for plot. If \code{class.2 = NULL} overall relative influence used for plot.}
+  \item{class.2}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.2 = NULL} overall relative influence used for plot.}
 
-  \item{imp.type.1}{Number. Type of importance to use for model 1. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is is the decrease in node impurities attribuatable to each predictor variable. For SGB models, it is the reduction attributeable to each varaible in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.1 = 1}. Default for SGB models is \code{imp.type.1 = 2}.}
+  \item{imp.type.1}{Number. Type of importance to use for model 1. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.1 = 1}. Default for SGB models is \code{imp.type.1 = 2}.}
 
-  \item{imp.type.2}{Number. Type of importance to use for model 2. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is is the decrease in node impurities attribuatable to each predictor variable. For SGB models, it is the reduction attributeable to each varaible in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.2 = 1}. Default for SGB models is \code{imp.type.2 = 2}.}
+  \item{imp.type.2}{Number. Type of importance to use for model 2. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.2 = 1}. Default for SGB models is \code{imp.type.2 = 2}.}
 
-  \item{type.label}{Logical. Should axise labels include importance type for each side of plot.}
+  \item{type.label}{Logical. Should axis labels include importance type for each side of plot.}
 
-  \item{scale.by}{String. Scale by: \code{"max"} or \code{"sum"}. When \code{scale.by="max"} the importances are scaled for each model so that the maximum importance for each model fills the graph. When \code{scale.by="sum"}, the importances for each model are scaled to sum to 100.}
+  \item{scale.by}{String. Scale by: \code{"max"} or \code{"sum"}. When \code{scale.by="max"} the importance are scaled for each model so that the maximum importance for each model fills the graph. When \code{scale.by="sum"}, the importance for each model are scaled to sum to 100.}
 
-  \item{sort.by}{String. Sort by: \code{"model.obj.1"}, \code{"model.obj.2"}, \code{"predList"}. Gives the order to draw the bars for the predictor variables. When \code{sort.by="model.obj.1"} the predictors are sorted largest to smallest based on importances from model 1. When \code{sort.by="model.obj.2"} the predictors are sorted largest to smallest based on importances from model 2. When \code{sort.by="predList"} the predictors are sorted to match the order given in \code{"predList"}.}
+  \item{sort.by}{String. Sort by: \code{"model.obj.1"}, \code{"model.obj.2"}, \code{"predList"}. Gives the order to draw the bars for the predictor variables. When \code{sort.by="model.obj.1"} the predictors are sorted largest to smallest based on importance from model 1. When \code{sort.by="model.obj.2"} the predictors are sorted largest to smallest based on importance from model 2. When \code{sort.by="predList"} the predictors are sorted to match the order given in \code{"predList"}.}
 
   \item{predList}{String.  A character vector of the predictor short names used to build the models. If \code{sort.by="predList"}, then \code{predList} is used to specify the order to draw the predictors in the barchart.}
 
@@ -74,7 +74,7 @@ Current choices:
 \details{
 The importance measures used in this plot depend on the model type (RF verses SGB) and the response type (continuous, categorical, or binary). 
 
-Importance type 1 is permutation based, as described in Breiman (2001). Importance is calculated by randomly permuting each predictor variable and computing the associated reduction in predictive performance using Out Of Bag error for RF models and training errror for SGB models. Note that for SGB models permutation based importance measures are still considered experimental.  Importance type 2 is model based. For RF models, importance type 2 is calculated by the decrease in node impurities attribuatable to each predictor variable. For SGB models, importance type 2 is the reduction attributeable to each varaible in predicting the gradient on each iteration as described in described in Friedman (2001). 
+Importance type 1 is permutation based, as described in Breiman (2001). Importance is calculated by randomly permuting each predictor variable and computing the associated reduction in predictive performance using Out Of Bag error for RF models and training error for SGB models. Note that for SGB models permutation based importance measures are still considered experimental.  Importance type 2 is model based. For RF models, importance type 2 is calculated by the decrease in node impurities attributable to each predictor variable. For SGB models, importance type 2 is the reduction attributable to each variable in predicting the gradient on each iteration as described in described in Friedman (2001). 
 
 For SGB models:
 \tabular{lllclll}{
@@ -94,7 +94,7 @@ For RF models:
 	  \tab \tab  \code{"binary"}      \tab \code{2}    	\tab node impurity	\tab \tab Mean Decrease Gini \cr
 	  \tab \tab  \code{"categorical"} \tab \code{2}    	\tab node impurity	\tab \tab Mean Decrease Gini   }
   
-For Random Forest models, if \code{imp.type} not specified, importance type defaults to \code{imp.type} of \code{1} - permutation importance. For SGB models, permutation importance is considered experimental so importance defaults to  \code{imp.type} of \code{2} - reduction of gradient of the loss function.
+For Random Forest models, if \code{imp.type} not specified, importance type defaults to \code{imp.type} of \code{1} - permutation importance. For SGB models, permutation importance is considered experimental so importance defaults to \code{imp.type} of \code{2} - reduction of gradient of the loss function.
 
 Also, for binary and categorical Random Forest models, class specific importance plots can be generated by the use of the \code{class} argument. Note that class specific importance is only available for Random Forest models with importance type 1.
 
