@@ -5,7 +5,7 @@
 plot of two-way model interactions
 }
 \description{
-Image or Persective plot of two-way model interactions. Ranges of two specified predictor variables are plotted on X and Y axis, and fitted model values are plotted on the Z axis. The remaining predictor variable are fixed at their mean (for continuous predictors) or their most common value (for catagorical predictors).
+Image or Perspective plot of two-way model interactions. Ranges of two specified predictor variables are plotted on X and Y axis, and fitted model values are plotted on the Z axis. The remaining predictor variables are fixed at their mean (for continuous predictors) or their most common value (for categorical predictors).
 }
 \usage{
 model.interaction.plot(model.obj = NULL, x = NULL, y = NULL, 
@@ -22,9 +22,9 @@ device.width = 7,  device.height = 7, cex=par()$cex, col = NULL, ...)
 
   \item{x}{String or Integer. Name of predictor variable to be plotted on the x axis. Alternativly, can be a number indicating a variable name from \code{predList}.}
 
-  \item{y}{String or Integer. Name of predictor variable to be plotted on the y axis. Alternativly, can be a number indicating a variable name from \code{predList}.}
+  \item{y}{String or Integer. Name of predictor variable to be plotted on the y axis. Alternatively, can be a number indicating a variable name from \code{predList}.}
 
-   \item{response.category}{String. Used for categorical response RF models. Specify which category of respose variable to use. This category's probabilities will be plotted on the z axis.}
+   \item{response.category}{String. Used for categorical response RF models. Specify which category of response variable to use. This category's probabilities will be plotted on the z axis.}
 
    \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -52,7 +52,7 @@ device.width = 7,  device.height = 7, cex=par()$cex, col = NULL, ...)
 
   \item{phi}{Numeric. Angles defining the viewing direction. \code{phi} gives the colatitude.}
 
-  \item{smooth}{String. controls smoothing of the predicted surface. Options are \code{"none"} (default), \code{"model"} which uses a glm model to smoth the surface, and \code{"average"} which applies a 3x3 smoothing average. Note: smoothing is not appropriate if \code{X} or \code{y} is factored.}
+  \item{smooth}{String. controls smoothing of the predicted surface. Options are \code{"none"} (default), \code{"model"} which uses a glm model to smooth the surface, and \code{"average"} which applies a 3x3 smoothing average. Note: smoothing is not appropriate if \code{X} or \code{y} is factored.}
 
   \item{plot.type}{Character. \code{"persp"} gives a 3-D perspective plot. \code{"image"} gives an image plot.}
  
@@ -82,9 +82,9 @@ Current choices:
   \item{\dots}{additional graphical parameters (see \code{\link{par}}).}
 }
 \details{
-This function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations of predictor values over the range of both variables. The remaining predictor variables from the model are fixed at either their means (for continuous predictors) or their most common value (for catagorical predictors). Model predictions are generated over this grid and plotted as the z axis.
+This function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations of predictor values over the range of both variables. The remaining predictor variables from the model are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis.
 
-This function works with both continuous and categorical predictors, though the perspective plot should be interpreted with care for categorical predictors. In particualar, the \code{smooth} option is not appropriate if either of the two selected predictor variables is categorical.
+This function works with both continuous and categorical predictors, though the perspective plot should be interpreted with care for categorical predictors. In particular, the \code{smooth} option is not appropriate if either of the two selected predictor variables is categorical.
 
 For categorical response models, a particular value must be specified for the response using the \code{response.category} argument. 
 }
