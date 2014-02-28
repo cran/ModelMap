@@ -17,6 +17,10 @@
 \alias{create.model}
 \alias{prediction.model}
 \alias{production.prediction}
+\alias{projcompare}
+\alias{projfix}
+\alias{FNcheck}
+\alias{grd2gri}
 
 
 \title{ Internal ModelMap Functions }

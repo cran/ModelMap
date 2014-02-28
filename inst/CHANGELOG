@@ -256,6 +256,79 @@ Fixed package vignette
 
 Fixed miss spelling
 
-############# ModelMap 2.3.4 08/12/17 ######################
+############# ModelMap 2.3.4 08/12/12 ######################
 
 Fixed further miss spellings
+
+############# ModelMap 3.0.0 01/25/13 ######################
+
+Switched map production over to raster package
+
+############# ModelMap 3.0.1 02/07/13 ######################
+
+Fixed bug when an entire row of predictor raster was entirely NA or -9999
+
+############# ModelMap 3.0.2 02/11/13 ######################
+
+Fixed bug that occured when 'response.type="categorical"' and categories in training data were numeric rather than charactor.
+
+############# ModelMap 3.0.3 03/06/13 ######################
+
+Updated help files and Vignette to reflect use of raster package.
+
+Updated 'model.build()' to use argument 'nTrain' instaid of 'train.fraction' to be consistent with current verion of gbm package.
+
+############# ModelMap 3.0.4 05/01/13 ######################
+
+Added better warning messages to projection checking of predictor layers in 'model.mapmake()' and added output file that lists original projections of all predictor layers.
+
+############# ModelMap 3.0.5 05/27/13 ######################
+
+Added checks for more than one '.'s in output filenames, and that any extensions are on list of valid extensions. 
+
+When path was not included in file names, ModelMap formerly used 'paste(folder,filename,sep="/")' to add folder to filenames. Switched to 'file.path(folder,filename)' to be valid across all platforms.
+
+Fixed error that would crash model.mapmake() if OUTPUTfn had more than one '.'.
+
+############# ModelMap 3.0.6 06/26/13 ######################
+
+############# ModelMap 3.0.7 06/26/13 ######################
+
+Switched to from our own projcompare() function to the raster package compareRaster() function for checking predictor rasters for consistency.
+
+Updated help file for model.mapmake().
+
+############# ModelMap 3.0.8 07/23/13 ######################
+
+Switched native raster format map to a tmp file, so only image file, or other format map is permanently saved.
+
+Added argument 'keep.predictor.brick' (defaults to false). If TRUE, predictor brick is saved as a native raster package format object, with name
+constructed by appending '_brick' to 'OUTPUTfn'. If FALSE, predictor brick is a tmp file that is deleated after map construction.
+
+Got rid of arguments 'OUTPUTfn.mean', 'OUTPUTfn.stdev', and 'OUTPUTfn.coefv'. Instead, file names for these output maps are constructed by appending '_mean', '_stdev', and '_coefv' to 'OUTPUTfn'.
+
+Changed DEPENDS field of package DESCRIPTION, to remove unneccessary packages that gbm depends on, and to move package 'fields' from DEPENDS to  Imports, as ModelMap only uses a single function from 'fields'. Edited NAMESPACE to match.
+
+Shortened help examples for 'model.diagnostics', 'model.mapmake', 'model.interaction.plot' and 'model.importance.plot'.
+
+############# ModelMap 3.0.9 10/25/13 ######################
+
+Added argument 'diagnostic.flag' to model.diagnostic(). This allows specification of a subset of training or test data to be used for model diagnostics that depend on predicted and observed values. 
+
+Fixed bug in how model.build() handled 'strata' argument when it was a character string rather than a vector.
+
+############# ModelMap 3.0.10 11/14/13 ######################
+
+Added 'proximity' argument to model.build()
+
+added quote() to setup for do.call() in model.build(), to avoid having extra copy of data saved in model.obj$call
+
+############# ModelMap 3.0.11 12/13/13 ######################
+
+changed model.diagnostics() argument 'diagnostics.flag' to 'diagnostic.flag'
+
+fixed but when model.build() argument that occured 'strata' was given as column name rather than vector of values.
+
+############# ModelMap 3.0.12 02/25/13 ######################
+
+added MAUC to model.diagnostics for categorical response

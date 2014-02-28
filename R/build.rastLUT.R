@@ -58,7 +58,7 @@ if(is.null(predList)){
 			qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
 			if(is.null(qdata.trainfn)){stop("")}
 		}else{
-			stop("In non-windows environment must provide 'predList' or 'qdata.trainfn'")
+			stop("in nonwindows environment must provide 'predList' or 'qdata.trainfn'")
 		}
 	}
 
@@ -83,7 +83,8 @@ if(is.null(predList)){
 ################################ Load Libraries #############################################
 #############################################################################################
 
-library(rgdal)
+#r#equirergdal)
+#r#equireraster)
 
 #############################################################################################
 ######################################## Select images ######################################
@@ -93,7 +94,7 @@ if(is.null(imageList)){
 	if(.Platform$OS.type=="windows"){
 		imageList <- getRasts()
 	}else{
-		stop("In non-windows environment must provide 'imageList'")
+		stop("in nonwindows environment must provide 'imageList'")
 	}
 }
 
@@ -104,13 +105,11 @@ for(i in 1:length(imageList)){
 	rast <- imageList[i]
 	if (!is.na(rast)){
 		## Gets spatial information for raster
-		sp.rast <- open.SpatialGDAL(rast)
+		sp.rast <- brick(rast)
 		if(is.null(sp.rast)){
-			stop("Invalid raster")}
-		## Gets number of bands for raster. If null, then only 1 band exists.
-		numbands[i] <- dim(sp.rast@grod)[3]
-		if(is.na(numbands[i])){
-			numbands[i] <- 1}
+			stop("invalid raster")}
+		## Gets number of bands for raster object
+		numbands[i] <- nlayers(sp.rast)
 	}
 }
 

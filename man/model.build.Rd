@@ -11,8 +11,9 @@ model.build(model.type = NULL, qdata.trainfn = NULL, folder = NULL,
 MODELfn = NULL, predList = NULL, predFactor = FALSE, response.name = NULL, 
 response.type = NULL, unique.rowname = NULL, seed=NULL, na.action=NULL, 
 keep.data = TRUE, ntree = 500, mtry = NULL, replace=TRUE, strata=NULL, 
-sampsize = NULL, n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, 
-bag.fraction = 0.5, train.fraction = 1, n.minobsinnode = 10, 
+sampsize = NULL, proximity = TRUE, n.trees = NULL, shrinkage = 0.001, 
+interaction.depth = 10, bag.fraction = 0.5, train.fraction = NULL, 
+nTrain = NULL, n.minobsinnode = 10, 
 var.monotone=NULL)
 }
 
@@ -55,6 +56,8 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{sampsize}{ Vector.  RF models.  Size(s) of sample to draw.  For classification, if \code{sampsize} is a vector of the length the number of factor levels \code{strata}, then sampling is stratified by \code{strata}, and the elements of \code{sampsize} indicate the numbers to be drawn from each strata. If argument \code{strata} is not provided, and \code{repsonse.type = "binary"} then sampling is stratified by presence/absence. If argument \code{sampsize} is not provided \code{model.build()} will use the default value from the \code{randomForest} package: \code{if (replace) nrow(data) else ceiling(.632*nrow(data))}. }
 
+  \item{proximity}{ Logical.  RF models.  Should proximity measure among the rows be calculated?}
+
   \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.}. If \code{n.trees} is given and \code{train.fraction} is less than 1, then the SGB model is built with the given number of trees, and the best number of trees is calculated with \code{gbm} \code{method="test"}. In both of these cases \code{best.iter} is included in the returned model object. If \code{n.trees} is given and \code{train.fraction = 1}, then the model is built with the given number of trees, and \code{best.iter} is not calculated.  }
 
   \item{shrinkage}{ Numeric. SGB models.  A shrinkage parameter applied to each tree in the expansion. Also known as the learning rate or step-size reduction. }
@@ -63,7 +66,9 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{bag.fraction}{ Numeric.  SGB models.  \code{ bag.fraction} must be a number between \code{0} and \code{1}, giving the fraction of the training set observations randomly selected to propose the next tree in the expansion.  This introduces randomnesses into the model fit. If \code{ bag.fraction < 1} then running the same model twice will result in similar but different fits. }
 
-  \item{train.fraction}{ Numeric.  SGB models.  The first \code{ train.fraction * nrows(data)} observations are used to fit the model and the remainder are used for computing out-of-sample estimates of the loss function. }
+  \item{train.fraction}{ Numeric.  SGB models.  The first \code{ train.fraction * nrows(data)} observations are used to fit the model and the remainder are used for computing out-of-sample estimates of the loss function. Deprecated. }
+
+  \item{nTrain}{ Numeric.  SGB models.  An integer representing the number of cases on which to train. This is the preferred way of specification; The option \code{train.fraction} is deprecated and only maintained for backward compatibility. These two parameters are mutually exclusive. If both are unspecified, all data is used for training.}
 
   \item{n.minobsinnode}{ Integer.  SGB models.  Minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight. }
 
@@ -127,7 +132,7 @@ seed=38
 
 # Define training and test files:
 
-qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdata.trainfn = system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
 
 # Define folder for all output:
 folder=getwd()	

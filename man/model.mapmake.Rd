@@ -4,13 +4,12 @@
 
 \title{ Map Making }
 \description{
-  Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in chunks, and output to the \code{.txt} file the prediction for each data chunk, before reading the next chunk of data.
+  Applies models to either ERDAS Imagine image (.img) files or ESRI Grids of predictors to create detailed prediction surfaces.  It will handle large predictor files for map making, by reading in the \code{.img} files in rows, and output to the \code{.img} file the prediction for each data row, before reading the next row of data.
 }
 \usage{
 model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, 
-rastLUTfn = NULL, na.action = NULL, numrows = 500, map.sd = FALSE, 
-asciifn = NULL, asciifn.mean = NULL, asciifn.stdev = NULL, 
-asciifn.coefv = NULL, make.img = TRUE, n.trees = NULL)
+rastLUTfn = NULL, na.action = NULL, keep.predictor.brick=FALSE, map.sd = FALSE,
+OUTPUTfn = NULL, n.trees = NULL)
 }
 
 \arguments{
@@ -30,9 +29,9 @@ Example of comma-delimited file:
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb2,} \tab \code{2}\cr
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb3,} \tab \code{3}}}
 
-  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{-9999} (the \code{NODATA} value); (2) \code{na.action = "na.roughfix"} where a missing categorical predictor for a data point or pixel is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor.   }
+  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  Currently, the only supported option for map making is \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{NA} (the \code{NODATA} value).   }
 
-  \item{numrows}{ Integer.  Map Production.  The number of rows to be predicted at a time.}
+  \item{keep.predictor.brick}{Logical.  Map Production. If \code{TRUE} then the raster brick containing the predictors from the model object is saved as a native raster package format file. If \code{FALSE} a temporary brick is created and then deleted at the end of map production.   }
 
   \item{map.sd}{ Logical.  Map Production.  If \code{map.sd = TRUE}, maps of mean, standard deviation, and coefficient of variation of the predictions from all the trees are generated for each pixel.  If \code{map.sd = FALSE} (the default), only the predicted probability map will be built. This option is only available if the \code{model.type = "RF"} the \code{response.type = "continuous"}.  Note: This option requires much more available memory. If you get the error \code{"..cannot allocate vector of size..."}, you must reduce the value of \code{numrow}.  
 
@@ -44,15 +43,14 @@ The names of the additional maps default to:
 	  \tab \tab \tab \code{folder/model.type_response.type_response.name_coefv.txt} }
 }
 
-  \item{asciifn}{ String.  Map Production.  Filename of output file for map production.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map.txt"}. }
+  \item{OUTPUTfn}{ String.  Map Production.  Filename of output file for map production.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{OUTPUTfn = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map"}. 
 
-  \item{asciifn.mean}{ String.  Map Production.  Used if \code{map.sd = TRUE} and \code{response.type = "continuous"}.  Filename of output file for mean of trees. The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn.mean = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map_mean.txt"}.}
+The \code{raster} package uses the filename extension to determine the output format of the map object. See  the \code{raster} package function \code{\link{writeFormats}} for a list of valid write formats. Because of this, only use the \code{"."} in output filenames if it is indicating a valid file extension.
 
-  \item{asciifn.stdev}{ String.  Map Production.  Used if \code{map.sd = TRUE} and \code{response.type = "continuous"}.  Filename of output file for standard deviation of trees. The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn.stdev = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map_stdev.txt"}.}
+If the output filename does not include an extension, the default extension of \code{".img"} will be added.
 
-  \item{asciifn.coefv}{ String.  Map Production.  Used if \code{map.sd = TRUE} and \code{response.type = "continuous"}.  Filename of output file for coefficient of variation of trees. The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{asciifn.coefv = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map_coefv.txt"}.}
+For continuous random forest models with \code{map.sd = TRUE} then \code{OUTPUTfn} is also used to create output file names for maps of the mean, standard deviation and coeficient of variation of all the trees predictions for each pixel.}
 
-  \item{make.img}{ Logical.  Map Production.  Will function make Imagine Image files in addition to ASCII grid files of map output.}
 
   \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
@@ -63,20 +61,30 @@ The names of the additional maps default to:
 
 When running \code{model.mapmake()} on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
-For map making, the package \code{rgdal} is used to read \code{.img} files. The data for production mapping should be in the form of pixel-based raster layers representing the predictors in the model. If there is more than one predictor or raster layer, the layers must all have the same number of columns and rows. The layers must also have the same extent, projection, and pixel size, for effective model development and accuracy. The layers must also be in either ESRI Grid or ERDAS Imagine image (single or multi-band) raster data formats, having continuous or categorical data values. The R package \code{rgdal} is used to read spatial rasters into R.
+The R package \code{raster} is used to read spatial rasters into R. The data for production mapping should be in the form of pixel-based raster layers representing the predictors in the model. If there is more than one predictor or raster layer, the layers must all have the same number of columns and rows. The layers must also have the same extent, projection, and pixel size, for effective model development and accuracy. The \code{raster} package function \code{compareRaster()} is used to check predictor layers for consistency. 
 
-When creating maps of non-rectangular study regions there may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored in the predictions, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and a prediction will be generated for each pixel. Note: in Imagine image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into R as \code{NA}, and if \code{na.action = "na.roughfix"}, predictions will be attempted for these pixels. This will cause the computation time to increase, and these predictions will need to be masked out when the final map is imported back into a GIS system.
+The layers must also be in (single or multi-band) raster data formats that can be read by package \code{raster}, for example ESRI Grid or ERDAS Imagine image files. The predictor layers must have continuous or categorical data values. See \code{\link{writeRaster}} for a list of available formats.
 
-The function \code{model.mapmake()} outputs an ASCII grid file and Imagine Image file of map information suitable to be imported into a GIS. Small maps can also be imported back into R using the function \code{read.asciigrid()} from the \code{sp} package.
+To improve processing speed, the \code{raster} package is used to create a raster brick object with a layer for each predictor in the model. By default, this brick is a temporary file that is automatically deleated as soon as the map is completed. If \code{keep.predictor.brick=TRUE}, the predictor brick with be saved as a native \code{raster} package file, with a file name created by appending \code{'_brick'} to the \code{OUTPUTfn}. Warning: these bricks can be quite large, as they contain all the predictor data for every pixel in the map.
 
-For Binary response models the output is in the form of predicted probability of presence for each pixel. For Continuous response models the output is the predicted value for each pixel. For Categorical response models the map output depends on the category labels. If the categorical response variable is numeric, the map output will use the original numeric categories. If the categories are non-numeric, map output is in the form of integer class codes for each pixel, coded for each level of the factored response, and a CSV file containing a look up table is also generated to associate the integer codes with the original values of the response categories. 
+When creating maps of non-rectangular study regions there may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored in the predictions, thus saving computing time. 
+
+The function \code{model.mapmake()} outputs an rater file of map information suitable to be imported into a GIS. Maps can also be imported back into R using the function \code{raster()} from the \code{raster} package. The file extension of \code{OUTPUTfn} determines the write format. If \code{OUTPUTfn} does not include a file extension, output will default to an ERDAS Imagine image file with extension \code{".img"}
+
+For Binary response models the output is in the form of predicted probability of presence for each pixel. For Continuous response models the output is the predicted value for each pixel. For Categorical response models the map output depends on the category labels. If the categorical response variable is numeric, the map output will use the original numeric categories. If the categories are non-numeric (for example, character strings), map output is in the form of integer class codes for each pixel, coded for each level of the factored response, and a CSV file containing a look up table is also generated to associate the integer codes with the original values of the response categories. 
 
 The first predictor from \code{predList} is used to determine projection of output Imagine Image file.
 
 }
 \value{
 
-The function does not return a value,  instead it writes  Asci grid file and Imagine image file of map information (suitable for importing into a GIS) to the specified folder.
+The \code{model.mapmake()} function does not return a value, instead it writes a raster file of map information (suitable for importing into a GIS) to the specified folder. The output raster is saved in the format specifed by the file extension of \code{OUTPUTfn}
+
+The \code{model.mapmake()} function also writes a text file listing the projections of all predictor rasters. 
+
+For categorical response models, a csv file map key is written giving the integer code associated with each response category.
+
+If \code{keep.predictor.brick = TRUE} then a raster brick of all the predictor rasters from the model is also saved to the specified folder. If \code{keep.predictor.brick = FALSE} (the default) then the predictor brick is written to a temprary file, and deleted. Warning: the predictor bricks can be quite large, and saving them can require quite a bit of memory.
 
 }
 \references{ 
@@ -93,7 +101,7 @@ Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
 
 \author{ Elizabeth Freeman and Tracey Frescino }
 
-\seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.diagnostics}}}
+\seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.diagnostics}}, \code{\link{compareRaster}}, \code{\link{writeRaster}}}
 \examples{
 
 ###########################################################################
@@ -105,7 +113,7 @@ seed=38
 
 # Define training and test files:
 
-qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdata.trainfn = system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
 
 # Define folder for all output:
 folder=getwd()	
@@ -117,7 +125,7 @@ unique.rowname="ID"
 
 
 ###########################################################################
-############## Pick one of the following sets of definitions: #############
+######################## Define the model: ################################
 ###########################################################################
 
 
@@ -131,62 +139,6 @@ predList=c("TCB","TCG","TCW")
 
 #define which predictors are categorical:
 predFactor=FALSE	
-
-# Response name and type:
-response.name="BIO"
-response.type="continuous"
-
-
-########## binary Response, Continuous Predictors ############
-
-#file name to store model:
-MODELfn="RF_CONIFTYP_TC"				
-
-#predictors:
-predList=c("TCB","TCG","TCW")		
-
-#define which predictors are categorical:
-predFactor=FALSE
-
-# Response name and type:
-response.name="CONIFTYP"
-
-# This variable is 1 if a conifer or mixed conifer type is present, 
-# otherwise 0.
-
-response.type="binary"
-
-
-########## Continuous Response, Categorical Predictors ############
-
-# In this example, NLCD is a categorical predictor.
-#
-# You must decide what you want to happen if there are categories
-# present in the data to be predicted (either the validation/test set
-# or in the image file) that were not present in the original training data.
-# Choices:
-#       na.action =  "na.omit"
-#                    Any validation datapoint or image pixel with a value for any
-#                    categorical predictor not found in the training data will be
-#                    returned as NA.
-#       na.action =  "na.roughfix" 
-#                    Any validation datapoint or image pixel with a value for any
-#                    categorical predictor not found in the training data will have
-#                    the most common category for that predictor substituted,
-#                    and the a prediction will be made.
-
-# You must also let R know which of the predictors are categorical, in other
-# words, which ones R needs to treat as factors.
-# This vector must be a subset of the predictors given in predList
-
-#file name to store model:
-MODELfn="RF_BIO_TCandNLCD"			
-
-#predictors:
-predList=c("TCB","TCG","TCW","NLCD")
-
-#define which predictors are categorical:
-predFactor=c("NLCD")
 
 # Response name and type:
 response.name="BIO"
@@ -220,67 +172,49 @@ model.obj = model.build( model.type="RF",
 ############ Then Run this code to predict map pixels #####################
 ###########################################################################
 
-# A single model was built from the training data, 
-# but it will be applied to two sets of image data, one from 2001 and one from 2004
 
-####################################################################################################
-
-### Create a list of the filenames (including paths) for the rast Look up Tables ###
+### Create a the filename (including path) for the rast Look up Tables ###
 
 
-rastLUTfn.2001 <- paste(system.file(package="ModelMap"),"/external/helpexamples/LUT_2001.csv",sep="")
-rastLUTfn.2004 <- paste(system.file(package="ModelMap"),"/external/helpexamples/LUT_2004.csv",sep="")
+rastLUTfn.2001 <- system.file(	"extdata",
+				"helpexamples",
+				"LUT_2001.csv",
+				package="ModelMap")
+                         
+                 
 
 
-### Load rast LUT tables, and add path to the filenames in column 1 ###
+
+### Load rast LUT table, and add path to the predictor raster filenames in column 1 ###
 
 rastLUT.2001 <- read.table(rastLUTfn.2001,header=FALSE,sep=",",stringsAsFactors=FALSE)
-rastLUT.2004 <- read.table(rastLUTfn.2004,header=FALSE,sep=",",stringsAsFactors=FALSE)
 
-rastLUT.2001[,1] <- paste(system.file(package="ModelMap"),"external/helpexamples",rastLUT.2001[,1],sep="/")
-rastLUT.2004[,1] <- paste(system.file(package="ModelMap"),"external/helpexamples",rastLUT.2004[,1],sep="/")                                      
-
-
-### Define filenames for map  output ###
-
-asciifn.2001 <- "RF_BIO_TCandNLCD_01.txt"
-asciifn.2004 <- "RF_BIO_TCandNLCD_04.txt"
+for(i in 1:nrow(rastLUT.2001)){
+	rastLUT.2001[i,1] <- system.file("extdata",
+					"helpexamples",
+					rastLUT.2001[i,1],
+					package="ModelMap")
+}                                 
 
 
-asciifn.2001 <- paste(folder,asciifn.2001,sep="/")
-asciifn.2004 <- paste(folder,asciifn.2004,sep="/")
+### Define filename for map  output ###
+
+OUTPUTfn.2001 <- "RF_BIO_TCandNLCD_01.img"
+OUTPUTfn.2001 <- paste(folder,OUTPUTfn.2001,sep="/")
 
 
-### Define Number of rows of raster to read in at one time ###
-# if crashes with warning: "unable to assign..." lower this number
-
-numrows=500
-
-
-### Create ascii text files of predicted map data ###
+### Create image files of predicted map data ###
 
 model.mapmake( model.obj=model.obj,
                folder=folder,		
                rastLUTfn=rastLUT.2001,
-           # Model Validation Arguments	
-               na.action="na.roughfix",
-           # Mapping arguments
-               numrows = numrows,						
-               asciifn=asciifn.2001
+           # Mapping arguments						
+               OUTPUTfn=OUTPUTfn.2001
                )
 
-model.mapmake( model.obj=model.obj,
-               folder=folder,		
-               rastLUTfn=rastLUT.2004,
-           # Model Validation Arguments	
-               na.action="na.roughfix",
-           # Mapping arguments
-               numrows = numrows,						
-               asciifn=asciifn.2004
-               )
 
 ###########################################################################
-######### run this code to create maps in R (For small maps only!)#########
+################ run this code to create maps in R ########################
 ###########################################################################
 
 ### Define Color Ramp ###
@@ -292,26 +226,25 @@ col.ramp <- hcl(h = 120, c = c, l = l)
 
 ### read in map data ###
 
-mapgrid.2001 <- read.asciigrid(asciifn.2001,as.image=TRUE)
-mapgrid.2004 <- read.asciigrid(asciifn.2004,as.image=TRUE)
+mapgrid.2001 <- raster(OUTPUTfn.2001)
+
+#mapgrid.2001 <- setMinMax(mapgrid.2001)
 
 
 ### create map ###
 
-dev.new(width = 8, height = 4)
-opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+dev.new(width = 5, height = 5)
+opar <- par(mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-zlim <- c(0,max(mapgrid.2001$z,mapgrid.2004$z,na.rm=TRUE))
+zlim <- c(0,max(maxValue(mapgrid.2001)))
 legend.label<-rev(pretty(zlim,n=5))
 legend.colors<-col.ramp[trunc((legend.label/max(legend.label))*100)+1]
 
-image(mapgrid.2001, col = col.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image(  mapgrid.2001, col = col.ramp, zlim=zlim, asp=1, bty="n", 
+        xaxt="n", yaxt="n", main="", xlab="", ylab="")
 mtext("2001 Imagery",side=3,line=1,cex=1.2)
 
-image(mapgrid.2004, col = col.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-mtext("2004 Imagery",side=3,line=1,cex=1.2)
-
-legend(	x=max(mapgrid.2004$x),y=max(mapgrid.2004$y),
+legend(	x=xmax(mapgrid.2001),y=ymax(mapgrid.2001),
 	legend=legend.label,
 	fill=legend.colors,
 	bty="n",
@@ -319,73 +252,6 @@ legend(	x=max(mapgrid.2004$x),y=max(mapgrid.2004$y),
 )
 mtext("Predictions",side=3,line=1,cex=1.5,outer=TRUE)
 par(opar)
-
-
-###########################################################################
-##### Run this code to map predictor data in R (For small maps only!) #####
-###########################################################################
-
-### Define Color Ramps ###
-
-l <- seq(100,0,length.out=101)
-c <- seq(0,100,length.out=101)
-col.ramp.1 <- hcl(h = 15, c = c, l = l)
-col.ramp.2 <- hcl(h = 70, c = c, l = l)
-col.ramp.3 <- hcl(h = 150, c = c, l = l)
-
-
-dev.new(width = 9, height = 6)
-opar <- par(mfcol=c(2,3),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
-
-#band 1
-predgrid.2001=readGDAL(rastLUT.2001[1,1],band=rastLUT.2001[1,3])
-predgrid.2001=as.image.SpatialGridDataFrame(predgrid.2001)
-predgrid.2004=readGDAL(rastLUT.2004[1,1],band=rastLUT.2004[1,3])
-predgrid.2004=as.image.SpatialGridDataFrame(predgrid.2004)
-
-zlim <- range(predgrid.2001$z,predgrid.2004$z)
-
-image(predgrid.2001, col = col.ramp.1,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-mtext(rastLUT.2001[1,2],side=3,cex=1.5)
-mtext("2001 Imagery",side=2,cex=1.5,line=1)
-
-image(predgrid.2004, col = col.ramp.1,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-mtext("2004 Imagery",side=2,cex=1.5,line=1)
-
-
-#band 2
-predgrid.2001=readGDAL(rastLUT.2001[2,1],band=rastLUT.2001[2,3])
-predgrid.2001=as.image.SpatialGridDataFrame(predgrid.2001)
-predgrid.2004=readGDAL(rastLUT.2004[2,1],band=rastLUT.2004[2,3])
-predgrid.2004=as.image.SpatialGridDataFrame(predgrid.2004)
-
-zlim <- range(predgrid.2001$z,predgrid.2004$z)
-
-image(predgrid.2001, col = col.ramp.2,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-mtext(rastLUT.2001[2,2],side=3,cex=1.5)
-
-image(predgrid.2004, col = col.ramp.2,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-
-
-#band 3
-predgrid.2001=readGDAL(rastLUT.2001[3,1],band=rastLUT.2001[3,3])
-predgrid.2001=as.image.SpatialGridDataFrame(predgrid.2001)
-predgrid.2004=readGDAL(rastLUT.2004[3,1],band=rastLUT.2004[3,3])
-predgrid.2004=as.image.SpatialGridDataFrame(predgrid.2004)
-
-zlim <- range(predgrid.2001$z,predgrid.2004$z)
-
-image(predgrid.2001, col = col.ramp.3,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-mtext(rastLUT.2001[3,2],side=3,cex=1.5)
-
-image(predgrid.2004, col = col.ramp.3,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
-
-
-mtext("Predictor Imagery",side=3,line=1,cex=1.5,outer=TRUE)
-par(opar)
-
-
-
 
 
 

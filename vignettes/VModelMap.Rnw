@@ -64,9 +64,9 @@
 \begin{document}
 
 \SweaveOpts{engine=R}
-%\VignetteIndexEntry{ModelMap: anR package for Model Creation and Map Production} 
-%\VignetteDepends{randomForest, gbm, PresenceAbsence, rgdal} 
-%\VignetteKeywords{species distribution models, random forest, stochastic gradient boosting, map production, R} 
+%\VignetteIndexEntry{ModelMap: an R package for Model Creation and Map Production} 
+%\VignetteDepends{randomForest, gbm, PresenceAbsence, raster} 
+%\VignetteKeywords{species distribution models, random forest, stochastic gradient boosting, map production, raster, R} 
 %\VignettePackage{ModelMap} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -89,7 +89,7 @@ Maps of tree species presence and silvicultural metrics like basal area are need
 The \proglang{R} software environment offers sophisticated new modeling techniques, but requires advanced programming skills to take full advantage of these capabilities. In addition, spatial data files can be too memory intensive to analyze easily with standard \proglang{R} code. The \pkg{ModelMap} package provides an interface between several existing \proglang{R} packages to automate and simplify the process of model building and map construction.
 
 While spatial data is typically manipulated within a Geographic Information System (GIS), the \pkg{ModelMap} package facilitates modeling and mapping extensive spatial data in the \proglang{R} software environment. 
-\pkg{ModelMap} has simple to use GUI prompts for non-programmers, but still has the flexibility to be run at the command line or in batch mode, and the power to take full advantage of sophisticated new modeling techniques. \pkg{ModelMap} uses the \pkg{rgdal} package to read and predict over GIS raster data. Large maps are read in sections, to keep memory usage reasonable. 
+\pkg{ModelMap} has simple to use GUI prompts for non-programmers, but still has the flexibility to be run at the command line or in batch mode, and the power to take full advantage of sophisticated new modeling techniques. \pkg{ModelMap} uses the \pkg{raster} package to read and predict over GIS raster data. Large maps are read in by row, to keep memory usage reasonable. 
 
 The current implementation of \pkg{ModelMap} builds predictive models using Random Forests or Stochastic Gradient Boosting. Random Forest models are constructed using the \pkg{randomForest} package \citep{randomForest} and Stochastic Gradient Boosting models are constructed using the \pkg{gbm} package \citep{gbm}. The \pkg{ModelMap} package models both continuous and binary response variables. For binary response, the \pkg{PresenceAbsence} package \citep{PresenceAbsence} package is used for model diagnostics.
 
@@ -111,7 +111,7 @@ While classification and regression trees are powerful methods in and of themsel
 
 \section{Package Overview}
 
-The \pkg{ModelMap} package for \proglang{R} enables user-friendly modeling, diagnostics, and mapping over large geographic areas though simple R function calls: \code{model.build()}, \code{model.diagnostics()}, and \code{model.mapmake()}. The function \code{model.build()} constructs predictive models of continuous or discrete responses using Random Forests or Stochastic Gradient Boosting. The function \code{model.diagnostics()} validates these models with an independent test set, cross-validation, or (in the case of Random Forest Models) with Out OF Bag (OOB) predictions on the training data. This function also creates graphs and tables of the model validation diagnostics. The function \code{model.mapmake()} applies the models to GIS image files of predictors to create detailed prediction surfaces. This function will handle large predictor files for map making, by reading in the GIS data in sections, thus keeping memory usage reasonable.
+The \pkg{ModelMap} package for \proglang{R} enables user-friendly modeling, diagnostics, and mapping over large geographic areas though simple R function calls: \code{model.build()}, \code{model.diagnostics()}, and \code{model.mapmake()}. The function \code{model.build()} constructs predictive models of continuous or discrete responses using Random Forests or Stochastic Gradient Boosting. The function \code{model.diagnostics()} validates these models with an independent test set, cross-validation, or (in the case of Random Forest Models) with Out OF Bag (OOB) predictions on the training data. This function also creates graphs and tables of the basic model validation diagnostics. The functions \code{model.importance.plot()} and \code{model.interaction.plot} provide additional graphical tools to examine the relationships between the predictor variable. The function \code{model.mapmake()} applies the models to GIS image files of predictors to create detailed prediction surfaces. This function will handle large predictor files for map making, by reading in the GIS data in sections, thus keeping memory usage reasonable. The \pkg{raster} package is used to read and write to the GIS image files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,15 +151,15 @@ In a \proglang{Windows} environment, if \code{qdata.testfn = NULL} (default), a 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Missing predictor values}
 
-There are three circumstances that can lead to having missing predictor values.  First, there are true missing values for predictors within the study area. Second, there are categorical predictors with categories that are present in the test or mapping data but not in the training data. And finally, portions of the mapping rectangle lie outside of the study area. Each of the three cases is handled slightly differently by \pkg{ModelMap}.
+There are three circumstances that can lead to having missing predictor values.  First, there are true missing values for predictors within the test set or study area. Second, there are categorical predictors with categories that are present in the test or mapping data but not in the training data. And finally, portions of the mapping rectangle lie outside of the study area. Each of the three cases is handled slightly differently by \pkg{ModelMap}.
 
-In the first instance, true mising data values in the test set or within the study area for production mapping could be caused by data collection errors. These are data points or pixels for which you may still need be interested in a prediction based on the other remaining predictors. These missing values should be coded as \code{NA} in the training or test data. In \proglang{Imagine} image files, pixels of the specified \code{NODATA} value will be read into \proglang{R} as \code{NA}. The argument \code{na.action} will determine how these \code{NA} pixels will be treated. There are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any \code{NA} predictors is omitted from the model building process and the diagnostic predictions, or returned as \code{-9999} in the map predictions; (2) \code{na.action = "na.roughfix"} where before making predictions, a missing categorical predictor is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor. 
+In the first instance, true mising data values in the test set or within the study area for production mapping could be caused by data collection errors. These are data points or pixels for which you may still need be interested in a prediction based on the other remaining predictors. These missing values should be coded as \code{NA} in the training or test data. In \proglang{Imagine} image files, pixels of the specified \code{NODATA} value will be read into \proglang{R} as \code{NA}. The argument \code{na.action} will determine how these \code{NA} pixels will be treated. For model diagnostics, there are 2 options: (1) \code{na.action = "na.omit"} (the default) where any data point or pixel with any \code{NA} predictors is omitted from the model building process and the diagnostic predictions, or returned as \code{-9999} in the map predictions; (2) \code{na.action = "na.roughfix"} where before making predictions, a missing categorical predictor is replaced with the most common category for that predictor, and a missing continuous predictor is replaced with the median for that predictor. Currently, for map making only one option is available: \code{na.action = "na.omit"}.
 
-The second type of missing value occurs when using categorical predictors. There may be cases where a category is found in the validation test set or in the map region that was not present in the training data. This is a particularly common occurrence when using cross-validation on a small dataset. Again, the argument \code{na.action} will determine how these data points or pixels are treated. If \code{na.action = "na.omit"}, no prediction will be made for these locations. If \code{na.action = "na.roughfix"}, the most common category will be substituted for the unknown category. In either instance, a warning will be generated with a list of the categories that were missing from the training data. After examining these categories, you may decide that rather than omitting these locations or substituting the most common category, a better option would be to collapse similar categories into larger groupings. In this case you would need to pre-process your data and run the models and predictions again.  
+The second type of missing value occurs when using categorical predictors. There may be cases where a category is found in the validation test set or in the map region that was not present in the training data. This is a particularly common occurrence when using cross-validation on a small dataset. Again, the argument \code{na.action} will determine how these data points or pixels are treated. If \code{na.action = "na.omit"}, no prediction will be made for these locations. For model diagnostics, with \code{na.action = "na.roughfix"} the most common category will be substituted for the unknown category. Again, for map making \code{na.action = "na.omit"} is the only available option. In either instance, a warning will be generated with a list of the categories that were missing from the training data. After examining these categories, you may decide that rather than omitting these locations or substituting the most common category, a better option would be to collapse similar categories into larger groupings. In this case you would need to pre-process your data and run the models and predictions again.  
 
-The final type of missing predictor occurs when creating maps of non-rectangular study regions. There may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored, thus saving computing time, and will be exported as \code{-9999}. Any value other than \code{-9999} will be treated as a legal data value and if \code{na.action = "na.roughfix"} a prediction will be generated for each pixel. 
+The final type of missing predictor occurs when creating maps of non-rectangular study regions. There may be large portions of the rectangle where you have no predictors, and are uninterested in making predictions. The suggested value for the pixels outside the study area is \code{-9999}. These pixels will be ignored, thus saving computing time, and will be exported as \code{NA}.  
 
-Note: in \proglang{Imagine} image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into \proglang{R} as \code{NA}, and if \code{na.action = "na.roughfix"}, predictions will be attempted for these pixels. This will cause the computation time to increase, and these predictions will need to be masked out when the final map is imported back into a GIS. 
+Note: in \proglang{Imagine} image files, if the specified \code{NODATA} is set as \code{-9999}, any \code{-9999} pixels will be read into \proglang{R} as \code{NA}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Model Object}
@@ -175,11 +175,13 @@ Stochastic gradient boosting is implemented through the \pkg{gbm} package within
 \subsection{Spatial Raster Layers}
 
 
-The \pkg{ModelMap} uses the \pkg{rgdal} package to read spatial rasters into \proglang{R}. The data for predictive mapping in \pkg{ModelMap} should be in the form of pixel-based raster layers representing the predictors in the model. The layers must also be in either \proglang{ESRI} Grid or \proglang{ERDAS Imagine} image (single or multi-band) raster data formats, having continuous or categorical data values. For effective model development and accuracy, if there is more than one raster layer, the layers must have the same extent, projection, and pixel size. 
+The \pkg{ModelMap} uses the \pkg{raster} package to read spatial rasters into \proglang{R}. The data for predictive mapping in \pkg{ModelMap} should be in the form of pixel-based raster layers representing the predictors in the model. The layers must be a file type recognizeable by the \pkg{raster} package, for example \proglang{ERDAS Imagine} image (single or multi-band) raster data formats, having continuous or categorical data values. For effective model development and accuracy, if there is more than one raster layer, the layers must have the same extent, projection, and pixel size. 
 
-The function \code{model.mapmake()} outputs an ASCII grid file of map information suitable to be imported into a GIS. Small maps can also be imported back into \proglang{R} using the function \code{read.asciigrid()} from the \pkg{sp} package \citep{sp}.
+To speed up processing of predictor layers, \code{model.mapmake()} builds a single raster brick object containing one layer for each predictor in the model. By default, this brick is stored as a temp file and deleted once the map is complete. If the argument \code{keep.predictor.brick = TRUE} then the brick will be saved in a native \pkg{raster} package format file, with the file name constructed by appending \code{'_brick.grd'} to the \code{OUTPUTfn}.
 
-The supplementary materials in \citet{elith08} also contain \proglang{R} code to predict to grids imported from a GIS program, including large grids that need to be imported in pieces. However this code requires pre-processing of the raster data in the GIS software to produce ASCII grids for each layer of data before they can be imported into \proglang{R}. \pkg{ModelMap} simplifies and automates this process, by reading Arcinfo grids and Imagine image files directly, (including multi band images). \pkg{ModelMap} also will verify that the extent of all rasters is identical (same cell size, same number of row and columns, corners line up) and will produce informative error messages if this is not true. \pkg{ModelMap} also simplifies working with masked values and missing predictors.
+The function \code{model.mapmake()} by default outputs an \proglang{ERDAS Imagine} image file of map information suitable to be imported into a GIS. (Note: The file extension of the \code{OUTPPUTfn} argument can be used to specify other file types, see the help file for the \code{writeFormats()} function in the \pkg{raster} package for a list of possible file types and extensions.) Maps can then be imported back into \proglang{R} and view graphically using the \pkg{raster} package.
+
+The supplementary materials in \citet{elith08} also contain \proglang{R} code to predict to grids imported from a GIS program, including large grids that need to be imported in pieces. However this code requires pre-processing of the raster data in the GIS software to produce ASCII grids for each layer of data before they can be imported into \proglang{R}. \pkg{ModelMap} simplifies and automates this process, by reading  Imagine image files directly, (including multi band images). \pkg{ModelMap} also will verify that the extent of all rasters is identical and will produce informative error messages if this is not true. \pkg{ModelMap} also simplifies working with masked values and missing predictors.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Raster Look Up Table}
@@ -197,7 +199,7 @@ In a windows environment, the function \code{build.rastLUT()} may be used to hel
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Examples}
 
-These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building four models: Random Forest with continuous response; Random Forest with binary response; Random Forest with categorical response; and, Stochastic Gradient Boosting with binary response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species. 
+These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building four models: Random Forest with continuous response; Random Forest with binary response; Random Forest with categorical response; and, Stochastic Gradient Boosting with binary response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species.The categorical response is vegetation category.  
 
 Next, model validation diagnostics are performed with three techniques: an independent test set; Out Of Bag estimation; and cross-validation. Independent test set validation and cross-validation work for both Random Forest and Stochastic Gradient Boosting models. Out Of Bag estimation is only available for Random Forest models. (Note: in an actual model comparison study, rather than a package demonstration, the models would be compared with the same validation technique, rather than mixing techniques.)
 
@@ -215,6 +217,7 @@ The dataset is from a pilot study in Nevada launched in 2004 involving acquisiti
 The predictor data set consists of 6 predictor variables: 5 continuous variables, and 1 categorical variable \mbox{(Table \ref{tab:one})}. The predictor layers are 250-meter resolution, pixel-based raster layers including Moderate Resolution Imaging Spectro-radiometer (MODIS) satellite imagery \citep{justice02}, a Landsat Thematic Mapper-based, thematic layer of predicted land cover, National Land Cover Dataset (NLCD) \citep{homer04}, and a topographic layer of elevation from the National Elevation Dataset  \citep{gesch02}. 
 
 The continuous response variables are percent cover of Pinyon and Sage. The binary response variables are presence of Pinyon and Sage. The categorical response variable is the vegetation category: TREE, SHRUB, OTHERVEG, and NONVEG.  
+
 The MODIS data included 250-meter, 16-day, cloud-free, composites of MODIS imagery for April 6, 2005: visible-red (RED) and near-infrared (NIR) bands and 2 vegetation indices, normalized difference vegetation index (NDVI) and enhanced vegetation index (EVI)  \citep{huete02}. The land cover and topographic layers were 30-meter products re-sampled to 250 meter using majority and mean summaries, respectively.
 
 The rectangular subset of Nevada chosen for these maps contains a small mountain range surrounded by plains, and was deliberately selected to lie along the edge of the study region to illustrate how \pkg{ModelMap} handles unsampled regions of a rectangle \mbox{(Figure \ref{fig:ExElev})}.
@@ -294,7 +297,7 @@ Specify model type. The choices are \code{"RF"} for Random Forest models, and \c
 model.type <- "RF"
 @
 
-Define training and test data file names. Note that the arguments \code{qdata.trainfn} and \code{qdata.testfn} will accept both character strings giving the file names of CSV files of data, or the data itself in the form of a data frame. 
+Define training and test data file names. Note that the arguments \code{qdata.trainfn} and \code{qdata.testfn} will accept either character strings giving the file names of CSV files of data, or the data itself in the form of a data frame. 
 
 <<Ex1 Define training and test files, results=hide>>=
 qdatafn <- "VModelMapData.csv"
@@ -647,13 +650,12 @@ model.interaction.plot( model.obj.ex1b,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Map production}
 
-Before creating maps of the response variable, Examine the predictor variable for elevation \mbox{(Figure \ref{fig:ExElev})}.
+Before building maps of the responses, examine the predictor variable for elevation \mbox{(Figure \ref{fig:ExElev})}:
 
 <<ExElevReadGDAL, results=hide>>=
 
 elevfn <- paste(folder,"/VModelMapData_dem_ELEVM_250.img",sep="")
-mapgrid <- readGDAL(elevfn,band=1)
-mapgrid <- as.image.SpatialGridDataFrame(mapgrid)
+mapgrid <- raster(elevfn)
 @
 
 <<ExElev,include=TRUE,width=4.5,height=6.5, results=hide>>=
@@ -662,7 +664,7 @@ opar <- par(mar=c(4,4,3,6),xpd=NA,mgp=c(3, 2, .3))
 
 col.ramp<-terrain.colors(101)
 
-zlim <- c(1500,max(mapgrid$z,na.rm=TRUE))
+zlim <- c(1500,maxValue(mapgrid))
 legend.label<-rev(pretty(zlim,n=5))
 legend.colors<-col.ramp[trunc((legend.label/max(legend.label))*100)+1]
 legend.label<-paste(legend.label,"m",sep="")
@@ -670,9 +672,13 @@ legend.label<-paste(legend.label,"m",sep="")
 legend.label<-paste((7:3)*500,"m")
 legend.colors<-col.ramp[c(100,75,50,25,1)]
 
-image(mapgrid, col = col.ramp,zlim=zlim,asp=1,bty="n")
+image( mapgrid, 
+       col = col.ramp,
+       xlab="", ylab="", 
+       zlim=zlim,
+       asp=1, bty="n", main="")
 
-legend( x=max(mapgrid$x),y=max(mapgrid$y),
+legend( x=xmax(mapgrid),y=ymax(mapgrid),
         legend=legend.label,
         fill=legend.colors,
         bty="n",
@@ -707,12 +713,12 @@ rastLUTfn     <- read.table(  rastLUTfn,
 rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 @
 
-To produce a map from a raster larger than the memory limits of \proglang{R}, predictions are made on subsets of the grid. The number of rows to read in at one time is defined by the \code{numrows} argument. The higher the value of \code{numrows}, the faster the map will be produced, but the higher the memory required. The maximum value of \code{numrows} depends on the width of the raster. If \code{model.mapmake()} crashes with the warning, \code{"unable to assign..."} try setting \code{numrows} to a lower number or use the \code{memory.limit()} function to increase the memory limits in \proglang{R}.
+To produce a map from a raster larger than the memory limits of \proglang{R}, predictions are made one row at a time. 
 
-Since this is a Random Forest model of a continuous response, the prediction at each pixel is the mean of all the trees. Therefore these individual tree predictions can also be used to map measures of uncertainty such as standard deviation and coefficient of variation for each pixel. To do so, set \code{map.sd = "TRUE"}. To calculate these pixel uncertainty measures, \code{model.map()} must keep all the individual trees in memory, so \code{map.sd = "TRUE"} is much more memory intensive, and the \code{numrows} argument may have to be set to an even lower value.  
+Since this is a Random Forest model of a continuous response, the prediction at each pixel is the mean of all the trees. Therefore these individual tree predictions can also be used to map measures of uncertainty such as standard deviation and coefficient of variation for each pixel. To do so, set \code{map.sd = "TRUE"}. To calculate these pixel uncertainty measures, \code{model.map()} must keep all the individual trees in memory, so \code{map.sd = "TRUE"} is much more memory intensive.  
 
 <<Ex1 Define numrows, results=hide>>=
-numrows=500
+
 @
 
 <<Ex1 Produce Maps, results=hide>>=
@@ -723,7 +729,6 @@ model.mapmake(  model.obj=model.obj.ex1a,
                 rastLUTfn=rastLUTfn,
                 na.action="na.omit",
              # Mapping arguments
-                numrows=numrows,
                 map.sd=TRUE)
             
 
@@ -733,11 +738,10 @@ model.mapmake(  model.obj=model.obj.ex1b,
                 rastLUTfn=rastLUTfn,
                 na.action="na.omit",
              # Mapping arguments
-                numrows=numrows,
                 map.sd=TRUE)
 @
 
-The function \code{model.mapmake()} creates an ASCII grid file of map information suitable to be imported into a GIS. As this sample dataset is relatively small, we can also import it into \proglang{R} for display. 
+The function \code{model.mapmake()} creates an \proglang{Imagine} image file of map information suitable to be imported into a GIS. As this sample dataset is relatively small, we can also import it into \proglang{R} for display. 
 
 We need to define a color ramp. For this response variable, zero values will display as white, shading to dark green for high values.
 
@@ -756,20 +760,28 @@ Since we know that percent cover can not be negative, we will set \code{zlim} to
 <<Ex1Map,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_map.txt",sep=""),as.image=TRUE)
-mapgrid.b <- read.asciigrid(paste(MODELfn.b,"_map.txt",sep=""),as.image=TRUE)
+mapgrid.a <- raster(paste(MODELfn.a,"_map.img",sep=""))
+mapgrid.b <- raster(paste(MODELfn.b,"_map.img",sep=""))
 
-zlim <- c(0,max(mapgrid.a$z,mapgrid.b$z,na.rm=TRUE))
+zlim <- c(0,max(maxValue(mapgrid.a),maxValue(mapgrid.b)))
 legend.label<-rev(pretty(zlim,n=5))
 legend.colors<-col.ramp[trunc((legend.label/max(legend.label))*100)+1]
 legend.label<-paste(legend.label,"%",sep="")
 
-image(mapgrid.a, col = col.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.a,
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, col = col.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.b, 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
@@ -797,20 +809,27 @@ stdev.ramp   <- hcl(h = 15, c = c, l = l)
 <<Ex1StdevMap,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_stdev.txt",sep=""),as.image=TRUE)
-mapgrid.b <- read.asciigrid(paste(MODELfn.b,"_stdev.txt",sep=""),as.image=TRUE)
+mapgrid.a <- raster(paste(MODELfn.a,"_map_stdev.img",sep=""))
+mapgrid.b <- raster(paste(MODELfn.b,"_map_stdev.img",sep=""))
 
-zlim <- c(0,max(mapgrid.a$z,mapgrid.b$z,na.rm=TRUE))
+zlim <- c(0,max(maxValue(mapgrid.a),maxValue(mapgrid.b)))
 legend.label<-rev(pretty(zlim,n=5))
 legend.colors<-stdev.ramp[trunc((legend.label/max(legend.label))*100)+1]
 legend.label<-paste(legend.label,"%",sep="")
 
-image(mapgrid.a, col = stdev.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.a, 
+       col=stdev.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, col = stdev.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.b, 
+       col=stdev.ramp,xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
@@ -837,19 +856,26 @@ coefv.ramp <- hcl(h = 70, c = c, l = l)
 <<Ex1CoefvMap,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_coefv.txt",sep=""),as.image=TRUE)
-mapgrid.b <- read.asciigrid(paste(MODELfn.b,"_coefv.txt",sep=""),as.image=TRUE)
+mapgrid.a <-raster(paste(MODELfn.a,"_map_coefv.img",sep=""),as.image=TRUE)
+mapgrid.b <- raster(paste(MODELfn.b,"_map_coefv.img",sep=""),as.image=TRUE)
 
-zlim <- c(0,max(mapgrid.a$z,mapgrid.b$z,na.rm=TRUE))
+zlim <- c(0,max(maxValue(mapgrid.a),maxValue(mapgrid.b)))
 legend.label<-rev(pretty(zlim,n=5))
 legend.colors<-coefv.ramp[trunc((legend.label/max(legend.label))*100)+1]
 
-image(mapgrid.a, col = coefv.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.a, 
+       col=coefv.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, col = coefv.ramp,zlim=zlim,asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.b, 
+       col=coefv.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
 	    	legend=legend.label,
 		    fill=legend.colors,
 		    bty="n",
@@ -941,11 +967,6 @@ Define the column that contains unique identifiers.
 unique.rowname <- "ID"
 @
 
-Define numrows.
-
-<<Ex2 Define numrows, results=hide>>=
-numrows=500
-@
 
 Define raster look up table.
 
@@ -1192,7 +1213,7 @@ par(opar)
 <<Ex2CompImpPA>>
 @
 \end{center}
-\caption{\label{fig:Ex2CompImpPA}Example 3 - Relative variable importances (permutation based) for predicting Presences verses predicting Absences for Pinyon ans Sage.}
+\caption{\label{fig:Ex2CompImpPA}Example 2 - Relative variable importances (permutation based) for predicting Presences verses predicting Absences for Pinyon and Sage.}
 \end{figure}
 
 
@@ -1284,23 +1305,19 @@ model.interaction.plot( model.obj.ex2b,
 The function \code{model.mapmake()} creates ascii text files of map predictions. 
 
 <<Ex2 Produce Maps, results=hide>>=
-
 model.mapmake( model.obj=model.obj.ex2a,
                folder=folder,           
                MODELfn=MODELfn.a,
                rastLUTfn=rastLUTfn,
-               na.action="na.omit",
-          # Mapping arguments
-               numrows=numrows)
+               na.action="na.omit")
             
 
 model.mapmake( model.obj=model.obj.ex2b,
                folder=folder,           
                MODELfn=MODELfn.b,
                rastLUTfn=rastLUTfn,
-               na.action="na.omit",
-          # Mapping arguments
-               numrows=numrows)
+               na.action="na.omit")
+
 @
 
 When working with categorical predictors, sometimes there are categories in the prediction data (either the test set, or the map data) not found in the training data. In this case, there were three classes for the predictor \code{NLCD01_250} that were not present in the training data. With the default \code{na.action = "na.omit"} the \code{model.mapmake()} function generated the following warnings, and these pixels will show up as blank pixels in the maps.
@@ -1341,19 +1358,26 @@ Import the data and create the map. Since we know that probability of presence c
 <<Ex2ProbabilitySurface,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_map.txt",sep=""),as.image=TRUE)
-mapgrid.b <- read.asciigrid(paste(MODELfn.b,"_map.txt",sep=""),as.image=TRUE)
+mapgrid.a <- raster(paste(MODELfn.a,"_map.img",sep=""))
+mapgrid.b <- raster(paste(MODELfn.b,"_map.img",sep=""))
 
 legend.subset<-c(100,80,60,40,20,1)
 legend.colors<-probpres.ramp[legend.subset]
 legend.label<-c("100%"," 80%"," 60%"," 40%"," 20%","  0%")
 
-image(mapgrid.a, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.a, 
+       col=probpres.ramp,
+       xlab="",ylab="",yaxt="n",main="",zlim=c(0,1),
+       asp=1,bty="n",xaxt="n")
 mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.b, 
+       col=probpres.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=c(0,1),
+       asp=1,bty="n",main="")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
     legend=legend.label,
     fill=legend.colors,
     bty="n",
@@ -1365,7 +1389,7 @@ par(opar)
 
 \begin{figure}
 \begin{center}
-<<Ex2ProductionMapsFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex2ProbabilitySurfaceFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
 <<Ex2ProbabilitySurface>>
 @
 \end{center}
@@ -1379,21 +1403,25 @@ Here are examples of Presence-Absence maps for Pinyon and Sage produced by four 
 
 <<Ex2aPresenceMaps,include=TRUE,width=5.4,height=7.5, results=hide>>=
 opar <- par(mfrow=c(2,2),mar=c(2.5,3,4,1),oma=c(0,0,4,6),xpd=NA)
-mapgrid <- read.asciigrid(paste(MODELfn.a,"_map.txt",sep=""),as.image=TRUE)
+mapgrid <- raster(paste(MODELfn.a,"_map.img",sep=""))
 criteria <- c("Default","MaxKappa","ReqSens","ReqSpec")
 criteria.labels<-c("Default","MaxKappa","ReqSens = 0.9","ReqSpec = 0.9")
 for(i in 1:4){
-	thresh<-opt.thresh.a$threshold[opt.thresh.a$opt.methods==criteria[i]]
-	presencegrid<-mapgrid
-	presencegrid$z <- ifelse(presencegrid$z>thresh,1,0)
+      thresh <- opt.thresh.a$threshold[opt.thresh.a$opt.methods==criteria[i]]
+      presencegrid <- mapgrid
+      v <- getValues(presencegrid)
+	v <- ifelse(v > thresh,1,0) 
+      presencegrid <- setValues(presencegrid, v)
+
 	image( presencegrid,
 	       col=c("white","forestgreen"),
 	       zlim=c(0,1),
 	       asp=1,
 	       bty="n",
-	       xaxt="n", yaxt="n")
+	       xaxt="n", yaxt="n",
+             main="",xlab="",ylab="")
 	if(i==2){
-		legend( x=max(mapgrid$x),y=max(mapgrid$y),
+		legend( x=xmax(mapgrid),y=ymax(mapgrid),
 		        legend=c("Present","Absent"),
 		        fill=c("forestgreen","white"),
 		        bty="n",
@@ -1418,25 +1446,27 @@ par(opar)
 
 <<Ex2bPresenceMaps,include=TRUE,width=5.4,height=7.5, results=hide>>=
 opar <- par(mfrow=c(2,2),mar=c(2.5,3,4,1),oma=c(0,0,4,6),xpd=NA)
-mapgrid <- read.asciigrid(paste(MODELfn.b,"_map.txt",sep=""),as.image=TRUE)
+mapgrid <- raster(paste(MODELfn.b,"_map.img",sep=""))
 criteria <- c("Default","MaxKappa","ReqSens","ReqSpec")
 criteria.labels<-c("Default","MaxKappa","ReqSens = 0.9","ReqSpec = 0.9")
 for(i in 1:4){
-	thresh<-opt.thresh.b$threshold[opt.thresh.b$opt.methods==criteria[i]]
-	presencegrid<-mapgrid
-	presencegrid$z <- ifelse(presencegrid$z>thresh,1,0)
+      thresh <- opt.thresh.b$threshold[opt.thresh.b$opt.methods==criteria[i]]
+      presencegrid <- mapgrid
+      v <- getValues(presencegrid)
+	v <- ifelse(v > thresh,1,0) 
+      presencegrid <- setValues(presencegrid, v)
+
 	image( presencegrid,
 	       col=c("white","forestgreen"),
+	       xlab="",ylab="",xaxt="n", yaxt="n",
 	       zlim=c(0,1),
-	       asp=1,
-	       bty="n",
-	       xaxt="n",yaxt="n")
+	       asp=1,bty="n",main="")
 	if(i==2){
-		legend( x=max(mapgrid$x),y=max(mapgrid$y),
-            legend=c("Present","Absent"),
-            fill=c("forestgreen","white"),
-            bty="n",
-            cex=1.2)}
+		legend( x=xmax(mapgrid),y=ymax(mapgrid),
+		        legend=c("Present","Absent"),
+		        fill=c("forestgreen","white"),
+		        bty="n",
+		        cex=1.2)}
 	mtext(criteria.labels[i],side=3,line=2,cex=1.2)
 	mtext(paste("threshold =",thresh),side=3,line=.5,cex=1)
 }
@@ -1522,11 +1552,6 @@ Define the column that contains unique identifiers.
 unique.rowname <- "ID"
 @
 
-Define numrows.
-
-<<Ex3 Define numrows, results=hide>>=
-numrows=500
-@
 
 Define raster look up table.
 
@@ -1563,11 +1588,11 @@ model.obj.ex3 <- model.build( model.type=model.type,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Model Diagnostics}
 
-Make Out-Of-Bag model predictions on the training data and run the diagnostics on these predictions.  Save JPEG, PDF, and PS versions of the diagnostic plots. 
+Make Out-Of-Bag model predictions on the training data and run the diagnostics on these predictions.  Save PDF versions of the diagnostic plots. 
 
 Out of Bag model predictions for a Random Forest model are not stochastic, so it is not necessary to set the seed.
 
-Since this is a categorical response model model diagnostics include a CSV file the observed and predicted values, as well as a CSV file of the confusion matrix and its associated Kappa value. 
+Since this is a categorical response model model diagnostics include a CSV file the observed and predicted values, as well as a CSV file of the confusion matrix and its associated Kappa value and MAUC. 
 
 <<Ex3 Model Diagnostics, results=hide>>=
 model.pred.ex3 <- model.diagnostics( model.obj=model.obj.ex3,
@@ -1593,7 +1618,11 @@ CMX.CSV <- read.table(   paste( MODELfn,"_pred_cmx.csv",sep=""),
 CMX.CSV
 @
 
-This table is designed to be easily interpreted in Excel, but is not very workable for carrying out analysis in R.  The \code{model.diagnostics()} function also outputs a CSV file of the observed and predicted values. 
+The \pkg{PresenceAbsence} package function \code{Kappa()} is used to calculate Kappa for the confusion matrix. Note that while most of the functions in the \pkg{PresenceAbsence} package are only applicable to binary confusion matrices, the \code{Kappa()} function will work on any size confusion matrix.
+
+The \pkg{HandTill2001} package is used to calculate the Multiple class Area under the Curve (MAUC) and described by \cite{hand01}. 
+
+The text file output of the confusion matrix is designed to be easily interpreted in Excel, but is not very workable for carrying out analysis in R. However, it is relativly easy to calculate the confusion matrix from the CSV file of the observed and predicted values. 
 
 <<Ex3 Observed and Predicted Show>>=
 PRED <-read.table(   paste( MODELfn,"_pred.csv",sep=""),
@@ -1605,7 +1634,7 @@ head(PRED)
 
 For categorical models, this file contains the observed category for each location, the category predicted by majority vote, as well as one column for each category observed in the data, giving the proportion of trees that voted for that category.
 
-To calculate the confusion matrix from this file we will use the observed and predicted columns. The \code{read.table()} function will convert columns containing character strings to factors. If the categories had been numerical, the \code{as.factor()} function can be used to convert the columns to factors. Because there may be catergories present in the observed data that are missing from the predictions (and vice versa), to get a symetric confusion matrix it is important to make sure all levels are present in both factors. 
+To calculate the confusion matrix from the file we will use the observed and predicted columns. The \code{read.table()} function will convert columns containing character strings to factors. If the categories had been numerical, the \code{as.factor()} function can be used to convert the columns to factors. Because there may be catergories present in the observed data that are missing from the predictions (and vice versa), to get a symetric confusion matrix it is important to make sure all levels are present in both factors. 
 
 The following code will work for both numerical and character categories:
 
@@ -1628,21 +1657,62 @@ CMX<-table( predicted=PRED$pred, observed= PRED$obs)
 CMX
 @
 
-To find Kappa for the confusion matrix, the \pkg{PresenceAbsence} package function \code{Kappa()} is used. Note that while most of the functions in the \pkg{PresenceAbsence} package are only applicable to binary confusion matrices, the \code{Kappa()} function will work on any size confusion matrix.
+To calculate the errors of Omission and Comission:
+
+<<Ex 3 Marginals Show>>=
+CMX.diag  <- diag(CMX)
+
+CMX.OMISSION  <- 1-(CMX.diag/apply(CMX,2,sum))
+CMX.COMISSION <- 1-(CMX.diag/apply(CMX,1,sum))
+
+CMX.OMISSION
+CMX.COMISSION
+@
+
+To calculate PCC:
+
+<<Ex3 PCC Show>>=
+CMX.PCC <- sum(CMX.diag)/sum(CMX)
+CMX.PCC
+@
+
+To calculate Kappa:
 
 <<Ex3 Kappa Show>>=
-CMX.KAPPA<-Kappa(CMX)
+CMX.KAPPA <- PresenceAbsence::Kappa(CMX)
 CMX.KAPPA
 @
 
-As in continuous and binary models, the \code{model.diagnostics()} function creats the variable importance graph \mbox{(Figure \ref{fig:Ex3VarImp}).} 
+The MAUC is calculated from the category specific predictions (the percent of trees that voted for each category):
+
+<<Ex3 MAUC Show>>=
+VOTE <- HandTill2001::multcap(  response = PRED$obs,
+                	predicted= as.matrix(PRED[,-c(1,2,3)]) )
+MAUC  <- HandTill2001::auc(VOTE)
+MAUC
+@
+
+Note, both the \pkg{PresenceAbsence} package and the \pkg{HandTill2001} package have functions named \code{auc()}. 
+The \code{::} operator is used to specify that we are calling the \code{auc()} function from the \pkg{HandTill2001} package.
+
+As in continuous and binary response models, the \code{model.diagnostics()} function creates a variable importance graph \mbox{(Figure \ref{fig:Ex3VarImp}).} 
  
- \begin{figure}
+\begin{figure}
 \begin{center}
 \includegraphics{VModelMapEx3_pred_importance}
 \end{center}
-\caption{\label{fig:Ex3VarImp} Example 3 - Variable importance graph for vegetation category.}
+\caption{\label{fig:Ex3VarImp} Example 3 - Overall variable importance graph for predicting vegetation category.}
 \end{figure}
+
+With categorical response models, the \code{model.diagnostics()} function alse creates category specific variable importance graphs, for example \mbox{(Figure \ref{fig:Ex3VarImpTree}).} 
+
+\begin{figure}
+\begin{center}
+\includegraphics{VModelMapEx3_pred_importance_TREE}
+\end{center}
+\caption{\label{fig:Ex3VarImpTree} Example 3 - Category specific variable importance graph for vegetation category "Tree".}
+\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Comparing Variable Importance}
@@ -1798,10 +1868,7 @@ model.mapmake( model.obj=model.obj.ex3,
                folder=folder,           
                MODELfn=MODELfn,
                rastLUTfn=rastLUTfn,
-               na.action="na.omit",
-          # Mapping arguments
-               numrows=numrows)
-            
+               na.action="na.omit")            
 @
 
 With categorical models, the \code{model.mapmake()} function outputs a map file, using integer codes for each category, along with a table relating these codes to the original categories. In this example \code{na.action} was set to \code{"na.omit"}, therefore pixels with factored predictors with values not found in the training data will be omited from the map. 
@@ -1830,27 +1897,36 @@ MAP.CODES
 
 
 
-Import the map output and transform the map output values to the row indices of the map codes. 
+Import the map output and transform the values of the map output to intergers from 1 to n (the number of map categories). 
 
-Note that here in example 3, where the categories are character strings, the integer codes from from column three are already the same as the row indices from column one, so this step is not strictly neccessary. However, if the categories in the training data had been unevenly spaced numeric codes, for example, \code{c(30,42,50,80)}, then \code{model.mapmake()} would keep the original values in the output. In this case, to produce a map in R with the \code{image()} function (as opposed to viewing the image in a GIS environment) it is neccessary to replace each category name with an evenly spaced index number in order to match each category to a color.
+Note that here in example 3, where the categorical responses were character strings, the \code{model.mapmake()} function generated integer codes from 1 to n for the raster output. So for this example this step is not actually neccessary. However, if the categories in the training data had been unevenly spaced numeric codes, for example, \code{c(30,42,50,80)}, then \code{model.mapmake()} would keep these original numeric codes in the raster output. In such cases, to produce a map in R with the \code{image()} function (as opposed to viewing the image in a GIS environment) creating a new raster where the numeric codes are replaced with the numbers 1 to n makes assigning specific colors to each category simpler.
 
 <<Ex3 Import data, results=hide>>=
 
-mapgrid <- read.asciigrid(paste(MODELfn,"_map.txt",sep=""),as.image=TRUE)
-mapgrid$z[]<-MAP.CODES$row[match(mapgrid$z[],MAP.CODES$integercode)]
+mapgrid <- raster(paste(MODELfn,"_map.img",sep=""))
+
+integergrid <- mapgrid
+v <- getValues(mapgrid)
+v <- MAP.CODES$row[match(v,MAP.CODES$integercode)]
+integergrid <- setValues(integergrid, v)
 @
 
 Produce the map \mbox{(Figure \ref{fig:Ex3Map})}.
 
 <<Ex3ProductionMaps,include=TRUE,width=7.5,height=10, results=hide>>=
 
+
 opar <- par(mfrow=c(1,1),mar=c(3,3,2,1),oma=c(0,0,3,8),xpd=NA)
 
-image(mapgrid, col = MAP.CODES$colors,zlim=c(1,nrow(MAP.CODES)),asp=1,bty="n",xaxt="n",yaxt="n")
+image(	integergrid, 
+				col = MAP.CODES$colors,
+				xlab="",ylab="",xaxt="n",yaxt="n",
+				zlim=c(1,nrow(MAP.CODES)),
+				main="",asp=1,bty="n")
 
 mtext(response.name,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid$x),y=max(mapgrid$y),
+legend( x=xmax(mapgrid),y=ymax(mapgrid),
         legend=MAP.CODES$category,
         fill=MAP.CODES$colors,
         bty="n",
@@ -1938,12 +2014,6 @@ Define the column that contains unique identifiers.
 
 <<Ex4 Define Identifier, results=hide>>=
 unique.rowname <- "ID"
-@
-
-Define numrows.
-
-<<Ex4 Define numrows, results=hide>>=
-numrows=500
 @
 
 Define raster look up table.
@@ -2203,21 +2273,14 @@ Run \code{model.mapmake()} to create the maps.
 model.mapmake( model.obj=model.obj.ex4a,
                folder=folder,           
                MODELfn=MODELfn.a,
-               rastLUTfn=rastLUTfn,
-               na.action="na.roughfix",
-          # Mapping arguments
-               map=TRUE,
-               numrows=numrows)
+               rastLUTfn=rastLUTfn)
             
 
 model.mapmake( model.obj=model.obj.ex4b,
                folder=folder,           
                MODELfn=MODELfn.b,
-               rastLUTfn=rastLUTfn,
-               na.action="na.roughfix",
-          # Mapping arguments
-               map=TRUE,
-               numrows=numrows)
+               rastLUTfn=rastLUTfn)
+
 @
 
 Map the probability surface (the probability that the species is present at each grid point) \mbox{(Figure \ref{fig:Ex4ProbSurf})}, using the color ramp defined in example 2.
@@ -2239,19 +2302,27 @@ probpres.ramp <- hcl(h = h, c = 80, l = l)
 <<Ex4ProbabilitySurface,include=TRUE,width=7.5,height=5.7, results=hide>>=
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
-mapgrid.a <- read.asciigrid(paste(MODELfn.a,"_map.txt",sep=""),as.image=TRUE)
-mapgrid.b <- read.asciigrid(paste(MODELfn.b,"_map.txt",sep=""),as.image=TRUE)
+mapgrid.a <- raster(paste(MODELfn.a,"_map.img",sep=""))
+mapgrid.b <- raster(paste(MODELfn.b,"_map.img",sep=""))
 
 legend.subset<-c(100,80,60,40,20,1)
 legend.colors<-probpres.ramp[legend.subset]
 legend.label<-c("100%"," 80%"," 60%"," 40%"," 20%","  0%")
 
-image(mapgrid.a, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+image( mapgrid.a, 
+       col=probpres.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=c(0,1),
+       asp=1,bty="n",main="")
 mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, col = probpres.ramp,zlim=c(0,1),asp=1,bty="n",xaxt="n",yaxt="n")
+image(mapgrid.b, 
+      col=probpres.ramp,
+      xlab="",ylab="",xaxt="n",yaxt="n",
+      zlim=c(0,1),
+      asp=1,bty="n",main="")
 mtext(response.name.b,side=3,line=1,cex=1.2)
 
-legend( x=max(mapgrid.b$x),y=max(mapgrid.b$y),
+legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
         legend=legend.label,
         fill=legend.colors,
         bty="n",
@@ -2287,16 +2358,16 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \appendixpage
 \addappheadtotoc
 
-\section{Argument List}
+%\section{Argument List}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{table}[h]
+\begin{table}[!h]
 \begin{center}
 \begin{tabularx}{\textwidth}{ |l|X| }
 
 \hline
-\multicolumn{2}{|c|}{Model building Arguments}\\
+\multicolumn{2}{|c|}{Arguments for \code{model.build()}}\\
 
 \hline
 
@@ -2311,15 +2382,19 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
               
 \code{predList}       & Predictor short names used to build the model. \\
 
-\code{predFactor}     & Predictor short names from \code{predList} that are factors (i.e categorical predictors).\\
+\code{predFactor}     & Predictors from \code{predList} that are factors (i.e categorical).\\
 
 \code{response.name}  & Response variable used to build the model.\\
 
 \code{response.type}  & Response type: \code{"binary"} or \code{"continuous"}.\\
 
+\code{unique.rowname} & Unique identifier for each row in the training data.\\
+
 \code{seed}           & Seed to initialize randomization to build RF or SGB models.\\
 
-\code{na.action}    & Specifies the action to take if there are \code{NA} values in the prediction data\\
+\code{na.action}      & Specifies the action to take if there are \code{NA} values in the prediction data\\
+
+\code{keep.data}      & Should a copy of the predictor data be included in the model object. Useful if \code{model.interaction.plot} will be used later.\\
  
 \hline
 
@@ -2330,6 +2405,12 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \code{ntree}           & Number of random forest trees.\\
  
 \code{mtry} 				   & Number of variables to try at each node of Random Forest trees.\\
+
+\code{replace}         & Should sampling be done with or without replacement.\\
+
+\code{strata}          & A (factor) variable that is used for stratified sampling.\\
+
+\code{sampsize}        &  For classification, if strata provided, sampling is stratified by strata. For binary response models, if argument strata is not provided then sampling is stratified by presence/absence.\\
 
 \hline
 
@@ -2344,9 +2425,14 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 
 \code{bag.fraction}     & Fraction of the training set observations randomly selected to propose the next tree in the expansion. If \code{bag.fraction < 1} then running the same model twice will result in similar but different fits.\\
 
-\code{train.fraction}   & Fraction of observations used to fit the model with the remainder are used for computing out-of-sample estimates of the loss function. Not needed if \code{bag.fraction < 1}.\\
+\code{train.fraction}   & Fraction of observations used to fit the model. Note: \code{train.fraction} is deprecated, \code{nTrain} is preferred.\\
+
+\code{nTRAIN}           & An integer representing the number of cases on which to train.\\
 
 \code{n.minobsinnode}   & Minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight.\\
+
+\code{var.monotone}     & Otional vector, the same length as the number of predictors, indicating which variables have a monotone increasing (+1), decreasing (-1), or arbitrary (0) relationship with the outcome.\\
+
 
 \hline
 
@@ -2363,7 +2449,7 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 
 \hline
 
-\multicolumn{2}{|c|}{Model Diagnostics Arguments} \\
+\multicolumn{2}{|c|}{Arguments for \code{model.diagnostics}} \\
 
 \hline
 
@@ -2380,6 +2466,8 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \code{response.name}  & Response variable used to build the model.\\
 
 \code{unique.rowname} & Name of column in training and test that uniquely identifies each row .\\
+
+\code{diagnostic.flag} & Name of column in training that indicates subset of data to use for diagnostics.\\
 
 \code{seed}           & Seed to initialize randomization to build RF or SGB models.\\
 
@@ -2412,6 +2500,8 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 
 \code{FNC}          & False Negative Cost for threshold optimization for binary response model.\\
 
+\code{n.trees}      & For SGB models, the number of stochastic gradient boosting trees for an SGB model.\\
+
 \hline
 \end{tabularx}
 \end{center}
@@ -2425,7 +2515,7 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \begin{tabularx}{\textwidth}{ |l|X| }
 
 \hline
-\multicolumn{2}{|c|}{Map Production Arguments} \\
+\multicolumn{2}{|c|}{Arguments for \code{model.mapmake()}} \\
 \hline
 
 \code{model.obj}      & The model object to use for prediction, if the model has been previously created.\\
@@ -2438,18 +2528,13 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
  
 \code{na.action}    & Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the mapping data set, but not in the training data set.\\
 
-\code{numrows}      & Number of rows of rasters to import for each loop.\\
+\code{keep.predictor.brick} & If \code{TRUE} then the raster brick containing the predictors from the model object is saved as a native raster package format file.\\
 
-\code{map.sd}       & Should maps of mean, standard deviation, and coefficient of variation of the predictions be produced: \code{T} or \code{F}. Only used if \code{response.type = "continuous"}.\\  
+\code{map.sd}       & Should maps of mean, standard deviation, and coefficient of variation of the predictions be produced: \code{TRUE} or \code{FALSE}. Only used if \code{response.type = "continuous"}.\\  
 
-\code{asciifn}      & Filename of output file for map production. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map.txt"}}.\\
+\code{OUTPUTfn}      & Filename for output raster file for map production. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map.txt"}}.\\
 
-\code{asciifn.mean} & Filename of output file for mean of trees. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map\_mean.txt"}}.\\
-
-\code{asciifn.stdev}& Filename of output file for standard deviation of trees. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map\_stdev.txt"}}.\\
-
-\code{asciifn.coefv}& Filename of output file for coefficient of variation of trees. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map\_coefv.txt"}}.\\
-
+\code{n.trees}       &  The number of stochastic gradient boosting trees for an SGB model.\\
 
 \hline
 \end{tabularx}

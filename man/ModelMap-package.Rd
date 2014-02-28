@@ -12,8 +12,8 @@ The \code{ModelMap} package creates sophisticated models of training data and va
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 2.3.4\cr
-Date: \tab 2012-08-17
+Version: \tab 3.0.14\cr
+Date: \tab 2014-02-28
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, 
 and therefore it is in the public domain and not subject to copyright.\cr
@@ -23,7 +23,7 @@ This package provides a push button approach to complex model building and produ
 
 It contains two simple functions that can be used before beginning the model building process: \link{get.test} that can be used to randomly divide a training dataset into training and test/validation sets; and \link{build.rastLUT} that uses GUI prompts to walk a user through the process of setting up a Raster look up table to link predictors from the training data with the rasters used for map contruction.
 
-It also contains four functions used for the model building and map contruction process itself: \link{model.build}, \link{model.diagnostics},\link{model.interaction.plot} and \link{model.mapmake}.
+It also contains five functions used for the model building and map contruction process itself: \link{model.build}, \link{model.diagnostics},\link{model.interaction.plot}, \link{model.importance.plot}, and \link{model.mapmake}.
 
 \code{ModelMap} can be run in a traditional R command mode, where all arguments are specified in the function call. However it can also be used in a full push button mode, where you type in the simple command such as \link{model.build}, and GUI pop-up windows ask questions about the type of model, the file locations of the data, etc...
 
@@ -33,7 +33,7 @@ Stochastic gradient boosting (Friedman 2001, 2002), is related to both boosting 
 
 For Presence-Absence data, the package \code{PresenceAbsence} is used for model validation.
 
-For map making, the \code{rgdal} is used to read \code{.img} files.
+For map making, the \code{raster} is used to read and write \code{.img} files.
 
 For interaction plots, the \code{fields} package is used to produce image plots.
 }

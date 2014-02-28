@@ -16,16 +16,14 @@ model.mapmake<-function(model.obj=NULL,
 			# Model Evaluation Arguments
 				na.action=NULL,	# also used for mapping
 			# Mapping arguments
-				numrows = 500,		# Only used if mapping. Number of rows predicted at a time.				
-				map.sd=FALSE,		# Only used if mapping. Generates 3 additional maps (mean,sd,coefvar)
-				asciifn=NULL,
-				asciifn.mean=NULL,
-				asciifn.stdev=NULL,
-				asciifn.coefv=NULL,
-				make.img=TRUE,
+				keep.predictor.brick=FALSE,	
+				map.sd=FALSE,
+				OUTPUTfn=NULL,
 			# SGB arguments
 				n.trees=NULL
 ){
+
+print("RASTER version")
 
 ## Note: Must have R version 2.5.1 or greater
 ## Note: Must have all rasters in same size, same resolution, and with -9999 for nodata values.
@@ -67,12 +65,12 @@ if(is.null(model.obj)){
 	if(is.null(MODELfn)){
 		if(.Platform$OS.type=="windows"){
 			MODELfn <- choose.files(caption="Select model object", filters = Filters["All",], multi = FALSE)
-			if(is.null(MODELfn)){stop("Must provide a model object")}
-		}else{stop("Must provide a model object")}
+			if(is.null(MODELfn)){stop("must provide a model object")}
+		}else{stop("must provide a model object")}
 	}
 	modelname<-load(MODELfn)
 	if(length(modelname)!=1){
-		stop("File must contain single model object")}
+		stop("file must contain single model object")}
 	assign("model.obj",get(modelname))
 }
 
@@ -106,7 +104,7 @@ if(model.type=="unknown"){
 print(paste("model.type =",model.type))
 
 #if (model.type == "SGB") {
-#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
+#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package but OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive however using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap")
 #}
 
 #############################################################################################
@@ -150,14 +148,14 @@ if(model.type=="RF"){
 ###################### Extract response.name from model.obj #################################
 #############################################################################################
 
-if(is.null(MODELfn) && is.null(asciifn)){
+if(is.null(MODELfn) && is.null(OUTPUTfn)){
 	if(!is.null(model.obj$response)){
 		response.name<-model.obj$response
 	}
 
 	## If the response variable is NULL, then the user selects variable from pop-up list.
 	if (is.null(response.name)){
-		stop("if model is built outside of ModelMap then either MODELfn or asciifn must be provided in argument list")
+		stop("if model is built outside of ModelMap then either MODELfn or OUTPUTfn must be provided in argument list")
 	}
 }
 
@@ -199,121 +197,79 @@ if(is.null(folder)){
 ############################# Generate Output File Names ####################################
 #############################################################################################
 
-
-print("folder:")
-print(folder)
-
-## MODELfn
-if(is.null(MODELfn)){
-	if(is.null(asciifn)){
-		MODELfn<-paste(model.type,"_",response.type,"_",response.name,sep="")
+if(is.null(OUTPUTfn)){
+	if(is.null(MODELfn)){
+		OUTPUTfn<-paste(model.type,"_",response.type,"_",response.name,"_map",sep="")
 	}else{
-		MODELfn<-strsplit(basename(asciifn),".txt")[[1]]
+		OUTPUTfn<-paste(extension(MODELfn,""),"_map",sep="")
 	}
 }
 
-if(identical(basename(MODELfn),MODELfn)){MODELfn<-paste(folder,"/",MODELfn,sep="")}
+OUTPUTfn <- FNcheck(	OUTPUTfn=OUTPUTfn,
+				folder=folder,
+				ERROR.NAME="OUTPUTfn")
 
-if(is.null(asciifn)){
-	asciifn<-paste(MODELfn,"_map.txt",sep="")}
-if(identical(basename(asciifn),asciifn)){asciifn<-paste(folder,"/",asciifn,sep="")}
+### After FNcheck, output filename will have path, base and extension in every case
 
-if(is.null(asciifn.mean)){
-	asciifn.mean<-paste(MODELfn,"_mean.txt",sep="")}
-if(identical(basename(asciifn.mean),asciifn.mean)){asciifn.mean<-paste(folder,"/",asciifn,sep="")}
+OUTPUTbase  <- basename(OUTPUTfn)				#name and extension, no path
 
-if(is.null(asciifn.stdev)){
-	asciifn.stdev<-paste(MODELfn,"_stdev.txt",sep="")}
-if(identical(basename(asciifn.stdev),asciifn.stdev)){asciifn.stdev<-paste(folder,"/",asciifn.stdev,sep="")}
+OUTPUTsplit <- strsplit(OUTPUTbase,split="\\.")[[1]]
+OUTPUTname <- OUTPUTsplit[1]  				#name, no extension or path
+OUTPUText   <- paste(".",OUTPUTsplit[2],sep="")		#just extension
 
-if(is.null(asciifn.coefv)){
-	asciifn.coefv<-paste(MODELfn,"_coefv.txt",sep="")}
-if(identical(basename(asciifn.coefv),asciifn.coefv)){asciifn.coefv<-paste(folder,"/",asciifn.coefv,sep="")}
+OUTPUTpath  <- dirname(OUTPUTfn)				#just path
 
+OUTPUTfn.noext<-file.path(OUTPUTpath,OUTPUTname)	#path and name, no extension
 
-
-#############################################################################################
-################################ Load Libraries #############################################
-#############################################################################################
-
-## Loads necessary libraries.
-
-library(rgdal)
-library(raster)
-
-if(model.type=="RF" ){library(randomForest)}
-if(model.type=="SGB"){library(gbm)}
-#if(response.type=="categorical"){library(gdata)}
-
-# Note:	'rgdal' is only used to make map
-#	'gbm'	is only used for SGB models
-#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
-#	'gdata' is used for mapping levels of categorical reponse variables
 
 
 #############################################################################################
 ############################### Determine NA.ACTION #########################################
 #############################################################################################
 
-
-###Check Model Object for na.action###
-
 #NA.ACTION is character string. Choices: "omit", "rough.fix".
-#na.action is the actual function, no quotes.
+#na.action is the actual function, no quotes. Function argument will staart with quotes then have them removed.
 #model.NA.ACTION and model.na.action are similar but extracted from model object,
 #   and need to be checked against 'model.diagnostics(na.action)'.
 
-model.NA.ACTION<-NULL
-model.na.action<-NULL
+NAvalid<-c("na.omit")
+model.NAvalid<-c("omit")
+
 NA.ACTION<-NULL
 
-
-###extract na.action from model.obj and check if valid, and if argument is NULL, default to option from model.obj###
-if(!is.null(model.obj$na.action)){
-	model.NA.ACTION<-class(model.obj$na.action)
-	if(!model.NA.ACTION%in%c("omit","roughfix")){
-		warning(paste("Model Object was built with 'na.action'",model.NA.ACTION,"which is not supported by model map"))
-		model.NA.ACTION<-NULL
+if(!is.null(na.action)){
+###if 'na.action' specified in 'model.mapmake()' check if valid, and if so use it.###
+	if(is.function(na.action)){
+		 stop("ModelMap uses quotes when specifying the argument 'na.action'")
 	}else{
-		model.na.action<-switch(model.NA.ACTION,omit=na.omit,roughfix=na.roughfix)
-		if(is.null(na.action)){             #if model.obj has na.action and function call does not then use action from model.obj
-			NA.ACTION<-model.NA.ACTION	#if this step is reached then whole next section not needed
-			na.action<-model.na.action
-		}
-	}
-}
-
-###Check if na.action from argument is valid###
-
-NAvalid<-c("na.omit","na.roughfix")
-NAwarn<-"ModelMap currently supports only \"na.omit\" and \"na.roughfix\" for 'na.action'"
-
-if(is.null(NA.ACTION)){	
-	if(is.null(na.action)){
-		na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
-		if(na.action=="" || is.null(na.action)){
-			stop("NA found in data, therefore na.action is required")}
-		if(!na.action%in%NAvalid){stop(NAwarn)}
-	}else{
-		if(is.function(na.action)){
-			 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+		if(!na.action%in%NAvalid){
+			stop("ModelMap currently supports only \"na.omit\" for map making 'na.action'")
 		}else{
-			if(!na.action%in%NAvalid){stop(NAwarn)}
+			#make NA.ACTION characters without "na."
+			NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
+			#turn na.action into function
+			#na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
 		}
 	}
-	print(paste("NA.ACTION =",NA.ACTION))
-	print(paste("na.action =",na.action))
-
-	#make NA.ACTION characters without "na."
-	NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
-	#turn na.action into function
-	na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
+}else{
+###if 'na.action not specified in 'model.map make()' then check if model was built with a valid na.action###
+	if(!is.null(model.obj$na.action)){
+		model.NA.ACTION<-class(model.obj$na.action)
+		if(!model.NA.ACTION%in%model.NAvalid){
+			warning("Model Object built with 'na.action' ",model.NA.ACTION," not supported for map making threfore default 'na.action' is \"na.omit\"")
+		}else{
+			NA.ACTION<-model.NA.ACTION	
+			print("Using 'na.action' from 'model.obj'")	
+			#na.action<-model.na.action
+		}
+	}
 }
-
-	print(paste("NA.ACTION =",NA.ACTION))
-	print(paste("is function na.action =",is.function(na.action)))
-
-if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
+if(is.null(NA.ACTION)){
+###if neither function call nor model object gives valid 'na.action' then defaults to "na.omit"###
+	NA.ACTION<-"omit"	
+	print("Using default 'na.action' of \"na.omit\"")
+	#na.action<-na.omit
+}
 
 #############################################################################################
 ############################# SGB + CV: check for n.trees ###################################
@@ -344,15 +300,15 @@ if(is.null(rastLUTfn)){
 						rastLUTfn=paste(MODELfn,"_rastLUT.csv",sep=""))	
 		}
 	}else{
-		stop("You must provide a raster Look Up Table")
+		stop("you must provide a raster Look Up Table")
 	}	
 }
 
-### Check if file name is full path or basename
+### Check if rastLUTfn file name is full path or basename
 
 if(is.matrix(rastLUTfn)!=TRUE && is.data.frame(rastLUTfn)!=TRUE){
 	if(identical(basename(rastLUTfn),rastLUTfn))
-		{rastLUTfn<-paste(folder,"/",rastLUTfn,sep="")
+		{rastLUTfn<-file.path(folder,rastLUTfn)
 	}
 }
 
@@ -372,12 +328,17 @@ if(is.factor(rastLUT[,1])){rastLUT[,1]<-as.character(rastLUT[,1])}
 if(is.factor(rastLUT[,2])){rastLUT[,2]<-as.character(rastLUT[,2])}
 if(is.factor(rastLUT[,3])){rastLUT[,3]<-as.numeric(as.character(rastLUT[,1]))}
 
+if(is.list(rastLUT[,1])){stop("'rastLUT' is of incorrect format, the first collumn of your 'rastLUT' is a list")}
+if(is.list(rastLUT[,2])){stop("'rastLUT' is of incorrect format, the second collumn of your 'rastLUT' is a list")}
+if(is.list(rastLUT[,3])){stop("'rastLUT' is of incorrect format, the third collumn of your 'rastLUT' is a list")}
+
 
 ### Check that all predictors in predList are in rastLUT
 
 pred.not.in.LUT<-!(predList%in%rastLUT[,2])
 if(any(pred.not.in.LUT)){
-	stop("Predictors ",paste(predList[pred.not.in.LUT]," ",sep=""),"from predList are not found in rastLUT")}
+	predNot<-paste(predList[pred.not.in.LUT]," ",sep="")
+	stop("Predictors ",predNot,"from predList are not found in rastLUT")}
 
 
 #############################################################################################
@@ -392,19 +353,19 @@ print("starting production prediction")
 production.prediction(	model.obj=model.obj,
 				model.type=model.type,
 				rastLUT=rastLUT,
-				na.action=na.action,
+				#na.action=na.action,
 				NA.ACTION=NA.ACTION,
 				response.type=response.type,
-				numrows=numrows,	
+				keep.predictor.brick=keep.predictor.brick,
 				map.sd=map.sd,
-				asciifn=asciifn,
-				asciifn.mean=asciifn.mean,
-				asciifn.stdev=asciifn.stdev,
-				asciifn.coefv=asciifn.coefv,
-				make.img=make.img,
+				OUTPUTfn=OUTPUTfn,			#path, name, extension
+				OUTPUTfn.noext=OUTPUTfn.noext,	#path, name
+				#OUTPUTpath=OUTPUTpath,			#path
+				OUTPUTname=OUTPUTname,			#name
+				OUTPUText=OUTPUText,			#extension
 				n.trees=n.trees)
 
-
+print("finished production prediction")
 #############################################################################################
 ############## If response/type=="categorical Write a key to levels #########################
 #############################################################################################
@@ -420,7 +381,8 @@ if(response.type=="categorical"){
 		mapkey<-data.frame(row=1:length(Ylev), category=Ylev,integercode=as.numeric(Ylev))
 	}
 
-	MapKeyfn<-paste(MODELfn,"_map_key.csv",sep="")
+	MapKeyfn<-paste(OUTPUTfn.noext,"_key.csv",sep="")
+
 	write.table(mapkey,file=MapKeyfn,sep=",",row.names=FALSE)
 }
 	
@@ -432,7 +394,7 @@ if(response.type=="categorical"){
 A<-formals(model.mapmake)
 A<-mget(names(A),ifnotfound="NULL",envir=as.environment(-1))
 
-ARGfn<-paste(MODELfn,"_mapmake_arguments.txt",sep="")
+ARGfn<-paste(OUTPUTfn.noext,"_mapmake_arguments.txt",sep="")
 
 if(is.matrix(rastLUTfn)==TRUE || is.data.frame(rastLUTfn)==TRUE){
 	A$rastLUTfn<-"preloaded dataframe"
