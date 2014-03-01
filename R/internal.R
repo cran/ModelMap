@@ -156,7 +156,6 @@ if(response.type == "binary"){
 
 if(response.type == "categorical"){
 
-	library("PresenceAbsence")
 	CMXfn<-paste(MODELpredfn,"_cmx.csv",sep="")
 
 	LEVELS<-unique(c(levels(PRED$pred),levels(PRED$obs)))
@@ -165,7 +164,7 @@ if(response.type == "categorical"){
 				observed = factor(PRED$obs,levels=LEVELS))
 
 
-	CMX.out<-matrix("cmx",nrow(CMX)+4,ncol(CMX)+4)
+	CMX.out<-matrix("cmx",nrow(CMX)+5,ncol(CMX)+4)
 	CMX.out[1,(1:ncol(CMX))+2]<-"observed"
 	CMX.out[2,(1:ncol(CMX))+2]<-colnames(CMX)
 
@@ -182,27 +181,35 @@ if(response.type == "categorical"){
 
 	###Totals###
 	CMX.out[1:2,ncol(CMX.out)-1]<-"total"
-	CMX.out[nrow(CMX.out)-1,1:2]<-"total"
+	CMX.out[nrow(CMX.out)-2,1:2]<-"total"
 	
 	CMX.out[(1:nrow(CMX))+2,ncol(CMX.out)-1]<-apply(CMX,1,sum)
-	CMX.out[nrow(CMX.out)-1,(1:ncol(CMX))+2]<-apply(CMX,2,sum)
-	CMX.out[nrow(CMX.out)-1,ncol(CMX.out)-1]<-sum(CMX)
+	CMX.out[nrow(CMX.out)-2,(1:ncol(CMX))+2]<-apply(CMX,2,sum)
+	CMX.out[nrow(CMX.out)-2,ncol(CMX.out)-1]<-sum(CMX)
 
 	###marginals###
 	CMX.diag<-diag(CMX)
 
-	CMX.out[1:2,ncol(CMX.out)]<-"User"
-	CMX.out[nrow(CMX.out),1:2]<-"Producer"
+	CMX.out[1:2,ncol(CMX.out)]<-"Commission"
+	CMX.out[nrow(CMX.out)-1,1:2]<-"Omission"
 
-	CMX.out[(1:nrow(CMX))+2,ncol(CMX.out)]<-CMX.diag/apply(CMX,1,sum)
-	CMX.out[nrow(CMX.out),(1:ncol(CMX))+2]<-CMX.diag/apply(CMX,2,sum)
+	CMX.out[(1:nrow(CMX))+2,ncol(CMX.out)]<-1-(CMX.diag/apply(CMX,1,sum))
+	CMX.out[nrow(CMX.out)-1,(1:ncol(CMX))+2]<-1-(CMX.diag/apply(CMX,2,sum))
 
 	###pcc###
-	CMX.out[ncol(CMX.out)-1,ncol(CMX.out)]<-"PCC"
-	CMX.out[ncol(CMX.out),ncol(CMX.out)-1]<-"PCC"
+	CMX.out[nrow(CMX.out)-2,ncol(CMX.out)]<-"PCC"
+	CMX.out[nrow(CMX.out)-1,ncol(CMX.out)-1]<-"PCC"
 
-	CMX.out[ncol(CMX.out),ncol(CMX.out)]<-sum(CMX.diag)/sum(CMX)
+	CMX.out[nrow(CMX.out)-1,ncol(CMX.out)]<-sum(CMX.diag)/sum(CMX)
 
+	###MAUC###
+
+	VOTE <- multcap(  response = PRED$obs,
+                		predicted= as.matrix(PRED[,-c(1,2,3)]) )
+	MAUC  <- HandTill2001::auc(VOTE)
+
+	CMX.out[nrow(CMX.out),1]<-"MAUC"
+	CMX.out[nrow(CMX.out),2]<-MAUC
 
 	write.table(CMX.out,file=CMXfn,sep=",",row.names=FALSE,col.names = FALSE)
 }
@@ -245,8 +252,7 @@ for(i in 1:length(device.type)){
 
 	if(model.type=="RF"){
 
-		if(i==1){library(randomForest)}
-
+		
 		###Importance Plot###
 		#print(paste("IMPORTANCEfn =",IMPORTANCEfn)
 
@@ -254,8 +260,6 @@ for(i in 1:length(device.type)){
 		if(device.type[i]=="jpeg"){jpeg(filename=paste(IMPORTANCEfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 		if(device.type[i]=="postscript"){postscript(file=paste(IMPORTANCEfn,".ps",sep=""),width = device.width, height = device.height)}
 		if(device.type[i]=="pdf"){pdf(file=paste(IMPORTANCEfn,".pdf",sep=""),width = device.width, height = device.height)}
-		if(device.type[i]=="win.metafile"){win.metafile(filename=paste(IMPORTANCEfn,".wmf",sep=""),width = device.width, height = device.height, 
-								pointsize = 12,restoreConsole = TRUE)}
  
 		opar<-par(cex=cex)
 		varImpPlot(model.obj,main="Relative Influence",cex=cex)
@@ -280,8 +284,7 @@ for(i in 1:length(device.type)){
 				if(device.type[i]=="jpeg"){jpeg(filename=paste(IMPFIGfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 				if(device.type[i]=="postscript"){postscript(file=paste(IMPFIGfn,".ps",sep=""),width = device.width, height = device.height)}
 				if(device.type[i]=="pdf"){pdf(file=paste(IMPFIGfn,".pdf",sep=""),width = device.width, height = device.height)}
-				if(device.type[i]=="win.metafile"){win.metafile(filename=paste(IMPFIGfn,".wmf",sep=""),width = device.width, height = device.height, 
-										pointsize = 12,restoreConsole = TRUE)}
+
 				opar<-par(cex=cex)			
 
 				varImpPlot(model.obj,cex=cex,type=1,class=CATnames[j],main="")
@@ -301,8 +304,7 @@ for(i in 1:length(device.type)){
 			if(device.type[i]=="jpeg"){jpeg(filename=paste(ERRORfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 			if(device.type[i]=="postscript"){postscript(file=paste(ERRORfn,".ps",sep=""),width = device.width, height = device.height)}
 			if(device.type[i]=="pdf"){pdf(file=paste(ERRORfn,".pdf",sep=""),width = device.width, height = device.height)}
-			if(device.type[i]=="win.metafile"){win.metafile(filename=paste(ERRORfn,".wmf",sep=""),width = device.width, height = device.height, 
-									pointsize = 12,restoreConsole = TRUE)}
+
 			opar<-par(cex=cex)
 		
 			Nmax<-length(model.obj$mse)
@@ -337,8 +339,7 @@ for(i in 1:length(device.type)){
 				if(device.type[i]=="jpeg"){jpeg(filename=paste(ERRORFIGfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 				if(device.type[i]=="postscript"){postscript(file=paste(ERRORFIGfn,".ps",sep=""),width = device.width, height = device.height)}
 				if(device.type[i]=="pdf"){pdf(file=paste(ERRORFIGfn,".pdf",sep=""),width = device.width, height = device.height)}
-				if(device.type[i]=="win.metafile"){win.metafile(filename=paste(ERRORFIGfn,".wmf",sep=""),width = device.width, height = device.height, 
-										pointsize = 12,restoreConsole = TRUE)}
+
 				opar<-par(cex=cex)
 
 				plot(	1:Nmax,
@@ -356,14 +357,13 @@ for(i in 1:length(device.type)){
 
 	if(model.type=="SGB"){
 
-		if(i==1){library(gbm)}
+		
 	
 		if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)}
 		if(device.type[i]=="jpeg"){jpeg(filename=paste(IMPORTANCEfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 		if(device.type[i]=="postscript"){postscript(file=paste(IMPORTANCEfn,".ps",sep=""),width = device.width, height = device.height)}
 		if(device.type[i]=="pdf"){pdf(file=paste(IMPORTANCEfn,".pdf",sep=""),width = device.width, height = device.height)}
-		if(device.type[i]=="win.metafile"){win.metafile(filename=paste(IMPORTANCEfn,".wmf",sep=""),width = device.width, height = device.height, 
-								pointsize = 12,restoreConsole = TRUE)}
+
 
 		opar<-par(las=1,mar=(c(5, 11, 4, 2) + 0.1),cex=cex)
 		summary(model.obj)
@@ -383,14 +383,12 @@ for(i in 1:length(device.type)){
 
 	if(response.type == "binary"){
 	
-		if(i==1){library("PresenceAbsence")}
-
+	
 		if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)}
 		if(device.type[i]=="jpeg"){jpeg(filename=paste(THRESHOLDPLOTSfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 		if(device.type[i]=="postscript"){postscript(file=paste(THRESHOLDPLOTSfn,".ps",sep=""),width = device.width, height = device.height)}
 		if(device.type[i]=="pdf"){pdf(file=paste(THRESHOLDPLOTSfn,".pdf",sep=""),width = device.width, height = device.height)}
-		if(device.type[i]=="win.metafile"){win.metafile(filename=paste(THRESHOLDPLOTSfn,".wmf",sep=""),width = device.width, height = device.height, 
-							pointsize = 12,restoreConsole = TRUE)}
+
 
 		opar<-par(cex=cex)
 		presence.absence.summary(PRED,main=main,legend.cex=cex,opt.legend.cex=cex)
@@ -407,8 +405,7 @@ for(i in 1:length(device.type)){
 		if(device.type[i]=="jpeg"){jpeg(filename=paste(SCATTERPLOTfn,".jpg",sep=""),width = device.width, height = device.height, res=jpeg.res, units="in")}
 		if(device.type[i]=="postscript"){postscript(file=paste(SCATTERPLOTfn,".ps",sep=""),width = device.width, height = device.height)}
 		if(device.type[i]=="pdf"){pdf(file=paste(SCATTERPLOTfn,".pdf",sep=""),width = device.width, height = device.height)}
-		if(device.type[i]=="win.metafile"){win.metafile(filename=paste(SCATTERPLOTfn,".wmf",sep=""),width = device.width, height = device.height, 
-										pointsize = 12,restoreConsole = TRUE)}
+
 
 		opar<-par(pty="s",cex=cex)
 		lim<-range(PRED$obs,PRED$pred)
@@ -447,7 +444,8 @@ model.SGB<-function(	qdata,
 				shrinkage=0.001,   	      # shrinkage or learning rate,
                  	 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				train.fraction = 1.0,       	# fraction of data for training,
+				nTrain = NULL,
+				#train.fraction = NULL,       	# fraction of data for training,
                  	 	n.minobsinnode = 10,         	# minimum total weight needed in each node
 				keep.data=TRUE,
 				var.monotone = NULL
@@ -472,8 +470,7 @@ if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
 if(is.null(n.trees)){
 
 	if(keep.data==FALSE){
-		warning("keep.data reset to TRUE because required by gbm.more() function needed for OOB determination of optimal number of trees.")}
-
+		warning("keep.data reset to TRUE because data needed for gbm.more() function needed for OOB determination of optimal number of trees")}
 
 	SGB <- gbm.fit(	x=qdata.x,
 				y=qdata.y,        
@@ -481,8 +478,9 @@ if(is.null(n.trees)){
 				n.trees=100,                	
 				shrinkage=shrinkage, 
 				interaction.depth=interaction.depth,		
-				bag.fraction = bag.fraction,          	
-				train.fraction = train.fraction,       	           		
+				bag.fraction = bag.fraction,   
+				nTrain = nTrain,       	
+				#train.fraction = train.fraction,       	           		
 				n.minobsinnode = n.minobsinnode,
 				keep.data=TRUE,
 				var.monotone=var.monotone)
@@ -498,24 +496,29 @@ if(is.null(n.trees)){
       	best.iter <- suppressWarnings(gbm.perf(SGB,method="OOB",plot.it=FALSE))
 	}
 	SGB$best.iter <- best.iter
-	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
+	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package however OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive however using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap")
 
 }else{
+
 	SGB <- gbm.fit(	x=qdata.x,
 				y=qdata.y,        
 				distribution=distribution,
 				n.trees=n.trees,                	
 				shrinkage=shrinkage, 
 				interaction.depth=interaction.depth,		
-				bag.fraction = bag.fraction,          	
-				train.fraction = train.fraction,       	           		
+				bag.fraction = bag.fraction, 
+				nTrain = nTrain,         	
+				#train.fraction = train.fraction,       	           		
 				n.minobsinnode = n.minobsinnode,
 				keep.data=keep.data,
 				var.monotone=var.monotone)
-	if(train.fraction<1){
-		SGB$best.iter <- suppressWarnings(gbm.perf(SGB,method="test",plot.it=FALSE))
-		if(SGB$best.iter>0.9*n.trees){
-			warning("Best number of trees is ", SGB$best.iter, " and total number trees tested was ", n.trees, ". You may want to explore increasing the 'n.trees' argument.")
+
+	if(!is.null(nTrain)){
+		if(nTrain<nrow(qdata.x)){
+			SGB$best.iter <- suppressWarnings(gbm.perf(SGB,method="test",plot.it=FALSE))
+			if(SGB$best.iter>0.9*n.trees){
+				warning("best number of trees is ", SGB$best.iter, " and total number trees tested was ", n.trees, " therefore you may want to explore increasing the 'n.trees' argument")
+			}
 		}
 	}
 
@@ -591,7 +594,6 @@ return(SGB.PRED)
 }
 
 
-
 #############################################################################################
 ########################## RF - Model Creation - Binary response ############################
 #############################################################################################
@@ -604,6 +606,7 @@ rF.binary<-function(	qdata,
 				replace=TRUE,
 				strata=NULL,
 				sampsize = NULL,
+				proximity = NULL,
 				seed=NULL){
 
 ## This function generates a presence/absence (binary categorical) model using Random Forests.
@@ -631,10 +634,10 @@ qdata.y<-as.factor(qdata.y)
 
 if(is.null(mtry)){
 
-	A<-list(	x=qdata.x, y=qdata.y,
+	A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 			doBest=FALSE,
 			importance=TRUE,
-			proximity=TRUE,
+			proximity=FALSE,
 			plot=FALSE,
 			replace=replace,
 			strata=strata,
@@ -649,9 +652,9 @@ if(is.null(mtry)){
 
 #print("finished tuning")
 
-A<-list(	x=qdata.x, y=qdata.y,
+A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 		importance=TRUE,
-		proximity=TRUE,
+		proximity=proximity,
 		mtry=mtry,
 		ntree=ntree,
 		replace=replace,
@@ -727,6 +730,7 @@ rF.categorical<-function(	qdata,
 					replace=TRUE,
 					strata=NULL,
 					sampsize = NULL,
+					proximity = NULL,
 					seed=NULL){
 
 ## This function generates a presence/absence (binary categorical) model using Random Forests.
@@ -751,10 +755,10 @@ if(!is.factor(qdata.y)){
 
 if(is.null(mtry)){
 
-	A<-list(	x=qdata.x, y=qdata.y,
+	A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 			doBest=FALSE,
 			importance=TRUE,
-			proximity=TRUE,
+			proximity=FALSE,
 			plot=FALSE,
 			replace=replace,
 			strata=strata,
@@ -769,9 +773,9 @@ if(is.null(mtry)){
 
 #print("finished tuning")
 
-A<-list(	x=qdata.x, y=qdata.y,
+A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 		importance=TRUE,
-		proximity=TRUE,
+		proximity=proximity,
 		mtry=mtry,
 		ntree=ntree,
 		replace=replace,
@@ -849,6 +853,7 @@ rF.continuous<-function(	qdata,
 					replace=TRUE,
 					strata=NULL,
 					sampsize = NULL,
+					proximity = NULL,
 					seed=NULL){
 
 
@@ -871,10 +876,10 @@ qdata.y<-qdata[,response.name]
 
 if(is.null(mtry)){
 
-	A<-list(	x=qdata.x, y=qdata.y,
+	A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 			doBest=FALSE,
 			importance=TRUE,
-			proximity=TRUE,
+			proximity=FALSE,
 			plot=FALSE,
 			replace=replace,
 			strata=strata,
@@ -887,9 +892,9 @@ if(is.null(mtry)){
 	mtry<-RT[which.min(RT[,2]),1]
 }
 
-A<-list(	x=qdata.x, y=qdata.y,
+A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 		importance=TRUE,
-		proximity=TRUE,
+		proximity=proximity,
 		mtry=mtry,
 		ntree=ntree,
 		replace=replace,
@@ -951,7 +956,6 @@ return(RF.PRED)
 ######################## Model Creation - Wrapper Function ##################################
 #############################################################################################
 
-
 create.model<-function(	qdata,
 				model.type=NULL,		# "RF", "GAM", "SGB"
 				folder=NULL,		# No ending slash, to output to working dir = getwd()
@@ -967,13 +971,15 @@ create.model<-function(	qdata,
 				replace=TRUE,
 				strata=NULL,
 				sampsize = NULL,
+				proximity=proximity,
 			
 			# SGB arguments:
 				n.trees=NULL,                 # number of trees
 				shrinkage=0.001,   	      # shrinkage or learning rate,
                   	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				train.fraction = 1.0,       	# fraction of data for training,
+				nTrain = NULL,
+				#train.fraction = NULL,       	# fraction of data for training,
                   	n.minobsinnode = 10,         	# minimum total weight needed in each node
 				var.monotone = NULL
 
@@ -995,6 +1001,7 @@ if(model.type=="RF"){
 						replace=replace,
 						strata=strata,
 						sampsize=sampsize,
+						proximity=proximity,
 						seed=NULL)}
 	if(response.type=="categorical"){
 		#print("calling rF.categorical")
@@ -1006,6 +1013,7 @@ if(model.type=="RF"){
 							replace=replace,
 							strata=strata,
 							sampsize=sampsize,
+							proximity=proximity,
 							seed=NULL)}
 	if(response.type=="continuous"){
 		#print("calling rF.continuous")
@@ -1017,6 +1025,7 @@ if(model.type=="RF"){
 							replace=replace,
 							strata=strata,
 							sampsize=sampsize,
+							proximity=proximity,
 							seed=NULL)}
 }
 
@@ -1032,7 +1041,8 @@ if(model.type=="SGB"){
 					shrinkage=shrinkage,   	      	# shrinkage or learning rate,
                   		interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
 					bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
-					train.fraction=train.fraction,      # fraction of data for training,
+					nTrain=nTrain,
+					#train.fraction=train.fraction,      # fraction of data for training,
                   		n.minobsinnode=n.minobsinnode,      # minimum total weight needed in each node
 					keep.data=keep.data,
 					var.monotone = var.monotone)
@@ -1121,12 +1131,6 @@ if(prediction.type!="CV"){
 
 }else{
 	print(paste("Begining ",v.fold,"-fold cross validation:",sep=""))
-	n.data=nrow(qdata)
-	n.per.fold<-floor(n.data/v.fold)
-	cv.index<-sample(rep(1:v.fold,(n.per.fold+1))[1:n.data])
-	
-	PRED<-data.frame(matrix(0,0,2))
-	names(PRED)<-c("obs","pred")
 
 	if(model.type=="RF"){
 		ntree<-model.obj$ntree
@@ -1137,17 +1141,33 @@ if(prediction.type!="CV"){
 		shrinkage<-model.obj$shrinkage
 		interaction.depth<-model.obj$interaction.depth
 		bag.fraction<-model.obj$bag.fraction
-		train.fraction<-model.obj$train.fraction
+		nTrain<-model.obj$nTrain
 		n.minobsinnode<-model.obj$n.minobsinnode
-		predList<-model.obj$var.names}
+		predList<-model.obj$var.names
+
+		#deal with nTrain<nrow(qdata)
+		print(paste("nTrain =",nTrain))
+		print(paste("nrow(qdata) =",nrow(qdata)))
+		if(nTrain<nrow(qdata)){
+			qdata<-qdata[1:nTrain,]}	
+	}
+
+	n.data=nrow(qdata)
+	n.per.fold<-floor(n.data/v.fold)
+	cv.index<-sample(rep(1:v.fold,(n.per.fold+1))[1:n.data])
+	
+	PRED<-data.frame(matrix(0,0,2))
+	names(PRED)<-c("obs","pred")
 
 	###start folds###
 	for(i in 1:v.fold){
+		print(paste("starting fold", i))
 		train.cv<-(1:nrow(qdata))[cv.index!=i]
 		qdata.train.cv<-qdata[train.cv,]
 		qdata.test.cv<-qdata[-train.cv,]
 
 		###check for factor levels not found in other folds###
+		print("starting factor checks")
 		if(!is.null(model.obj$levels)){
 			predFactor<-names(model.obj$levels)
 			invalid.levels<-vector("list", length=length(predFactor))
@@ -1182,9 +1202,10 @@ if(prediction.type!="CV"){
 				if(length(invalid.levels[[p]])>0){
 					print("     NA action triggered")
 					N.invalid<-sum(is.na(qdata.test.cv[,p]))
-					warning(paste(	"Factored predictor",p,"in fold",i,
-								"contains", N.invalid, "data point(s) of levels",paste(invalid.levels[[p]],collapse=", "),
-								"not found in other folds, these levels treated as NA"))
+					warn.lev<-paste(invalid.levels[[p]],collapse=", ")
+					warning(	"Factored predictor ",p," in fold ",i,
+							" contains ", N.invalid, " data points of levels ",warn.lev,
+							" not found in other folds and these levels treated as NA")
 				}
 			}
 			
@@ -1252,7 +1273,7 @@ if(prediction.type!="CV"){
 			}
 		}
 		if(model.type=="SGB"){
-			#print(paste("      making model for fold",i))
+			print(paste("      making SGB model for fold",i))
 
 			
 			SGB.cv<-model.SGB(	qdata=qdata.train.cv,
@@ -1264,10 +1285,11 @@ if(prediction.type!="CV"){
 							shrinkage=shrinkage,   	      	# shrinkage or learning rate,
                   				interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
 							bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
-							train.fraction=train.fraction,      # fraction of data for training,
+							nTrain=nrow(qdata.train.cv),
+							#train.fraction=train.fraction,      # fraction of data for training,
                   				n.minobsinnode=n.minobsinnode       # minimum total weight needed in each node
 							)
-			#print(paste("      making SGB predictions for fold",i))
+			print(paste("      making SGB predictions for fold",i))
 			PRED.cv<-prediction.SGB(	prediction.type="TEST",
 								qdata=qdata.test.cv,
 								response.name=response.name,
@@ -1289,28 +1311,272 @@ write.table(PRED,file=PREDICTIONfn,sep=",",row.names=FALSE)
 return(PRED)
 }
 
+
 #############################################################################################
 #############################################################################################
-############################# Production Prediction #########################################
+###################### Production Prediction - Sub Functions ################################
 #############################################################################################
 #############################################################################################
 
+
+#############################################################################################
+################################## Check filename ###########################################
+#############################################################################################
+
+
+FNcheck<-function(OUTPUTfn,folder,ERROR.NAME){
+### checks filename for valid extensions, stops if there is more than 1 '.' in filename or invalid extension after the dot.
+### If no, extension, warns and adds default extension of .img
+### If no path, adds path from 'folder'.
+
+	validExtensions<-c(".tif",
+				".tiff",
+				".grd",
+				".asc",
+				".nc",
+				".cdf",
+				".ncdf",
+				".kml",
+				".kmz",
+				".big",
+				".sgrd",
+				".sdat",
+				".bil",
+				".bsq",
+				".bip",
+				".bmp",
+				".gen",
+				".bt",
+				".envi",
+				".ers",
+				".img",
+				".rst",
+				".mpr",
+				".rsw") 
+
+
+	OUTPUTsplit<-strsplit(basename(OUTPUTfn),split="\\.")[[1]]
+	OUTPUText<-paste(".",tail(OUTPUTsplit, 1),sep="")
+
+	#if basename of output filename has more than 1 '.'
+	if(length(OUTPUTsplit) > 2){
+		stop(ERROR.NAME," ",OUTPUTfn," has more than one '.' The ",ERROR.NAME," should only use the character '.' to indicate the file extension.")}
+
+	#if basename has exactly one dot, check if extension is valid
+	if(length(OUTPUTsplit) == 2){
+		if(!tolower(OUTPUText)%in%validExtensions){
+			#OUTPUTfn<-paste(dirname(OUTPUTfn),"/",OUTPUTsplit[1],".img",sep="")
+			stop(ERROR.NAME," extension ",OUTPUText," is invalid. See 'writeFormats()' for a list of valid raster file types.")}}
+
+	#if basename has no extension, add default extension of '.img'
+	if(length(OUTPUTsplit) == 1){
+		OUTPUTfn<-paste(OUTPUTfn,".img",sep="")
+		warning(ERROR.NAME," ",OUTPUTsplit," does not include an extension, using default extension of '.img'. New ",ERROR.NAME," is ",OUTPUTfn)
+	}
+
+	# if OUTPUTfn has no directory path, add folder to name
+	if(identical(basename(OUTPUTfn),OUTPUTfn))
+		{OUTPUTfn<-file.path(folder,OUTPUTfn)}
+
+	return(OUTPUTfn)
+}
+
+
+#############################################################################################
+################################# Fix projections ###########################################
+#############################################################################################
+
+
+projfix<-function(RAST,OUTPUTfn.noext){
+#RAST	list of rasters suitable to be given to stack() function
+
+	#find all projections
+	PROJ<-lapply(RAST,projection)
+
+	#create output file of all projections
+	OUTPUTfn.proj<-paste(OUTPUTfn.noext,"_projections.txt",sep="")
+	PROJout<-data.frame(predictor=names(PROJ),projection=sapply(PROJ,I))
+	write.table(PROJout,file=OUTPUTfn.proj,row.names=FALSE,sep="\t")
+
+	#find source filenames
+	FN<-sapply(RAST,function(x){basename(filename(x))})
+
+	#check if all rasters have projections
+	HAVEPROJ<-sapply(RAST,function(x){is.na(projection(x)) || is.null(projection(x))})
+	if(any(HAVEPROJ)){
+		if(sum(HAVEPROJ)==1){
+			warning.message<-paste("raster for predictor ",names(HAVEPROJ[HAVEPROJ])," is missing a projection, see '", OUTPUTfn.proj, "' for details", sep="")
+		}else{
+			warning.message<-paste("rasters for predictors ",paste(names(HAVEPROJ[HAVEPROJ]),collapse=" ")," are missing projections, see '", OUTPUTfn.proj, "' for details", sep="")
+		}
+		stop(warning.message)
+	}
+
+
+#	#check if projections are similar enough to reconcile
+#	SAME<-sapply(PROJ,function(x,proj){projcompare(x,proj)},proj=PROJ[[1]])
+#	SAME.R<-sapply(RAST,function(x,control.rast){compareRaster(x,control.rast,stopiffalse=FALSE)},control.rast=RAST[[1]])
+#
+#	if(all(SAME)){
+#		if(all(SAME.R)){
+#			#they all match, no need to do anything
+#			RAST.out<-RAST
+#		}else{
+#			#set all projections to match layer 1
+#			RAST.out<-RAST
+#			RAST.out<-lapply(RAST,function(x,rast){projection(x)<-projection(rast); x},rast=RAST[[1]])
+#			warning("one or more predictor layers had projections that needed to be reconciled, see '", OUTPUTfn.proj, "' for details")
+#		}
+#	}else{
+#		stop("projections of predictor layers too different to reconcile, see '", OUTPUTfn.proj, "' for details")
+#	}
+
+	#check if projections are the same
+	#SAME<-sapply(PROJ,function(x,proj){projcompare(x,proj)},proj=PROJ[[1]])
+	SAME.R<-sapply(RAST,function(x,control.rast){compareRaster(x,control.rast,stopiffalse=FALSE)},control.rast=RAST[[1]])
+
+	#if(all(SAME)){
+	if(all(SAME.R)){
+			#they all match, no need to do anything
+			print("all predictor layer rasters match")
+			RAST.out<-RAST
+		#}else{
+		#	#set all projections to match layer 1
+		#	RAST.out<-RAST
+		#	RAST.out<-lapply(RAST,function(x,rast){projection(x)<-projection(rast); x},rast=RAST[[1]])
+		#	warning("one or more predictor layers had projections that needed to be reconciled, see '", OUTPUTfn.proj, "' for details")
+		#}
+	}else{
+		stop("predictor layer rasters too different to reconcile, see '", OUTPUTfn.proj, "' for details")
+	}
+
+	return(RAST.out)
+}
+
+#############################################################################################
+###################################### grd to gri ###########################################
+#############################################################################################
+
+grd2gri<-function(x){
+	paste(strsplit(x,".grd")[[1]],".gri",sep="")}
+
+#############################################################################################
+###################################### Compare projections ##################################
+#############################################################################################
+# Note this function is not currently in use, it is currently replaced by raster package function compareRaster()
+
+	projcompare <- function(layer1prj, layer2prj){
+		########################################################################################
+		## DESCRIPTION: Internal function to compare projections. If not the same, return FALSE
+		##
+		## ARGUMENTS:
+		##   layer1prj - the projection name for layer1
+		##   layer2prj - the projection name for layer1	
+		##
+		## NOTE:
+		## Use function proj4string(layer) or projection(layer) to get the projection name 
+		########################################################################################
+
+
+		ellpsna <- FALSE
+		datumna <- FALSE
+
+		if(is.null(layer1prj) | is.null(layer2prj)){
+			stop("check projection layers")
+		}
+	
+		projnm1 <- strsplit(strsplit(layer1prj, "+proj=")[[1]][2], " +")[[1]][1]
+		ellpsnm1 <- strsplit(strsplit(layer1prj, "+ellps=")[[1]][2], " +")[[1]][1]
+		datumnm1 <- strsplit(strsplit(layer1prj, "+datum=")[[1]][2], " +")[[1]][1]
+	
+		projnm2 <- strsplit(strsplit(layer2prj, "+proj=")[[1]][2], " +")[[1]][1]
+		ellpsnm2 <- strsplit(strsplit(layer2prj, "+ellps=")[[1]][2], " +")[[1]][1]
+		datumnm2 <- strsplit(strsplit(layer2prj, "+datum=")[[1]][2], " +")[[1]][1]
+
+		if(is.na(ellpsnm1) | is.na(ellpsnm2)){
+			ellpsna <- TRUE
+		}
+		if(is.na(datumnm1) | is.na(datumnm2)){
+			datumna <- TRUE
+		}
+
+		if(is.null(ellpsna) & is.null(datumna)){
+			stop("CHECK PROJECTIONS. NEED ELLPSNM OR DATUM DEFINED IN BOTH PROJECTIONS")
+		}else{
+	
+			## ASSUME WGS84 and NAD83 ARE EQUAL
+			if(!is.na(datumnm1)){ if(datumnm1 == "WGS84"){ datumnm1 = "NAD83" } }
+			if(!is.na(datumnm2)){ if(datumnm2 == "WGS84"){ datumnm2 = "NAD83" } }				
+
+			if(projnm1 == projnm2){
+				if(ellpsnm1 == ellpsnm2 | ellpsna){
+					if(datumnm1 == datumnm2 | datumna){
+						projmatch <- TRUE
+					}else{
+						projmatch <- FALSE
+					}
+				}else{
+					projmatch <- FALSE
+				}
+			}else{
+				projmatch <- FALSE
+			}
+		}
+		return(projmatch)
+	}
+
+#############################################################################################
+#############################################################################################
+#################### Production Prediction - Actual Function ################################
+#############################################################################################
+#############################################################################################
 
 production.prediction<-function(	model.obj,
 						model.type,
 						rastLUT,
-						na.action=NULL,
+						#na.action=NULL,
 						NA.ACTION=NULL,
 						response.type,
-						numrows=500,	
+						keep.predictor.brick,							
 						map.sd=FALSE,
-						asciifn,
-						asciifn.mean,
-						asciifn.stdev,
-						asciifn.coefv,
-						make.img=TRUE,
+						OUTPUTfn,
+						OUTPUTfn.noext,
+						#OUTPUTpath,
+						OUTPUTname,
+						OUTPUText,
 						n.trees){
 
+#############################################################################################
+################################## Create File names ########################################
+#############################################################################################
+
+### Creat filename for native raster format map output
+
+TMPfn.map <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_map_",sep=""))
+
+### Creat filename for predictor raster brick
+
+if(keep.predictor.brick){
+	OUTPUTfn.brick <- paste(OUTPUTfn.noext,"_brick",sep="")
+}else{
+	OUTPUTfn.brick <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_brick_",sep=""))
+}
+
+### map sd filenames
+
+if(map.sd && model.type=="RF" && response.type=="continuous"){
+
+	OUTPUTfn.mean  <- paste(OUTPUTfn.noext,"_mean",OUTPUText,sep="")
+	OUTPUTfn.stdev <- paste(OUTPUTfn.noext,"_stdev",OUTPUText,sep="")
+	OUTPUTfn.coefv <- paste(OUTPUTfn.noext,"_coefv",OUTPUText,sep="")
+
+	TMPfn.mean     <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_mean_",sep=""))
+	TMPfn.stdev    <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_stdev_",sep=""))
+	TMPfn.coefv    <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_coefv_",sep=""))	
+
+}else{
+	map.sd<-FALSE
+}
 
 
 #####################################################################################
@@ -1325,358 +1591,198 @@ if(model.type=="RF"){
 if(model.type=="SGB"){
 	predList<-model.obj$var.names}
 
-predLUT<-rastLUT[match(predList, rastLUT[,2]),] #only the predictors form the model, in same order as in model
+predLUT<-rastLUT[match(predList, rastLUT[,2]),] #only the predictors from the model, in same order as in model
 if(any(predList!=predLUT[,2])){
 	stop("predictor names from model do not match short names in rastLUT")}	
 
-## Gets the filenames of raster layers and/or stacks necessary to run model.
-rastnm.all<-unique(predLUT[,1])
-
-########################################################################################
-#################################### Set up ############################################
-########################################################################################
-
-## Initialize variables
-rowcnt <- 0		# The total count of rows each time through loop
-final <- FALSE	# Loop testing variable
-offset <- 0		# Offset variable for importing rows
-
-## Open first raster
-sp.rast <- open.SpatialGDAL(rastnm.all[1])
-
-## Count the number of raster files
-#rastcnt <- rep(1,length(rastnm.all))
-
-## Get the basename of first raster
-rast.basenm1 <- basename(predLUT[1,1])
-rast.basenm1 <- strsplit(rast.basenm1,".img")
-
-## Set variables for header of ASCII file
-ncols <- sp.rast@grid@cells.dim[1]
-nrows <- sp.rast@grid@cells.dim[2]
-xllcorner <- sp.rast@bbox[1]
-yllcorner <- sp.rast@bbox[2]
-cellsize <- sp.rast@grid@cellsize[1]
-NODATA_value <- -9999
-
-## Get dimensions of raster ### we never ended up using this for anything
-#sp.rast.dim<-dim(sp.rast@grod)
-#if(length(sp.rast.dim)==3){rastcnt[1]<-sp.rast.dim[3]}
-
-## Close raster
-close(sp.rast)
-
-## Writes out header to an ASCII file
-write(paste("ncols", ncols, sep = "         "), file=asciifn)
-write(paste("nrows", nrows, sep = "         "), file=asciifn, append=TRUE)
-write(paste("xllcorner", xllcorner, sep = "     "), file=asciifn, append=TRUE)
-write(paste("yllcorner", yllcorner, sep = "     "), file=asciifn, append=TRUE)
-write(paste("cellsize", cellsize, sep = "      "), file=asciifn, append=TRUE)
-write(paste("NODATA_value", NODATA_value, sep = "  "), file=asciifn, append=TRUE)
-
-
-if(map.sd && model.type=="RF" && response.type=="continuous"){
-	## Writes out header to an ASCII file
-	write(paste("ncols", ncols, sep = "         "), file=asciifn.mean)
-	write(paste("nrows", nrows, sep = "         "), file=asciifn.mean, append=TRUE)
-	write(paste("xllcorner", xllcorner, sep = "     "), file=asciifn.mean, append=TRUE)
-	write(paste("yllcorner", yllcorner, sep = "     "), file=asciifn.mean, append=TRUE)
-	write(paste("cellsize", cellsize, sep = "      "), file=asciifn.mean, append=TRUE)
-	write(paste("NODATA_value", NODATA_value, sep = "  "), file=asciifn.mean, append=TRUE)
-
-	## Writes out header to an ASCII file
-	write(paste("ncols", ncols, sep = "         "), file=asciifn.stdev)
-	write(paste("nrows", nrows, sep = "         "), file=asciifn.stdev, append=TRUE)
-	write(paste("xllcorner", xllcorner, sep = "     "), file=asciifn.stdev, append=TRUE)
-	write(paste("yllcorner", yllcorner, sep = "     "), file=asciifn.stdev, append=TRUE)
-	write(paste("cellsize", cellsize, sep = "      "), file=asciifn.stdev, append=TRUE)
-	write(paste("NODATA_value", NODATA_value, sep = "  "), file=asciifn.stdev, append=TRUE)
-
-	## Writes out header to an ASCII file
-	write(paste("ncols", ncols, sep = "         "), file=asciifn.coefv)
-	write(paste("nrows", nrows, sep = "         "), file=asciifn.coefv, append=TRUE)
-	write(paste("xllcorner", xllcorner, sep = "     "), file=asciifn.coefv, append=TRUE)
-	write(paste("yllcorner", yllcorner, sep = "     "), file=asciifn.coefv, append=TRUE)
-	write(paste("cellsize", cellsize, sep = "      "), file=asciifn.coefv, append=TRUE)
-	write(paste("NODATA_value", NODATA_value, sep = "  "), file=asciifn.coefv, append=TRUE)
+anyFactor<-FALSE
+if(!is.null(model.obj$levels)){
+	anyFactor<-TRUE
+	predFactor<-names(model.obj$levels)
+	extraLevels<-vector("list",length(predFactor))
+	names(extraLevels)<-predFactor
 }
 
+########################################################################################
+################################ Set Data Type #########################################
+########################################################################################
 
-## Check all rasts for consistency
+if(response.type=="binary"){data.type <- "FLT4S"}
+if(response.type=="categorical"){
+	data.type <- "INT2S"
+	Ylev<-levels(model.obj$y)}
+if(response.type=="continuous"){data.type <- "FLT4S"}
 
-#print("checking rasts")
+########################################################################################
+########################### Build raster stack #########################################
+########################################################################################
+print("building brick")
 
-if(length(rastnm.all)>1){
-for (r in 2:length(rastnm.all)) {
+RAST<-vector("list", 0)
 
-	## Open raster
-	sp.rast <- open.SpatialGDAL(rastnm.all[r])
-	#sp.rast.dim<-dim(sp.rast@grod)
-	#if(length(sp.rast.dim)==3){rastcnt[r]<-sp.rast.dim[3]}
+for(p in predList){
+	
+	rastfn<-rastLUT[rastLUT[,2]==p,1]
+	band<-  rastLUT[rastLUT[,2]==p,3]
+	print(paste(p,"rastfn:",rastfn))
+
+	RAST[[p]]<-raster(rastfn,band=band)
+}
+
+print("checking projections")
+RAST<-projfix(RAST,OUTPUTfn.noext=OUTPUTfn.noext)
+
+#compareRaster(RAST,stopiffalse=TRUE, showwarning=TRUE) #, crs=FALSE)
+
+RS<-stack(RAST)
+RB<-brick(RS,values=TRUE,filename=OUTPUTfn.brick,overwrite=TRUE)
+
+print("successfully built predictor brick")
+########################################################################################
+############################# Loop through rows ########################################
+########################################################################################
+
+out <- raster(RAST[[1]])
+dataType(out) <- data.type
+NAvalue(out) <- -9999
+
+print("write start")
+print(OUTPUTfn)
+print(paste("datatype =",data.type))
+
+out <- writeStart(out, filename=TMPfn.map, overwrite=TRUE, datatype=data.type)
+#out <- writeStart(out, overwrite=TRUE,  dataType=data.type) #doesn't work
 
 
-	## Get name of raster
-	rast.basenm <- basename(rastnm.all[r])
-	rast.basenm <- strsplit(rast.basenm,".img")
+if(map.sd){
+	out.mean <- raster(RAST[[1]])
+	out.mean <- writeStart(out.mean, filename=extension(TMPfn.mean,""), overwrite=TRUE, datatype=data.type)
 
-# Check if all rasters have the same cellsize and extent.
-	if (ncols != sp.rast@grid@cells.dim[1]){
-		stop("Number of columns of", rast.basenm,"= ",sp.rast@grid@cells.dim[1]," Number of columns of",rast.basenm1,"= ",ncols)}
-	if (nrows != sp.rast@grid@cells.dim[2]){
-		stop("Number of rows of", rast.basenm,"= ",sp.rast@grid@cells.dim[2]," Number of rows of",rast.basenm1,"= ",nrows)}
-	if (xllcorner != sp.rast@bbox[1]){
-		warning("The xllcorner of", rast.basenm, "= ",sp.rast@bbox[1], " The xllcorner of",rast.basenm1,"= ",xllcorner,immediate.=TRUE)}
-	if (abs(xllcorner - sp.rast@bbox[1]) > cellsize){
-		warning("These images are misregistered by more than one cell",immediate.=TRUE)}
-	if (yllcorner != sp.rast@bbox[2]){
-		warning("The yllcorner of", rast.basenm, "= ",sp.rast@bbox[2], " The yllcorner of",rast.basenm1,"= ",yllcorner,immediate.=TRUE)}
-	if (abs(yllcorner - sp.rast@bbox[2]) > cellsize){
-		warning("These images are mis-registered by more than one cell",immediate.=TRUE)}
-	if (cellsize != sp.rast@grid@cellsize[1]){
-		warning("The cellsize of", rast.basenm,"= ",sp.rast@grid@cellsize[1]," The cellsize of",rast.basenm1,"= ",cellsize,immediate.=TRUE)}
-		
-	close(sp.rast)
-}}
+	out.stdev <- raster(RAST[[1]])
+	out.stdev <- writeStart(out.stdev, filename=extension(TMPfn.stdev,""), overwrite=TRUE, datatype=data.type)
 
-#print("done checking rasts")
+	out.coefv <- raster(RAST[[1]])
+	out.coefv <- writeStart(out.coefv, filename=extension(TMPfn.coefv,""), overwrite=TRUE, datatype=data.type)
+}
 
+###############################################################################################################
+print("starting loops")
+for(r in 1:(dim(RB)[1])){
+	print(paste("rows =",r))
 
-#predcnt <- table(predLUT[,1])[match(rastnm.all,names(table(predLUT[,1])))]	#not redundant-rastnm.all is defined as unique(predLUT[,1])  
-													# table() sorts, while unique() preserves order of first occurance
-predcnt <- table(predLUT[,1])									
-predcnt <- predcnt[match(unique(predLUT[,1]),names(predcnt))]
+	v <- data.frame(getValues(RB, r))
 
-##define dematrix() function to turn matrix into vector
-dematrix <- function(m){m[1:length(m)]}
+	### deal with factored predictors ###
+	if(anyFactor){
+		for(f in predFactor){
+			f.lev<-model.obj$levels[[f]]
+			f.extra<-v[,f][!v[,f]%in%f.lev]
+			extraLevels[[f]]<-unique(c(extraLevels[[f]],f.extra))
+			
+			#v[,f][!v[,f]%in%f.lev] <- ??? #leaving this line just in case we decide to add rough fix back in
 
-#################################################################################
-
-while (!final){
-
-	print(paste("numrows =",numrows))
-	print(paste("rowcnt =",rowcnt))
-
-	if (rowcnt+numrows >= nrows) {
-		numrows <- numrows - ((rowcnt+numrows) - nrows)
-		offset <- rowcnt
-		final <- TRUE
-	}
-
-	preds <- data.frame(matrix(-9999,numrows*ncols,sum(predcnt)))
-
-	p=0
-
-	for(r in 1:length(rastnm.all)){
-		
-		#print(paste("rastnm =",rastnm.all[r]))
-
-		predLUT.r<-predLUT[predLUT[,1]==rastnm.all[r],]
-
-		openrast <- GDAL.open(rastnm.all[r])
-
-		bands <- predLUT.r[,3]
-		pred <- getRasterData(openrast, offset = c(offset, 0), band=bands, region.dim=c(numrows, ncols),as.is=TRUE)
-
-		GDAL.close(openrast)
- 
-		if(predcnt[r]==1){
-			preds[,p+1]<-pred[1:length(pred)]
-			names(preds)[p+1]<-predLUT.r[,2]
-		}else{
-			if(numrows==1){
-				preds[,(p+1):(p+predcnt[r])]<-pred
-			}else{
-				preds[,(p+1):(p+predcnt[r])]<-apply(pred,3,dematrix)}
-			names(preds)[(p+1):(p+predcnt[r])]<-predLUT.r[,2]
-			}
-
-		p<-p+predcnt[r]
-
-	}
-
-	# change column order from order in rastLUT to order in rastLUT??? redundant!!!
-	preds<-preds[,match(predLUT[,2],names(preds))] 
-	#preds<-preds[,match(predList,names(preds))] #maybe better? - order same as in predList. never mind, predLUT has already been sorted into same order as predList
-
-	predictions_out<-rep(-9999,nrow(preds))
- 
-print(paste("NA.ACTION =",NA.ACTION))
-
-	###Give warning of true/interior NA's
-	if(any(is.na(preds))){
-		N.na<-sum(is.na(preds))
-		if(NA.ACTION=="roughfix"){
-			warning(paste(N.na,"NA values in predictors repaced with median or most common category"))
-		}else{
-			if(NA.ACTION=="omit"){
-				warning(paste(N.na,"NA values in predictors repaced with  NODATA value of -9999 and no predictions will be made on these pixels"))
-			}else{
-				stop("1: 'na.action' must be either \"na.roughfix\" or \"na.omit\"")
-			}
-		}
-	} 
-
-	### Turn missing values of factors into NA and give warnings of missing factors
-	if(!is.null(model.obj$levels)){
-		missing.levels<-model.obj$levels
-		for(m in names(model.obj$levels)){
-			missing.levels[[m]]<-unique(preds[,m][!preds[,m]%in%model.obj$levels[[m]]])
-
-			if(!length(missing.levels[[m]])==0){
-				if(NA.ACTION=="roughfix"){
-					warning(paste("categorical factored predictor",m,"contains levels",
-						paste(missing.levels[[m]],collapse=", "),  
-						"not found in training data, pixels with these levels will be replaced with most common category"))
-				}else{
-					if(NA.ACTION=="omit"){
-						warning(paste("categorical factored predictor",m,"contains levels",
-							paste(missing.levels[[m]],collapse=", "),  
-							"not found in training data, pixels with these levels will be returned as -9999"))
-					}else{
-						stop("2:'na.action' must be either \"na.roughfix\" or \"na.omit\"")
-					}
-				}
-			}
-			if(!"-9999"%in%model.obj$levels[[m]]){
-				preds[,m]<-factor(preds[,m],levels=c(model.obj$levels[[m]],-9999))
-			}else{
-				preds[,m]<-factor(preds[,m],levels=c(model.obj$levels[[m]]))
-			}
+			v[,f]<-factor(v[,f],levels=f.lev)
 		}
 	}
 
+	### deal with -9999 ###
+	nonPredict <- apply(((v == -9999)|is.na(v)), 1, any)
 
-	###Actually do NA action
-	if(any(is.na(preds))){
-		if(NA.ACTION=="roughfix"){
-			preds<-na.roughfix(preds)
-		}else{
-			if(NA.ACTION=="omit"){
-				preds[is.na(preds)] <- -9999
-			}else{
-				stop("3:'na.action' must be either \"na.roughfix\" or \"na.omit\"")
-			}
-		}
-	}
-
-
-	###make predictions on every row of preds that does not contain any -9999 values
-	not9<-!apply(preds==-9999,1,any)
-	all9<-!any(not9==TRUE)
-
-	if(!all9){
-		preds.not9<-preds[not9,]
-		preds.not9<-data.frame(preds.not9)
-
-		for(m in names(model.obj$levels)){
-			preds.not9[,m]<-factor(preds.not9[,m],levels=c(model.obj$levels[[m]]))}
+	v.pred<-rep(NA,length=nrow(v))
 		
-		##sort col into same order as predList from model.obj. (Started as order in lookup table) 
-		preds.not9<-preds.not9[,match(predList,names(preds.not9))] 
-
-		## Model predictions
-
-		print("making predictions")
-
+	if(any(!nonPredict)){
 		if(model.type=="RF"){
 			if(response.type=="binary"){
-				predictions_out[not9]<-signif(predict(model.obj, preds.not9,type="vote")[,"1"],2)}
+				v.pred[!nonPredict] <- signif(predict(model.obj, v[!nonPredict,],type="vote")[,"1"],2)}
 
 			if(response.type=="categorical"){
-				Ylev<-levels(model.obj$y)
-				PREDCHUNK<-predict(model.obj, preds.not9)
-				PREDCHUNK<-factor(PREDCHUNK,levels=Ylev) #this may be redundant-rf appears to do this, but not documented
+				PRED <- predict(model.obj, v[!nonPredict,])
+				
 				if(any(is.na(suppressWarnings(as.numeric(Ylev))))){
-					predictions_out[not9]<-unclass(PREDCHUNK)
+					v.pred[!nonPredict] <- as.integer(PRED)
 				}else{
-					predictions_out[not9]<-as.numeric(levels(PREDCHUNK))[PREDCHUNK]
+					v.pred[!nonPredict] <- as.integer(as.character(PRED))
 				}
 			}
 
 			if(response.type=="continuous"){
-				predictions_out[not9]<-predict(model.obj, preds.not9)}
+				v.pred[!nonPredict] <- predict(model.obj, v[!nonPredict,])}
 		}
 		if(model.type=="SGB"){
-			predictions_out[not9]<-predict.gbm(	object=model.obj,
-								newdata=preds.not9,
-								n.trees=n.trees,
-								type="response",
-								single.tree=FALSE)
+			v.pred[!nonPredict] <- predict.gbm(	object=model.obj,
+									newdata=v[!nonPredict,],
+									n.trees=n.trees,
+									type="response",
+									single.tree=FALSE)
 		}
 	}
 
-	write(predictions_out, file = asciifn, ncolumns=ncols, append=TRUE, sep=" ")
-	
-	#print("starting standard deviation stuff")
+	writeValues(out, v.pred, r)
 
-	if(map.sd && model.type=="RF" && response.type=="continuous"){
+	if(map.sd){
+		v.mean  <- rep(NA,length=nrow(v))
+		v.stdev <- rep(NA,length=nrow(v))
+		v.coefv <- rep(NA,length=nrow(v))
 
-		print(paste("Are all pixels -9999?",all9))
-
-		test_stdev<-rep(-9999,nrow(preds))
-		test_mean <-rep(-9999,nrow(preds))		
-		test_coefv<-rep(-9999,nrow(preds))
-
-		if(!all9){
-
-			print(paste("number of not -9999 pixels =",nrow(preds.not9)))			
-
-			test_mat<-predict(model.obj, preds.not9, predict.all=TRUE)$individual
-			#print("I've made the predictions! Now for the stdev...")
-			test_stdev[not9]<-apply(test_mat,1,sd)
-			test_mean[not9]<-apply(test_mat,1,mean)
-			test_coefv[not9]<-test_stdev[not9]/test_mean[not9]
-			test_coefv[test_stdev==0]<-0
-			test_coefv[test_mean==0]<-0
-			rm(test_mat)
+		if(any(!nonPredict)){
+			v.everytree <- predict(model.obj, v[!nonPredict,], predict.all=TRUE)$individual #only has rows for !nonPredict
+			v.mean[!nonPredict]  <- apply(v.everytree,1,mean)
+			v.stdev[!nonPredict] <- apply(v.everytree,1,sd)
+			v.coefv[!nonPredict] <- v.stdev[!nonPredict]/v.mean[!nonPredict]
+			v.coefv[!nonPredict][v.stdev[!nonPredict]==0]<-0
+			v.coefv[!nonPredict][v.mean[!nonPredict]==0]<-0
+			rm(v.everytree)
 		}
 
-		write(test_mean,  file = asciifn.mean, ncolumns=ncols, append=TRUE, sep=" ")
-		write(test_stdev, file = asciifn.stdev, ncolumns=ncols, append=TRUE, sep=" ")
-		write(test_coefv, file = asciifn.coefv, ncolumns=ncols, append=TRUE, sep=" ")}
-
-	rowcnt<-rowcnt + numrows
-	offset<-rowcnt	
-	}
-
-	###############convert to Imagine Image files#################
-
-	if(make.img){
-
-		###use first predictor layer to define projection###
-		RS.pred<-raster(rastnm.all[1])
-		CRS<-projection(RS.pred,asText=FALSE)
-		if(is.na(CRS@projargs)){
-			warning("No projection associated with predictor 1 therefore no projection assigned to output image file")
-		}
-		###define image file name###
-		imgfn<-strsplit(asciifn, split=".txt")[[1]]
-		imgfn<-paste(imgfn,"img",sep=".")
-		###read ascii grid and write imagine image###
-		RS.out<-raster(asciifn,crs=CRS)
-		setMinMax(RS.out)
-		writeRaster(RS.out,imgfn,overwrite=TRUE,NAflag=-9999)
-
-		if(map.sd && model.type=="RF" && response.type=="continuous"){
-
-			imgfn.mean<-strsplit(asciifn.mean, split=".txt")[[1]]
-			imgfn.mean<-paste(imgfn.mean,"img",sep=".")
-			RS.out<-raster(asciifn.mean,crs=CRS)
-			setMinMax(RS.out)
-			writeRaster(RS.out,imgfn.mean,overwrite=TRUE,NAflag=-9999)
-
-			imgfn.stdev<-strsplit(asciifn.stdev, split=".txt")[[1]]
-			imgfn.stdev<-paste(imgfn.stdev,"img",sep=".")
-			RS.out<-raster(asciifn.stdev,crs=CRS)
-			setMinMax(RS.out)
-			writeRaster(RS.out,imgfn.stdev,overwrite=TRUE,NAflag=-9999)
-
-			imgfn.coefv<-strsplit(asciifn.coefv, split=".txt")[[1]]
-			imgfn.coefv<-paste(imgfn.coefv,"img",sep=".")
-			RS.out<-raster(asciifn.coefv,crs=CRS)
-			setMinMax(RS.out)
-			writeRaster(RS.out,imgfn.coefv,overwrite=TRUE,NAflag=-9999)
-		}
+		writeValues(out.mean, v.mean, r)
+		writeValues(out.stdev, v.stdev, r)
+		writeValues(out.coefv, v.coefv, r)
 	}
 }
+
+################################################################################################
+
+out <- writeStop(out)
+
+out<-setMinMax(out)
+writeRaster(out,OUTPUTfn,overwrite=TRUE, datatype=data.type)
+
+if(map.sd){
+	out.mean  <- writeStop(out.mean)
+	out.stdev <- writeStop(out.stdev)
+	out.coefv <- writeStop(out.coefv)
+	
+	out.mean  <- setMinMax(out.mean)
+	writeRaster(out.mean, OUTPUTfn.mean,overwrite=TRUE,datatype=data.type)
+
+	out.stdev <- setMinMax(out.stdev)
+	writeRaster(out.stdev,OUTPUTfn.stdev,overwrite=TRUE,datatype=data.type)
+
+	out.coefv <- setMinMax(out.coefv)
+	writeRaster(out.coefv,OUTPUTfn.coefv,overwrite=TRUE,datatype=data.type)
+}
+
+###clean up tmp files
+
+#print(OUTPUTfn.brick)
+#print(TMPfn.map)
+
+file.remove(TMPfn.map)
+file.remove(grd2gri(TMPfn.map))
+
+if(!keep.predictor.brick){
+	file.remove(OUTPUTfn.brick)
+	file.remove(grd2gri(OUTPUTfn.brick))
+}
+if(map.sd){
+	file.remove(TMPfn.mean)
+	file.remove(TMPfn.stdev)
+	file.remove(TMPfn.coefv)
+	file.remove(grd2gri(TMPfn.mean))
+	file.remove(grd2gri(TMPfn.stdev))
+	file.remove(grd2gri(TMPfn.coefv))
+}
+
+}
+
 

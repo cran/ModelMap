@@ -16,7 +16,7 @@ if (is.null(qdatafn)){
 
 		qdatafn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
 		if(is.null(qdatafn)){stop("")}
-	}else{stop("You must provide qdatafn")}
+	}else{stop("you must provide qdatafn")}
 }
 
 ## Check if file name is full path or basename
@@ -34,11 +34,11 @@ if(is.matrix(qdatafn)!=TRUE && is.data.frame(qdatafn)!=TRUE){
 ## check that qdata.trainfn and qdata.testfn are filenames
 
 if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
-	stop("In the function get.test(), qdata.trainfn must be the filename for the new training dataset")}
+	stop("in the function get.test() 'qdata.trainfn' must be the filename for the new training dataset")}
 
 
 if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
-	stop("In the function get.test(), qdata.testfn must be the filename for the new test dataset")}
+	stop("in the function get.test() 'qdata.testfn' must be the filename for the new test dataset")}
 
 ## Read in data
 

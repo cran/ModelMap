@@ -9,10 +9,10 @@
 \usage{
 model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL, 
 folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL,
- seed = NULL, prediction.type=NULL, MODELpredfn = NULL, na.action = NULL,
- v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, jpeg.res = 72,
- device.width = 7,  device.height = 7, cex=par()$cex, req.sens, req.spec,
- FPC, FNC, n.trees = NULL)
+ diagnostic.flag=NULL, seed = NULL, prediction.type=NULL, MODELpredfn = NULL, 
+ na.action = NULL, v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, 
+ jpeg.res = 72, device.width = 7,  device.height = 7, cex=par()$cex, 
+ req.sens, req.spec, FPC, FNC, n.trees = NULL)
 }
 
 \arguments{
@@ -30,6 +30,9 @@ folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL,
   \item{response.name}{ String.  The name of the response variable used to build the model. The \code{response.name} must be column name from the training/test data files. If the \code{model.obj} was constructed in \code{ModelMap} with the \code{model.build()} function, then the \code{model.diagnostics()} can extract the \code{response.name} from the \code{model.obj}. If the model was constructed outside of \code{ModelMap} the you may need to specify the \code{response.name}. In particular, if a SGB model was constructed with the aid of Elith's code, it is necessary to specify the \code{response.name} argument, as all models constructed with this code are given a response name of \code{"y.data"}. If the \code{response.name} argument differs from the response name in the \code{model.obj}, the specified argument is giver preference, and a warning generated.}
 
   \item{unique.rowname}{ String.  The name of the unique identifier used to identify each row in the training data.  If \code{unique.rowname = NULL}, a GUI interface prompts user to select a variable from the list of column names from the training data file.  If \code{unique.rowname = FALSE}, a variable is generated of numbers from \code{1} to \code{nrow(qdata)} to index each row. }
+
+  \item{diagnostic.flag}{ String.  The name of a column used to identify a subset of rows in the training data or test data to 
+use for model diagnostics. This column must be either a logical vector (\code{TRUE} and \code{FALSE}) or a vector of zeros ond ones (where \code{0=FALSE} and \code{1=TRUE}. If this argument is used model diagnostics that depend on predicted and observed values will be calculated from a subset of the training or test data. These include confusion matrix and threshold criteria for binary response models and the scatterplot for continuous response models. The output file of predicted and observed values will have an aditional column, indicating which rows were used in the diagnostic calculations. Note that for cross validation, the entire training dataset will be used to create cross validation predictions, but that only the predictions on the the rows indicated by \code{diagnostic.flag} will be used for the diagnostics. }
 
   \item{seed}{ Integer.  The number used to initialize randomization to build RF or SGB models.  If you want to produce the same model later, use the same seed.  If \code{seed = NULL} (the default), a new seed is created each run. }
 
@@ -93,6 +96,8 @@ If \code{response.type = "binary"}, a summary graph is made using the \code{Pres
 
 If \code{response.type = "continuous"} a scatterplot of observed vs.  predicted is created with a simple linear regression line.  The graph is labeled with slope and intercept of this line as well as Pearson's and Spearman's correlation coefficients.
 
+If \code{response.type = "categorical"}, a confusion matrix is generated, that includes erros of ommission and comission, as well as Kappa, Percent Correctly Classified (PCC) and the Multicategorical Area Under the Curve (MAUC) as defined by Hand and Till (2001) and calculated by the package \code{HandTill2001}.
+
 }
 \value{
 
@@ -116,6 +121,8 @@ Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machin
 
 Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(4):367-378.
 
+Hand, D. J., & Till, R. J. (2001). A simple generalisation of the area under the ROC curve for multiple class classification problems. Machine Learning, 45(2), 171-186.
+
 Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 
 Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
@@ -134,8 +141,8 @@ seed=38
 
 # Define training and test files:
 
-qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
-qdata.testfn = system.file("external", "helpexamples","DATATEST.csv", package = "ModelMap")
+qdata.trainfn = system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdata.testfn = system.file("extdata", "helpexamples","DATATEST.csv", package = "ModelMap")
 
 # Define folder for all output:
 folder=getwd()	
@@ -265,35 +272,35 @@ PRED.OOB
 
 ### for Cross-Validation predictions ###
 
-MODELpredfn<-paste(MODELfn,"_CV",sep="")
-PRED.CV<-model.diagnostics( 	model.obj=model.obj,
-                   		qdata.trainfn=qdata.trainfn,
-                   		folder=folder,		
-                   		unique.rowname=unique.rowname,
-                   		seed=seed,
-                	# Model Validation Arguments
-                   		prediction.type="CV",
-                   		MODELpredfn=MODELpredfn,
-                   		device.type=c("default","jpeg","pdf"),	
-                   		v.fold=10,
-                   		na.action="na.roughfix"
-)
-PRED.CV
+#MODELpredfn<-paste(MODELfn,"_CV",sep="")
+#PRED.CV<-model.diagnostics( 	model.obj=model.obj,
+#                   		qdata.trainfn=qdata.trainfn,
+#                   		folder=folder,		
+#                   		unique.rowname=unique.rowname,
+#                   		seed=seed,
+#                	# Model Validation Arguments
+#                   		prediction.type="CV",
+#                   		MODELpredfn=MODELpredfn,
+#                   		device.type=c("default","jpeg","pdf"),	
+#                   		v.fold=10,
+#                   		na.action="na.roughfix"
+#)
+#PRED.CV
 
 ### for Independent Test Set predictions ###
 
-MODELpredfn<-paste(MODELfn,"_TEST",sep="")
-PRED.TEST<-model.diagnostics( 	model.obj=model.obj,
-                   		qdata.testfn=qdata.testfn,
-                   		folder=folder,		
-                   		unique.rowname=unique.rowname,
-                	# Model Validation Arguments
-                   		prediction.type="TEST",
-                   		MODELpredfn=MODELpredfn,
-                   		device.type=c("default","jpeg","pdf"),	
-                   		na.action="na.roughfix"
-)
-PRED.TEST
+#MODELpredfn<-paste(MODELfn,"_TEST",sep="")
+#PRED.TEST<-model.diagnostics( 	model.obj=model.obj,
+#                   		qdata.testfn=qdata.testfn,
+#                   		folder=folder,		
+#                   		unique.rowname=unique.rowname,
+#                	# Model Validation Arguments
+#                   		prediction.type="TEST",
+#                   		MODELpredfn=MODELpredfn,
+#                   		device.type=c("default","jpeg","pdf"),	
+#                   		na.action="na.roughfix"
+#)
+#PRED.TEST
 
 }
 

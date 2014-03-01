@@ -22,7 +22,7 @@ model.importance.plot<-function(	model.obj.1=NULL,
 						predList=NULL,
 						folder=NULL,
 						PLOTfn=NULL,
-						device.type=NULL,	# options: "default", "jpeg", "none","postscript", "win.metafile"
+						device.type=NULL,	# options: "default", "jpeg", "none","postscript"
 						jpeg.res=72,
 						device.width=7,
 						device.height=7,
@@ -44,34 +44,37 @@ if(.Platform$OS.type=="windows"){
 ###################################################################################
 
 if(is.null(device.type)){
-	device.type <- select.list(c("default","jpeg","none","pdf","postscript","win.metafile"), title="Diagnostic Output?", multiple = TRUE)
+	device.type <- select.list(c("default","jpeg","none","pdf","postscript"), title="Diagnostic Output?", multiple = TRUE)
 	device.type <- c(device.type,"default")
 }
 if(length(device.type)==0 || is.null(device.type)){
 	device.type <- "default"
 }
 
-if(!is.null(device.type)){
-	device.type[device.type=="windows"]<-"default"
-	if(any(!device.type%in%c("default","jpeg","none","pdf","postscript","win.metafile"))){
-		stop("Illegal 'device.type'. Device types must be one or more of 'default', 'jpeg', 'pdf', 'postscript', or 'win.metafile'")
-	}
-	device.type<-sort(device.type)
-	if("default"%in%device.type){
-		device.type<-c(device.type[device.type!="default"],"default")
-	}
+device.type[device.type=="windows"]<-"default"
+if(any(!device.type%in%c("default","jpeg","none","pdf","postscript","win.metafile"))){
+	stop("illegal 'device.type' device types must be one or more of 'default' 'jpeg' 'pdf' or 'postscript'")
+}
+
+device.type<-sort(device.type)
+if("default"%in%device.type){
+	device.type<-c(device.type[device.type!="default"],"default")
 }
 
 if("none"%in%device.type){
 	device.type<-"none"
 }
 
+#if(.Platform$OS.type!="windows"){
+#	if("win.metafile" %in% device.type){
+#		stop("'win.metafile' is only a legal 'device.type' in a windows environment")}}
+
 ###################################################################################
 ######################## Select Output Folder #####################################
 ###################################################################################
 
 if(is.null(folder)){
-	if(any(device.type%in%c("jpeg","pdf","postscript","win.metafile"))){
+	if(any(device.type%in%c("jpeg","pdf","postscript"))){
 		if(.Platform$OS.type=="windows"){
 			folder<-choose.dir(default=getwd(), caption="Select directory")
 		}else{
@@ -84,7 +87,8 @@ if(is.null(folder)){
 ###################################################################################
 
 if(is.null(PLOTfn)){PLOTfn<- paste(model.name.1,"_",model.name.2,sep="")}
-if(identical(basename(PLOTfn),PLOTfn)){PLOTfn<-paste(folder,"/",PLOTfn,sep="")}
+if(identical(basename(PLOTfn),PLOTfn)){
+	PLOTfn<-file.path(folder,PLOTfn)}
 
 #####################################################################################
 ############################# check model.obj #######################################
@@ -94,12 +98,12 @@ if(is.null(model.obj.1)){
 	if(is.null(MODELfn)){
 		if(.Platform$OS.type=="windows"){
 			MODELfn <- choose.files(caption="Select first model", filters = Filters["All",], multi = FALSE)
-			if(is.null(MODELfn)){stop("Must provide a model object")}
-		}else{stop("Must provide a model object")}
+			if(is.null(MODELfn)){stop("must provide a model object")}
+		}else{stop("must provide a model object")}
 	}
 	modelname<-load(MODELfn)
 	if(length(modelname)!= 1){
-		stop("File must contain single model object")}
+		stop("file must contain single model object")}
 	assign("model.obj.1",get(modelname))
 }
 
@@ -107,12 +111,12 @@ if(is.null(model.obj.2)){
 	if(is.null(MODELfn)){
 		if(.Platform$OS.type=="windows"){
 			MODELfn <- choose.files(caption="Select second model", filters = Filters["All",], multi = FALSE)
-			if(is.null(MODELfn)){stop("Must provide a model object")}
-		}else{stop("Must provide a model object")}
+			if(is.null(MODELfn)){stop("must provide a model object")}
+		}else{stop("must provide a model object")}
 	}
 	modelname<-load(MODELfn)
 	if(length(modelname)!= 1){
-		stop("File must contain single model object")}
+		stop("file must contain single model object")}
 	assign("model.obj.2",get(modelname))
 }
 #####################################################################################
@@ -162,14 +166,14 @@ if(response.type.2=="unknown"){stop("supplied model.obj.2 has an unknown respons
 if(model.type.1=="RF"){
 	if(is.null(imp.type.1)){imp.type.1<-1}
 	if(!is.null(class.1) && imp.type.1==2){
-		warning("No class-specific measure for 'imp.type.1=2' therefore importance type changed to 'imp.type.1=1'")
+		warning("no class specific measure for 'imp.type.1=2' therefore importance type changed to 'imp.type.1=1'")
 		imp.type.1<-1}
 	IMP.1<-imp.extract.rf(model.obj.1,imp.type=imp.type.1,class=class.1)
 }else{
 	if(model.type.1=="SGB"){
 		if(is.null(imp.type.1)){imp.type.1<-2}
 		if(!is.null(class.1)){
-			warning("No class-specific measure for SGB models therefore 'class.1' ignored")}
+			warning("no class specific measure for SGB models therefore 'class.1' ignored")}
 		print(paste("imp.type.1:",imp.type.1))
 		IMP.1<-imp.extract.sgb(model.obj.1,imp.type=imp.type.1)
 	}else{stop("model.obj is of unknown type")}
@@ -178,14 +182,14 @@ if(model.type.1=="RF"){
 if(model.type.2=="RF"){
 	if(is.null(imp.type.2)){imp.type.2<-1}
 	if(!is.null(class.2) && imp.type.2==2){
-		warning("No class-specific measure for 'imp.type.2=2' therefore importance type changed to 'imp.type.2=1'")
+		warning("no class specific measure for 'imp.type.2=2' therefore importance type changed to 'imp.type.2=1'")
 		imp.type.2<-1}
 	IMP.2<-imp.extract.rf(model.obj.2,imp.type=imp.type.2,class=class.2)
 }else{
 	if(model.type.2=="SGB"){
 		if(is.null(imp.type.2)){imp.type.2<-2}
 		if(!is.null(class.2)){
-			warning("No class-specific measure for SGB models therefore 'class.2' ignored")}
+			warning("no class specific measure for SGB models therefore 'class.2' ignored")}
 		print(paste("imp.type.2:",imp.type.2))
 		IMP.2<-imp.extract.sgb(model.obj.2,imp.type=imp.type.2)
 	}else{stop("model.obj is of unknown type")}
@@ -369,17 +373,11 @@ if(device.type[i] == "postscript"){
 	IMPORTANCEfn<-paste(PLOTfn,".ps",sep="")
 }
 
-if(device.type[i] == "win.metafile"){
-	IMPORTANCEfn<-paste(PLOTfn,".emf",sep="")
-}
 
 if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)}
 if(device.type[i]=="jpeg"){jpeg(filename=IMPORTANCEfn,width = device.width, height = device.height, res=jpeg.res, units="in")}
 if(device.type[i]=="postscript"){postscript(file=IMPORTANCEfn,width = device.width, height = device.height)}
 if(device.type[i]=="pdf"){pdf(file=IMPORTANCEfn,width = device.width, height = device.height)}
-if(device.type[i]=="win.metafile"){win.metafile(filename=IMPORTANCEfn,width = device.width, height = device.height, 
-								pointsize = 12,restoreConsole = TRUE)}
-
 
 
 	op<-par(mar=par()$mar+c(0,(2*NCHAR/3)-2,0,0),cex=cex)

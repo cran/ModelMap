@@ -1,6 +1,5 @@
 
 
-
 #############################################################################################
 #############################################################################################
 ############################ Model Diagnostics Function #####################################
@@ -16,13 +15,14 @@ model.diagnostics<-function(	model.obj=NULL,
 				MODELfn=NULL,
 				response.name=NULL,
 				unique.rowname=NULL,	# Row identifier
+				diagnostic.flag=NULL,
 				seed=NULL,
 			# Model Evaluation Arguments
 				prediction.type=NULL,
 				MODELpredfn=NULL,
 				na.action=NULL,	# also used for mapping
 				v.fold=10,
-				device.type=NULL,	# options: "default", "jpeg", "none","postscript", "win.metafile"
+				device.type=NULL,	# options: "default", "jpeg", "none","postscript"
 				DIAGNOSTICfn=NULL,
 				jpeg.res=72,
 				device.width=7,
@@ -112,7 +112,7 @@ if(model.type=="unknown"){
 print(paste("model.type =",model.type))
 
 #if (model.type == "SGB") {
-#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package. OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive. Using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap.")
+#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package but OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive however using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap")
 #}
 
 #############################################################################################
@@ -167,7 +167,7 @@ if(!is.null(model.obj$response)){
 		response.name<-model.response.name
 	}else{
 		if(response.name!=model.response.name){
-			warning(paste("supplied model.obj has response",model.response.name,"not supplied response",response.name))
+			warning("supplied model.obj has response ",model.response.name," not supplied response ",response.name)
 		}
 	}
 }
@@ -177,7 +177,7 @@ if(!is.null(model.obj$response)){
 if (is.null(response.name)){
 	response.name <- select.list(names(qdata), title="Select response name.")
 	if(response.name=="" || is.null(response.name)){
-		stop("response.name is required")}	
+		stop("response.name is needed")}	
 }
 
 print(paste("response.name =",response.name))
@@ -214,9 +214,9 @@ if (is.null(prediction.type)){
 }
 
 if(prediction.type=="" || is.null(prediction.type)){
-	stop("prediction.type is required")}
+	stop("prediction.type is needed")}
 if(prediction.type=="TRAIN"){
-	warning("Predictions will be made made on the training data, and will yeild unrealistic accuracy estimates with regard to independant data")}
+	warning("predictions will be made made on the training data and will yeild unrealistic accuracy estimates with regard to independant data")}
 
 if(model.type=="SGB" && prediction.type=="OOB"){
 	stop("'OOB' predictions not available for 'SGB' models")}
@@ -260,17 +260,22 @@ if(is.null(folder)){
 
 
 print(paste("folder =",folder))
-
+print(paste("MODELfn =",MODELfn))
 ## MODELfn
 if(is.null(MODELfn)){
 	MODELfn<- paste(model.type,"_",response.type,"_",response.name,sep="")}
 
-if(identical(basename(MODELfn),MODELfn)){MODELfn<-paste(folder,"/",MODELfn,sep="")}
+if(identical(basename(MODELfn),MODELfn)){
+	MODELfn<-file.path(folder,MODELfn)}
 
+
+print(paste("MODELpredfn =",MODELpredfn))
 ## MODELpredfn
 if(is.null(MODELpredfn)){
 	MODELpredfn<-paste(MODELfn,"_pred",sep="")}
-if(identical(basename(MODELpredfn),MODELpredfn)){MODELpredfn<-paste(folder,"/",MODELpredfn,sep="")}
+
+if(identical(basename(MODELpredfn),MODELpredfn)){
+	MODELpredfn<-file.path(folder,MODELpredfn)}
 
 
 
@@ -289,7 +294,7 @@ if (prediction.type %in% c("CV","TRAIN","OOB")){
 		if(.Platform$OS.type=="windows"){
 			qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
 			if(is.null(qdata.trainfn)){stop("")}
-		}else{stop("If prediction.type is CV, OOB, or TRAIN, you must provide qdata.trainfn")}
+		}else{stop("if prediction.type is CV OOB or TRAIN you must provide 'qdata.trainfn'")}
 	}
 
 	## Check if file name is full path or basename
@@ -326,7 +331,8 @@ if (prediction.type=="TEST"){
 
 	## Check if file name is full path or basename
 	if(is.matrix(qdata.testfn)!=TRUE && is.data.frame(qdata.testfn)!=TRUE){
-		if(identical(basename(qdata.testfn),qdata.testfn)){qdata.testfn<-paste(folder,"/",qdata.testfn,sep="")}
+		if(identical(basename(qdata.testfn),qdata.testfn)){
+			qdata.testfn<-file.path(folder,qdata.testfn)}
 	}
 
 	## Read in training data
@@ -349,6 +355,7 @@ missing.predictors<-!(predList %in% names(qdata))
 if(any(missing.predictors)){
 	stop("Model predictors: ", predList[missing.predictors], " are missing from the diagnostic dataset")}
 
+datakeep<-c(predList,response.name)
 
 #############################################################################################
 ######################## Deal with factored response ########################################
@@ -377,12 +384,10 @@ if (is.null(unique.rowname)){
 
 		rownames(qdata)<-qdata[,unique.rowname]
 
-
-
 	}	
 }else{
 	if(!(unique.rowname%in%names(qdata))){
-		warning("unique.rowname",unique.rowname,"not found in qdata, row index numbers will be used instead")
+		warning("unique.rowname ",unique.rowname," not found in qdata therefore row index numbers will be used instead")
 		unique.rowname<-FALSE
 	}
 	if(unique.rowname!=FALSE){
@@ -392,17 +397,70 @@ if (is.null(unique.rowname)){
 	}
 }
 
+#############################################################################################
+############################ check 'diagnostic.flag' ########################################
+#############################################################################################
+
+print("checking diagnostic.flag")
+
+DFLAG<-FALSE
+if(!is.null(diagnostic.flag)){DFLAG<-TRUE}
+
+if(DFLAG){
+
+	if(!(diagnostic.flag%in%names(qdata))){
+		warning("diagnostic.flag ",diagnostic.flag," not found in qdata therefore argument ignored and all data points will be used for diagnostics")
+		DFLAG<-FALSE
+	}
+
+	if(is.factor(qdata[,diagnostic.flag])){
+		qdata[,diagnostic.flag]<-as.logical(qdata[,diagnostic.flag])
+	}
+
+	if(is.character(qdata[,diagnostic.flag])){
+		qdata[,diagnostic.flag]<-as.logical(as.factor(qdata[,diagnostic.flag]))
+	}
+
+	if(is.numeric(qdata[,diagnostic.flag])){
+		if(all(qdata[,diagnostic.flag]%in%c(0,1))){
+			qdata[,diagnostic.flag]<-as.logical(qdata[,diagnostic.flag])
+		}else{
+			stop("diagnostic.flag must be a collumn of either 0 and 1 (0=FALSE, and 1=TRUE), or of TRUE and FALSE")
+		}
+	} 
+
+	if(any(is.na(qdata[,diagnostic.flag]))){
+		stop("unable to interpret all values of diagnostics flag as true or false, NA's generated")
+	}
+
+}
+
+if(DFLAG){
+	datakeep<-c(datakeep,diagnostic.flag)
+}
+
 
 #############################################################################################
-######################### Drop unused columns of qdata ######################################
+################################## Drop unused columns ######################################
 #############################################################################################
 
-qdata<-qdata[,c(predList,response.name)]
+print("dropping unused collumns")
+
+
+print("  qdata dimensions before")
+print(dim(qdata))
+
+qdata<-qdata[,datakeep]
+
+print("  qdata dimensions after")
+print(dim(qdata))
 
 #############################################################################################
 ########## Check for factored predictors with levels not found in training data #############
 #############################################################################################
 	
+print("checking factors")
+
 if(!is.null(model.obj$levels)){
 	invalid.levels<-model.obj$levels
 
@@ -411,27 +469,19 @@ if(!is.null(model.obj$levels)){
 		invalid.levels[[p]]<-unique(qdata[,p][!qdata[,p]%in%valid.levels] )
 		qdata[,p]<-factor(qdata[,p],levels=model.obj$levels[[p]])
 		if(length(invalid.levels[[p]])>0){
-			warning(paste(	"categorical factored predictor",p,"contains levels",paste(invalid.levels[[p]],collapse=", "),
-						"not found in training data, these categories will be treated as NA and either omited or replaced"))
+			invalid.lev<-paste(invalid.levels[[p]],collapse=", ")
+			warning(	"categorical factored predictor ",p," contains levels ",invalid.lev,
+					"not found in training data and these categories will be treated as NA and either omited or replaced")
 		}
 	}
 }
 
-#############################################################################################
-################################ Load Libraries #############################################
-#############################################################################################
-
-## Loads necessary libraries.
-
-if(model.type=="RF" ){library(randomForest)}
-if(model.type=="SGB"){library(gbm)}
-
-#	'gbm'	is only used for SGB models
-#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
 
 #############################################################################################
 ############################### Determine NA.ACTION #########################################
 #############################################################################################
+
+print("Na action")
 
 ###create logical vector of datarows containing NA in predictors or reponses###
 
@@ -462,7 +512,7 @@ if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
 		model.NA.ACTION<-class(model.obj$na.action)
 		print(paste("model.NA.ACTION =",model.NA.ACTION))
 		if(!model.NA.ACTION%in%c("omit","roughfix")){
-			warning(paste("Model Object was built with 'na.action'",model.NA.ACTION,"which is not supported by model map"))
+			warning("Model Object was built with 'na.action' ",model.NA.ACTION," which is not supported by model map")
 			model.NA.ACTION<-NULL
 		}else{
 			model.na.action<-switch(model.NA.ACTION,omit=na.omit,roughfix=na.roughfix)
@@ -484,11 +534,11 @@ if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
 		if(is.null(na.action)){
 			na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
 			if(na.action=="" || is.null(na.action)){
-				stop("NA found in data, therefore na.action is required")}
+				stop("NA found in data, therefore na.action needed")}
 			if(!na.action%in%NAvalid){stop(NAwarn)}
 		}else{
 			if(is.function(na.action)){
-				 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+				 stop("quotes needed when specifying the argument 'na.action'")
 			}else{
 				if(!na.action%in%NAvalid){stop(NAwarn)}
 			}
@@ -502,13 +552,13 @@ if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
 	###Check for impossible combo of model na.action, diagnostics na.action, and prediction.type=OOB
 	if(!is.null(model.NA.ACTION)){
 		if(model.NA.ACTION=="omit" && NA.ACTION=="roughfix" && prediction.type=="OOB"){
-			warning("'model.obj' was created with 'na.action=\"na.omit\"', OOB predictions not available on data rows containing NA, defaulting to 'na.action=\"na.omit\"'")
+			warning("'model.obj' was created with 'na.action=\"na.omit\"' therefore OOB predictions not available on data rows containing NA and 'na.action' defaulting to \"na.omit\"")
 			NA.ACTION<-"omit"
 			na.action<-na.omit
 		}
 		
 	}
-	if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
+	
 }
 
 				#print("NA.ACTION:")
@@ -523,7 +573,7 @@ if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
 ################################ Deal with NA's #############################################
 #############################################################################################
 
-#print("starting dealing with NA")
+print("starting dealing with NA")
 
 if(any(NA.data)){
 
@@ -531,8 +581,8 @@ if(any(NA.data)){
 
 	if(NA.ACTION=="omit"){
 		print("Omiting data points with NA predictors or NA response")
-		warning(paste(sum(NA.data), "data point(s) with NA values for prdictor or response omitted"))
-		qdata<-na.action(qdata)
+		warning(sum(NA.data), " data points with NA values for prdictor or response omitted")
+		qdata[,c(predList,response.name)]<-na.action(qdata[,c(predList,response.name)])
 	}
 	
 
@@ -540,9 +590,9 @@ if(any(NA.data)){
 
 	if(NA.ACTION=="roughfix"){
 		print("Replacing NA predictors and responses with median value or most common category")
-		if(any(NA.resp)){warning(paste(sum(NA.data), "data point(s) with NA values (including", sum(NA.resp),"point(s) with NA response) replaced with median/most common response"))
-		}else{warning(paste(sum(NA.data), "data point(s) with NA values replaced with median/most common value"))}
-		qdata<-na.action(qdata)
+		if(any(NA.resp)){warning(sum(NA.data), " data points with NA values including ", sum(NA.resp)," points with NA response replaced with median or most common response")
+		}else{warning(sum(NA.data), " data points with NA values replaced with median or most common value")}
+		qdata[,c(predList,response.name)]<-na.action(qdata[,c(predList,response.name)])
 
 		na.ac<-(1:nrow(qdata))[NA.data]
 		names(na.ac)<-rownames(qdata)[NA.data]
@@ -551,13 +601,13 @@ if(any(NA.data)){
 	}
 }
 
-#print("done dealing with NA")
+print("done dealing with NA")
 
 
 ##for OOB models, check number of rows is equal to data used in building model
 if(prediction.type=="OOB"){
 	if( nrow(qdata)!= length(model.obj$y)){
-		stop("prediction.type is OOB, but number of rows in qdata.train does not match dataset used to build model")
+		stop("'prediction.type' is OOB but number of rows in 'qdata.train' does not match dataset used to build model")
 	}
 }
 
@@ -566,8 +616,10 @@ if(prediction.type=="OOB"){
 ############################# Check Device Type #############################################
 #############################################################################################
 
+print("check device type")
+
 if(is.null(device.type)){
-	device.type <- select.list(c("default","jpeg","none","pdf","postscript","win.metafile"), title="Diagnostic Output?", multiple = TRUE)
+	device.type <- select.list(c("default","jpeg","none","pdf","postscript"), title="Diagnostic Output?", multiple = TRUE)
 	device.type <- c(device.type,"default")
 }
 if(length(device.type)==0 || is.null(device.type)){
@@ -576,8 +628,8 @@ if(length(device.type)==0 || is.null(device.type)){
 
 if(!is.null(device.type)){
 	device.type[device.type=="windows"]<-"default"
-	if(any(!device.type%in%c("default","jpeg","none","pdf","postscript","win.metafile"))){
-		stop("Illegal 'device.type'. Device types must be one or more of 'default', 'jpeg', 'pdf', 'postscript', or 'win.metafile'")
+	if(any(!device.type%in%c("default","jpeg","none","pdf","postscript"))){
+		stop("illegal 'device.type' device types must be one or more of 'default' 'jpeg' 'pdf' or 'postscript'")
 	}
 	device.type<-sort(device.type)
 	if("default"%in%device.type){
@@ -595,12 +647,21 @@ if("none"%in%device.type){
 ############################# SGB + CV: check for n.trees ###################################
 #############################################################################################
 
-if(model.type=="SGB" && is.null(n.trees)){
-	if(!is.null(model.obj$best.iter)){
-		n.trees<-model.obj$best.iter
-	}else{
-		n.trees<-model.obj$n.trees
+print("check n.trees")
+
+if(model.type=="SGB"){
+	if(is.null(n.trees)){
+		if(!is.null(model.obj$best.iter)){
+			n.trees<-model.obj$best.iter
+		}else{
+			n.trees<-model.obj$n.trees
+		}
 	}
+	#if(!is.null(model.obj$nTrain)){
+	#	nTrain <- model.obj$nTrain
+	#}else{
+	#	nTrain <- length(model.obj$train.error)
+	#}
 }
 
 
@@ -613,7 +674,7 @@ if(!is.null(seed)){
 	set.seed(seed)}
 
 
-#print("starting predictions")
+print("starting predictions")
 
 PRED <- prediction.model(		model.obj=model.obj,
 						model.type=model.type,
@@ -638,7 +699,50 @@ PRED <- prediction.model(		model.obj=model.obj,
 						)
 
 
-#print("starting diagnostics")
+
+#############################################################################################
+########################### If DFLAG=T remove unused rows ###################################
+#############################################################################################
+
+if(DFLAG){
+	PREDICTIONfn<-paste(MODELpredfn,".csv",sep="")
+	PRED.OUT<-cbind(PRED,qdata[,diagnostic.flag])
+	names(PRED.OUT)<-c(names(PRED),diagnostic.flag)
+	write.table(PRED.OUT,file=PREDICTIONfn,sep=",",row.names=FALSE)
+}
+
+
+
+
+
+print("removing rows")
+
+#print("PRED dimensions before:")
+#print(dim(PRED))
+
+if(DFLAG){
+	PRED<-PRED[qdata[,diagnostic.flag],]
+}
+
+
+#print("PRED dimensions after:")
+#print(dim(PRED))
+#print(PRED)
+
+#print(paste("diagnostic.flag =",diagnostic.flag))
+
+#print("names(qdata)=")
+#print(names(qdata))
+
+#print("qdata[,diagnostic.flag]")
+#print(qdata[,diagnostic.flag])
+#############################################################################################
+################################### Run Diagnostics #########################################
+#############################################################################################
+
+
+
+print("starting diagnostics")
 
 diagnostics.function(	model.obj=model.obj,
 				model.type=model.type,
@@ -660,23 +764,25 @@ diagnostics.function(	model.obj=model.obj,
 				FNC=FNC)
 #if(.Platform$OS.type=="windows"){bringToTop(which = dev.cur(), stay = FALSE)}
 
-
+print("ending diagnostics")
 
 #############################################################################################
 ################################## Write a list of argumets #################################
 #############################################################################################
 
+print("starting argument record")
 ARGfn<-paste(MODELfn,"_model_diagnostics_arguments.txt",sep="")
 
 A<-formals(model.diagnostics)
 envir<-as.environment(-1)
 A<-mget(names(A),ifnotfound="NULL",envir=envir)
 
-ARGfn<-paste(MODELfn,"_arguments.txt",sep="")
+#ARGfn<-paste(MODELfn,"_arguments.txt",sep="")
 
 if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
 	A$qdata.trainfn<-"preloaded dataframe"
 }
+
 
 if(is.matrix(qdata.testfn)==TRUE || is.data.frame(qdata.testfn)==TRUE){
 	A$qdata.testfn<-"preloaded dataframe"
@@ -685,11 +791,9 @@ if(is.matrix(qdata.testfn)==TRUE || is.data.frame(qdata.testfn)==TRUE){
 A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
-
-#print(paste("ARGfn =",ARGfn))
-
-capture.output(print(A),file=ARGfn)
-
+print(A)
+#capture.output(print(A),file=ARGfn)
+print("ending argument record")
 
 #############################################################################################
 ##################################### Returns ###############################################

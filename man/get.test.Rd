@@ -30,7 +30,7 @@ Outputs a training data file and test data file. Unless \code{qdata.trainfn} or 
 
 \examples{
 
-qdatafn<-system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdatafn<-system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
 
 qdata<-read.table(file=qdatafn,sep=",",header=TRUE,check.names=FALSE)
 

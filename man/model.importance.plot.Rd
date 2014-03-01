@@ -24,16 +24,16 @@ device.width = 7, device.height = 7,cex=par()$cex,...)
   \item{model.name.1}{String. Label for left side of barchart.}
 
   \item{model.name.2}{String. Label for right side of barchart.}
-
-  \item{class.1}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.1 = NULL} overall relative influence used for plot.}
-
-  \item{class.2}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.2 = NULL} overall relative influence used for plot.}
-
+ 
   \item{imp.type.1}{Number. Type of importance to use for model 1. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.1 = 1}. Default for SGB models is \code{imp.type.1 = 2}.}
 
   \item{imp.type.2}{Number. Type of importance to use for model 2. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.2 = 1}. Default for SGB models is \code{imp.type.2 = 2}.}
 
   \item{type.label}{Logical. Should axis labels include importance type for each side of plot.}
+
+  \item{class.1}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.1 = NULL} overall relative influence used for plot.}
+
+  \item{class.2}{String. For binary and categorical random forest models. If the name a class is specified, the class-specific relative influence is used for plot. If \code{class.2 = NULL} overall relative influence used for plot.}
 
   \item{scale.by}{String. Scale by: \code{"max"} or \code{"sum"}. When \code{scale.by="max"} the importance are scaled for each model so that the maximum importance for each model fills the graph. When \code{scale.by="sum"}, the importance for each model are scaled to sum to 100.}
 
@@ -125,7 +125,7 @@ seed=38
 
 # Define training and test files:
 
-qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdata.trainfn = system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
 
 # Define folder for all output:
 folder=getwd()	

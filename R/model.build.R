@@ -24,12 +24,14 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
 				replace=TRUE,
 				strata=NULL,
 				sampsize = NULL,
+				proximity = TRUE,
 			# SGB arguments:
 				n.trees=NULL,                 	# number of trees
 				shrinkage=0.001,   	      # shrinkage or learning rate,
                   	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
 				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				train.fraction = 1.0,       	# fraction of data for training,
+				train.fraction = NULL,       	# fraction of data for training,
+				nTrain = NULL,
                   	n.minobsinnode = 10,        	# minimum total weight needed in each node
 				var.monotone = NULL
 
@@ -77,10 +79,10 @@ if(.Platform$OS.type=="windows"){
 if(is.null(model.type)){
 	model.type <- select.list(c("RF","SGB"), title="Select model type.")}
 if(model.type=="" || is.null(model.type)){
-	stop("model.type is required")}
+	stop("'model.type' needed")}
 
 if(!model.type%in%c("RF","SGB")){
-	stop("ModelMap currently supports only RF and SGB for model.type")}
+	stop("ModelMap currently supports only RF and SGB for 'model.type'")}
 
 
 #############################################################################################
@@ -92,13 +94,13 @@ if(!model.type%in%c("RF","SGB")){
 if(is.null(response.type)){
 	response.type <- select.list(c("continuous","binary","categorical"), title="Select response type.")}
 if(response.type=="" || is.null(response.type)){
-	stop("response.type is required")}	
+	stop("'response.type' needed")}	
 
 if(response.type=="categorical" && model.type=="SGB"){
-	stop("Categorical response only supported for Random Forest models")}
+	stop("categorical response only supported for Random Forest models")}
 
 if(!response.type%in%c("continuous","binary","categorical")){
-	stop("ModelMap currently supports only continuous, binary and categorical for response.type")}
+	stop("ModelMap currently supports only continuous binary and categorical for 'response.type'")}
 
 #############################################################################################
 ################################ Select Output Folder #######################################
@@ -122,7 +124,8 @@ print(paste("folder =", folder))
 if(is.null(MODELfn)){
 	MODELfn<- paste(model.type,"_",response.type,"_",response.name,sep="")}
 
-if(identical(basename(MODELfn),MODELfn)){MODELfn<-paste(folder,"/",MODELfn,sep="")}
+if(identical(basename(MODELfn),MODELfn)){
+	MODELfn<-file.path(folder,MODELfn)}
 	
 #############################################################################################
 ###################################### Load Data ############################################
@@ -134,12 +137,13 @@ if (is.null(qdata.trainfn)){
 	if(.Platform$OS.type=="windows"){
 		qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
 		if(is.null(qdata.trainfn)){stop("")}
-	}else{stop("To create a model or make validation predictions, you must provide qdata.trainfn")}
+	}else{stop("to create a model or make validation predictions you must provide 'qdata.trainfn'")}
 }
 
 ## Check if file name is full path or basename
 if(is.matrix(qdata.trainfn)!=TRUE && is.data.frame(qdata.trainfn)!=TRUE){
-	if(identical(basename(qdata.trainfn),qdata.trainfn)){qdata.trainfn<-paste(folder,"/",qdata.trainfn,sep="")}
+	if(identical(basename(qdata.trainfn),qdata.trainfn)){
+		qdata.trainfn<-file.path(folder,qdata.trainfn)}
 }
 
 ## Read in training data
@@ -157,7 +161,7 @@ if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
 if (is.null(response.name)){
 	response.name <- select.list(names(qdata), title="Select response name.")
 	if(response.name=="" || is.null(response.name)){
-		stop("response.name is required")}	
+		stop("'response.name' is needed")}	
 }
 
 print(paste("response.name =",response.name))
@@ -169,7 +173,9 @@ print(paste("response.name =",response.name))
 if(!is.null(strata)){
 	if(length(strata)==1){
 		if(strata%in%names(qdata)){
-			strata<-qdata$strata
+			#print(paste("strata:",strata))
+			strata<-qdata[,strata]
+			#print(paste("strata:",strata))
 		}else{
 			stop("'strata' must be either a collumn name from 'qdata' or vector or factor with one element for each row of qdata")
 		}
@@ -221,9 +227,9 @@ factored.qdata<-factored.qdata|character.qdata
 
 if(any(predFactor==FALSE)){
 	if(any(factored.qdata)){
-		stop(	"predictors: ",
-			paste(names(factored.qdata)[factored.qdata],collapse=" "),
-			" are catagorical predictors (i.e. are non-numeric, such as factors or characters), but are not included in 'predFactor'. Either add these predictors to 'predFactor' or correct the dataset."
+		fact.q<-paste(names(factored.qdata)[factored.qdata],collapse=" ")
+		stop(	"predictors ",fact.q,
+			" are catagorical predictors i.e. are non numeric such as factors or characters but are not included in 'predFactor' either add these predictors to 'predFactor' or correct the dataset"
 			)
 	}
 }
@@ -231,9 +237,9 @@ if(any(predFactor==FALSE)){
 if(!any(predFactor==FALSE)){
 
 	if(any(!names(factored.qdata)[factored.qdata]%in%predFactor)){
-		stop(	"predictors: ",
-			paste(names(factored.qdata)[factored.qdata][!names(factored.qdata)[factored.qdata]%in%predFactor],collapse=" "),
-			" are catagorical predictors (i.e. are non-numeric, such as factors or characters), but are not included in 'predFactor'. Either add these predictors to 'predFactor' or correct the dataset."
+		fact.q<-paste(names(factored.qdata)[factored.qdata][!names(factored.qdata)[factored.qdata]%in%predFactor],collapse=" ")
+		stop(	"predictors ",fact.q,
+			" are catagorical predictors i.e. are non-numeric such as factors or characters but are not included in 'predFactor' either add these predictors to 'predFactor' or correct the dataset"
 			)
 	}
 
@@ -267,19 +273,6 @@ if (is.null(unique.rowname)){
 
 qdata<-qdata[,c(predList,response.name)]
 
-#############################################################################################
-################################ Load Libraries #############################################
-#############################################################################################
-
-## Loads necessary libraries.
-
-#print("loading libraries")
-
-if(model.type=="RF" ){library(randomForest)}
-if(model.type=="SGB"){library(gbm)}
-
-#	'gbm'	is only used for SGB models
-#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
 
 #############################################################################################
 ############################### Determine NA.ACTION #########################################
@@ -306,11 +299,11 @@ if(any(NA.data)){
 	if(is.null(na.action)){
 		na.action <- select.list(c("na.omit","na.roughfix"), title="Select na.action")
 		if(na.action=="" || is.null(na.action)){
-			stop("NA found in data, therefore na.action is required")}
+			stop("NA found in data therefore 'na.action' is needed")}
 		if(!na.action%in%NAvalid){stop(NAwarn)}
 	}else{
 		if(is.function(na.action)){
-			 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
+			 stop("quotes needed when specifying the argument 'na.action'")
 		}else{
 			if(!na.action%in%NAvalid){stop(NAwarn)}
 		}
@@ -321,7 +314,6 @@ if(any(NA.data)){
 	#turn na.action into function
 	na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
 
-	if(model.type=="SGB" && NA.ACTION=="roughfix"){library(randomForest)}
 }
 
 
@@ -366,13 +358,35 @@ if(any(NA.data)){
 }
 
 #############################################################################################
+##################### SGB models: check nTrain vs train.fraction ############################
+#############################################################################################
+
+if(model.type=="SGB"){
+    if (!is.null(nTrain) && !is.null(train.fraction)) {
+        stop("parameters 'nTrain' and 'train.fraction' cannot both be specified")
+    }
+    else if (!is.null(train.fraction)) {
+        warning("parameter 'train.fraction' of gbm.fit is deprecated please specify 'nTrain' instead")
+        nTrain <- floor(train.fraction * nrow(qdata))
+    }
+    else if (is.null(nTrain)) {
+        nTrain <- nrow(qdata)
+    }
+}
+
+print("nrow(qdata):")
+print(nrow(qdata))
+print("nTrain:")
+print(nTrain)
+
+#############################################################################################
 ####################################### Build Model #########################################
 #############################################################################################
 
 if(!is.null(seed)){
 	set.seed(seed)}
 
-#print("About to create model")
+print("About to create model")
 
 if (model.type=="RF"){
 	model.obj<-create.model(qdata=qdata,
@@ -388,7 +402,8 @@ if (model.type=="RF"){
 					mtry=mtry,
 					replace=replace,
 					strata=strata,
-					sampsize=sampsize
+					sampsize=sampsize,
+					proximity=proximity
 				)
 
 
@@ -404,11 +419,12 @@ if(model.type=="SGB"){
 					keep.data=keep.data,
 	
 				# SGB arguments:
-					n.trees=n.trees,                 	
+					n.trees=n.trees,            	
 					shrinkage=shrinkage,   	      
                   		interaction.depth=interaction.depth,	
-					bag.fraction=bag.fraction,          	
-					train.fraction=train.fraction,       	
+					bag.fraction=bag.fraction,
+					nTrain=nTrain,          	
+					#train.fraction=train.fraction,       	
                   		n.minobsinnode=n.minobsinnode,
 					var.monotone = var.monotone)	
 }	

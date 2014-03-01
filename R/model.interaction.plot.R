@@ -21,7 +21,7 @@ function(	model.obj=NULL,
 		smooth = "none",      			# controls smoothing of the predicted surface
 #		mask = FALSE,         			# controls masking using a sample intensity model
 		plot.type = NULL,   			# controls whether a "persp" or "image" plot is drawn
-		device.type=NULL,	# options: "default", "jpeg", "none","postscript", "win.metafile"
+		device.type=NULL,	# options: "default", "jpeg", "none","postscript" 
 		jpeg.res=72,
 		device.width=7,
 		device.height=7,
@@ -43,7 +43,7 @@ function(	model.obj=NULL,
 # and its desired value, e.g., c(name1 = 12.2, name2 = 57.6)
 
 
-#require(splines)
+
 
 
 ########################################################################################
@@ -83,23 +83,23 @@ plot.type<-switch(plot.type,	"persp"="persp",
 ### Check Device Type ###
 
 if(is.null(device.type)){
-	device.type <- select.list(c("default","jpeg","none","pdf","postscript","win.metafile"), title="Diagnostic Output?", multiple = TRUE)
+	device.type <- select.list(c("default","jpeg","none","pdf","postscript"), title="Diagnostic Output?", multiple = TRUE)
 	device.type <- c(device.type,"default")
 }
 if(length(device.type)==0 || is.null(device.type)){
 	device.type <- "default"
 }
 
-if(!is.null(device.type)){
-	device.type[device.type=="windows"]<-"default"
-	if(any(!device.type%in%c("default","jpeg","none","pdf","postscript","win.metafile"))){
-		stop("Illegal 'device.type'. Device types must be one or more of 'default', 'jpeg', 'pdf', 'postscript', or 'win.metafile'")
-	}
-	device.type<-sort(device.type)
-	if("default"%in%device.type){
-		device.type<-c(device.type[device.type!="default"],"default")
-	}
+
+device.type[device.type=="windows"]<-"default"
+if(any(!device.type%in%c("default","jpeg","none","pdf","postscript"))){
+	stop("illegal 'device.type' device types must be one or more of 'default', 'jpeg', 'pdf', or 'postscript'")
 }
+device.type<-sort(device.type)
+if("default"%in%device.type){
+	device.type<-c(device.type[device.type!="default"],"default")
+}
+
 
 if("none"%in%device.type){
 	device.type<-"none"
@@ -109,7 +109,7 @@ if("none"%in%device.type){
 ### Select Output Folder ###
 
 if(is.null(folder)){
-	if(any(device.type%in%c("jpeg","pdf","postscript","win.metafile"))){
+	if(any(device.type%in%c("jpeg","pdf","postscript"))){
 		if(.Platform$OS.type=="windows"){
 			folder<-choose.dir(default=getwd(), caption="Select directory")
 		}else{
@@ -135,12 +135,12 @@ if(is.null(model.obj)){
 	if(is.null(MODELfn)){
 		if(.Platform$OS.type=="windows"){
 			MODELfn <- choose.files(caption="Select model object", filters = Filters["All",], multi = FALSE)
-			if(is.null(MODELfn)){stop("Must provide a model object")}
-		}else{stop("Must provide a model object")}
+			if(is.null(MODELfn)){stop("must provide a model object")}
+		}else{stop("must provide a model object")}
 	}
 	modelname<-load(MODELfn)
 	if(length(modelname)!= 1){
-		stop("File must contain single model object")}
+		stop("file must contain single model object")}
 	assign("model.obj",get(modelname))
 }
 
@@ -160,8 +160,7 @@ if("randomForest"%in%model.type.long){
 	}
 }
 
-if(model.type=="SGB"){require(gbm)}
-if(model.type=="RF"){require(randomForest)}
+
 
 if(model.type=="unknown"){stop("model.obj is of unknown type")}
 
@@ -202,7 +201,7 @@ if(response.type=="categorical"){
 		response.levels<-levels(model.obj$y)
 		response.category <- select.list(response.levels, title="Select response category.")
 		if(response.category=="" || is.null(response.category)){
-			stop("Must choose response category.")
+			stop("must choose response category")
 		}
 	}
 	response.category<-as.character(response.category)
@@ -217,16 +216,16 @@ if(response.type=="categorical"){
 if (is.null(x)){
 	x <- select.list(predList, title="Select predictor for X axis.")
 	if(x=="" || is.null(x)){
-		stop("Must give predictor to use for X axis.")}
+		stop("must give predictor to use for X axis")}
 }	
 
 if(length(x)!=1){
-	stop("'x' is must be a single name or number")}
+	stop("'x' must be a single name or number")}
 
 if(is.numeric(x)){
 	if(x>=1 && x<=n.preds){
 		x.name<-predList[x]
-	}else{stop("if 'x' is numeric, 'x' must be number between 1 and number of predictor variables in 'model.obj'") }
+	}else{stop("if 'x' is numeric 'x' must be number between 1 and number of predictor variables in 'model.obj'") }
 }else{
 	if(x%in%predList){
 		x.name<-x
@@ -241,21 +240,21 @@ if(is.null(xlab)){xlab <- x.name}
 if (is.null(y)){
 	y <- select.list(predList, title="Select predictor for Y axis.")
 	if(y=="" || is.null(y)){
-		stop("Must give predictor to use for Y axis.")}
+		stop("must give predictor to use for Y axis")}
 }	
 
 if(length(y)!=1){
-	stop("'y' is must be a single name or number")}
+	stop("'y' must be a single name or number")}
 	
 if(is.numeric(y)){
 	if(y>=1 && y<=n.preds){
 		y.name<-predList[y]
-	}else{stop("if 'y' is numeric, 'y' must be number between 1 and number of predictor variables in 'model.obj'") }
+	}else{stop("if 'y' is numeric 'y' must be number between 1 and number of predictor variables in 'model.obj'") }
 }else{
 	if(y%in%predList){
 		y.name<-y
 		y<-match(y.name,predList)
-	}else{stop("if 'y' is character string, 'y' must be name of a predictor variable in 'model.obj'") }
+	}else{stop("if 'y' is character string 'y' must be name of a predictor variable in 'model.obj'") }
 }
 
 if(is.null(ylab)){ylab <- y.name}
@@ -293,12 +292,13 @@ if(is.null(model.obj$predictor.data )){
 			if(.Platform$OS.type=="windows"){
 				qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
 				if(is.null(qdata.trainfn)){stop("")}
-			}else{stop("If RF model built outside of ModelMap package you must provide qdata.trainfn")}
+			}else{stop("if RF model built outside of ModelMap package you must provide qdata.trainfn")}
 		}
 
 		## Check if file name is full path or basename
 		if(is.matrix(qdata.trainfn)!=TRUE && is.data.frame(qdata.trainfn)!=TRUE){
-			if(identical(basename(qdata.trainfn),qdata.trainfn)){qdata.trainfn<-paste(folder,"/",qdata.trainfn,sep="")}
+			if(identical(basename(qdata.trainfn),qdata.trainfn)){
+				qdata.trainfn<-file.path(folder,qdata.trainfn)}
 		}
 
 		## Read in training data
@@ -375,7 +375,7 @@ for (i in 1:n.preds) {
 				if(pred.means[m]%in%names(temp.table)){
 					pred.frame[,j] <- pred.means[m]
 				}else{
-					stop("'pred.means' contains a value for factored predictor",predList[i],"not found in training data")
+					stop("'pred.means' contains a value for factored predictor ",predList[i]," not found in training data")
 				}
 			}
 			pred.frame[,j] <- factor(pred.frame[,j],levels=names(temp.table))
@@ -413,12 +413,12 @@ if(model.type=="RF"){
 	}
 }
 
-### model smooth if required ###
+### model smooth if specified ###
 
 if (smooth == "model") {
 	
 	if(any(is.factor(x.var),is.factor(y.var))){
-		warning("Smoothing is not appropriate for factored predictors.")}
+		warning("smoothing is not appropriate for factored predictors")}
 
 	pred.glm <- glm(prediction ~ ns(pred.frame[,1], df = 8) * ns(pred.frame[,2], df = 8), data=pred.frame,family=poisson)
 	prediction <- fitted(pred.glm)
@@ -452,11 +452,11 @@ if (is.null(z.range)) {
 
 	pred.matrix <- matrix(prediction,ncol=N.y,nrow=N.x)
 
-### kernel smooth if required ###
+### kernel smooth if specified ###
 
 if (smooth == "average") {  #apply a 3 x 3 smoothing average
 	if(any(is.factor(x.var),is.factor(y.var))){
-		warning("Smoothing is not appropriate for factored predictors.")}
+		warning("smoothing is not appropriate for factored predictors")}
 
 	pred.matrix.smooth <- pred.matrix
 		for (i in 2:49) {
@@ -498,7 +498,8 @@ if(is.null(PLOTfn)){
 	}
 }
 
-if(identical(basename(PLOTfn),PLOTfn)){PLOTfn<-paste(folder,"/",PLOTfn,sep="")}
+if(identical(basename(PLOTfn),PLOTfn)){
+	PLOTfn<-file.path(folder,PLOTfn)}
 
 ### loop thru devices ###
 
@@ -519,9 +520,6 @@ if(device.type[i] == "postscript"){
 	INTERACTIONfn<-paste(PLOTfn,".ps",sep="")
 }
 
-if(device.type[i] == "win.metafile"){
-	INTERACTIONfn<-paste(PLOTfn,".emf",sep="")
-}
 
 ###################################################################
 
@@ -529,8 +527,6 @@ if(device.type[i]=="default"){dev.new(width = device.width, height = device.heig
 if(device.type[i]=="jpeg"){jpeg(filename=INTERACTIONfn,width = device.width, height = device.height, res=jpeg.res, units="in")}
 if(device.type[i]=="postscript"){postscript(file=INTERACTIONfn,width = device.width, height = device.height)}
 if(device.type[i]=="pdf"){pdf(file=INTERACTIONfn,width = device.width, height = device.height)}
-if(device.type[i]=="win.metafile"){win.metafile(filename=INTERACTIONfn,width = device.width, height = device.height, 
-								pointsize = 12,restoreConsole = TRUE)}
 
 ###################################################################################
 
@@ -540,7 +536,6 @@ if (plot.type=="image") {
 	if(response.type=="categorical"){
 		zlab<-paste("probability of", response.category)}
 
-	require(fields)
 
 	x.min<-min(unclass(x.var))
 	x.max<-max(unclass(x.var))

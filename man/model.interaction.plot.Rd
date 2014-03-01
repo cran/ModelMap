@@ -108,8 +108,8 @@ seed=38
 
 # Define training and test files:
 
-qdata.trainfn = system.file("external", "helpexamples","DATATRAIN.csv", package = "ModelMap")
-qdata.testfn = system.file("external", "helpexamples","DATATEST.csv", package = "ModelMap")
+qdata.trainfn = system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
+qdata.testfn = system.file("extdata", "helpexamples","DATATEST.csv", package = "ModelMap")
 
 # Define folder for all output:
 folder=getwd()	
@@ -172,18 +172,10 @@ model.interaction.plot(	model.obj,
 			plot.type="persp", 
 			device.type="default") 
 
-### specify first and forth predictors in 'predList (one continuous one factored) ###
+### specify predictors in 'predList' by name (one continuous one factored) ###
 
 model.interaction.plot(	model.obj,
-			x=1, y=4, 
-			main=response.name, 
-			plot.type="persp", 
-			device.type="default") 
-
-### same as previous example, but specifying predictors by name ##
-
-model.interaction.plot(	model.obj,
-			x="TCB", y="NLCD",  
+			x="TCB", y="NLCD", 
 			main=response.name, 
 			plot.type="persp", 
 			device.type="default") 
@@ -218,14 +210,18 @@ model.interaction.plot(		model.obj,
 
 ### factored 3rd predictor ###
 
-nlcd<-levels(model.obj$predictor.data$NLCD)
+#interaction between TCG and TCW for 3 most common values of NLCD
 
-for(i in nlcd){
+nlcd<-levels(model.obj$predictor.data$NLCD)
+nlcd.counts<-table(model.obj$predictor.data$NLCD)
+nlcd.ordered<-nlcd[order(nlcd.counts,decreasing=TRUE)]
+
+for(i in nlcd.ordered[1:3]){
 	pred.means=list(NLCD=i)
 
 	model.interaction.plot(	model.obj,
 				x="TCG", y="TCW",  
-				main=paste("NLCD =",i),
+				main=paste("NLCD=",i," (",nlcd.counts[i]," plots)", sep=""),
 				pred.means=pred.means, 
 				z.range=c(0,110),
 				theta=290,
@@ -240,7 +236,7 @@ for(i in nlcd){
 
 tcb<-seq(	min(model.obj$predictor.data$TCB),
 		max(model.obj$predictor.data$TCB),
-		length=5)
+		length=3)
 
 tcb<-signif(tcb,2)
 
@@ -277,8 +273,6 @@ for(i in 1:3){
 				plot.type="persp", 
 				device.type="default") 
 }
-
-
 
 
 }
