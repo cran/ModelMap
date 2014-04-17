@@ -1,6 +1,4 @@
 
-
-
 #############################################################################################
 #############################################################################################
 ################################# Model Map Making ##########################################
@@ -179,6 +177,28 @@ if(response.type=="categorical"){
 }
 	
 
+#############################################################################################
+################################ Load Libraries #############################################
+#############################################################################################
+## Loads necessary libraries.
+
+##require(rgdal)
+#require(raster)
+
+#if(model.type=="RF" ){
+#	require(randomForest)
+#}
+#if(model.type=="SGB"){
+#	#require(gbm)
+#}
+##if(response.type=="categorical"){library(gdata)}
+
+# Note:	'rgdal' is only used to make map
+#	'gbm'	is only used for SGB models
+#	'randomForest' is used for RF models, and also for na.action="na.roughfix" for all model types.
+#	'gdata' is (no longer) used for mapping levels of categorical reponse variables
+
+
 
 #############################################################################################
 ################################ Select Output Folder #######################################
@@ -240,7 +260,7 @@ NA.ACTION<-NULL
 if(!is.null(na.action)){
 ###if 'na.action' specified in 'model.mapmake()' check if valid, and if so use it.###
 	if(is.function(na.action)){
-		 stop("ModelMap uses quotes when specifying the argument 'na.action'")
+		 stop("ModelMap requires the use of quotes when specifying the argument 'na.action'")
 	}else{
 		if(!na.action%in%NAvalid){
 			stop("ModelMap currently supports only \"na.omit\" for map making 'na.action'")
@@ -412,6 +432,4 @@ capture.output(print(A),file=ARGfn)
 ####################################### Return nothing ######################################
 #############################################################################################
 
-
 }
-

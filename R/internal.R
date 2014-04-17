@@ -126,6 +126,7 @@ diagnostics.function<-function(	model.obj=NULL,
 						MODELpredfn=NULL,
 						response.name,
 						response.type,
+						prediction.type,
 						folder=getwd(),
 						device.type="default",
 						jpeg.res=72,
@@ -158,10 +159,17 @@ if(response.type == "categorical"){
 
 	CMXfn<-paste(MODELpredfn,"_cmx.csv",sep="")
 
-	LEVELS<-unique(c(levels(PRED$pred),levels(PRED$obs)))
+	LEVELS.pred <- levels(PRED$pred)
+	LEVELS.obs  <- levels(PRED$obs)
+
+	print(paste("LEVELS.pred: ",paste(LEVELS.pred, collapse=" ")))
+	print(paste("LEVELS.obs:  ",paste(LEVELS.obs,  collapse=" ")))
+
+
+	LEVELS<-unique(c(LEVELS.pred,LEVELS.obs))
 
 	CMX<-table(	predicted = factor(PRED$pred,levels=LEVELS),
-				observed = factor(PRED$obs,levels=LEVELS))
+			observed = factor(PRED$obs,levels=LEVELS))
 
 
 	CMX.out<-matrix("cmx",nrow(CMX)+5,ncol(CMX)+4)
@@ -204,8 +212,31 @@ if(response.type == "categorical"){
 
 	###MAUC###
 
+	#if(prediction.type=="CV"){
+      #      PRED.mauc = PRED[4:(ncol(PRED)-1)]
+	#}else{
+	#	PRED.mauc = PRED[,4:ncol(PRED)]
+	#}
+
+	PRED.mauc <- PRED[,LEVELS.pred]
+
+	if(any(!LEVELS.obs%in%LEVELS.pred)){
+
+		LEVELS.new <- LEVELS.obs[!LEVELS.obs%in%LEVELS.pred]
+
+		LEVELS.new.paste <-paste(LEVELS.new,collapse=" ")
+
+		warning("Response categories: ", LEVELS.new.paste, " observed in test data were not included in training data")
+		
+		PRED.new  <- matrix(NA,nrow=nrow(PRED.mauc),ncol=length(LEVELS.new))
+		colnames(PRED.new)<-LEVELS.new
+
+		PRED.mauc<-cbind(PRED.mauc,PRED.new)
+	}
+
 	VOTE <- multcap(  response = PRED$obs,
-                		predicted= as.matrix(PRED[,-c(1,2,3)]) )
+                		predicted= as.matrix(PRED.mauc) )
+
 	MAUC  <- HandTill2001::auc(VOTE)
 
 	CMX.out[nrow(CMX.out),1]<-"MAUC"
@@ -1126,8 +1157,35 @@ if(prediction.type!="CV"){
 		print(paste("     nrow(PRED) =", nrow(PRED)))
 	}
 
-	rownames(PRED)<-rownames(qdata)
 
+	#create qdata.y that has been transformed as response gets transformed
+
+	qdata.y<-qdata[,response.name]
+	if(response.type=="binary"){
+		if(!is.numeric(qdata.y)){
+			stop("If 'response.type is 'Binary' then 'response.name' must be numeric")}
+		qdata.y[qdata.y>0]<-1
+		qdata.y[qdata.y<0]<-0
+	}
+	if(response.type=="categorical"){
+		if(!is.factor(qdata.y)){qdata.y<-as.factor(qdata.y)}
+	}	
+
+
+
+	#If prediction is OOB check that training data responses are the same as those used to build the model
+	if(prediction.type=="OOB"){
+		if(!isTRUE(all.equal(PRED$obs,qdata.y))){
+			stop("Prediction type is 'OOB' but responses in 'qdata.trainfn' do not match data used to build the model")
+		}
+	}
+
+	#Note - If this warning appears there is a bug
+	if(!isTRUE(all.equal(PRED$obs,qdata.y))){
+		stop("Something has gone wrong and observed responses are scrambled")
+	}
+
+	rownames(PRED)<-rownames(qdata)
 
 }else{
 	print(paste("Begining ",v.fold,"-fold cross validation:",sep=""))
@@ -1189,15 +1247,15 @@ if(prediction.type!="CV"){
 				qdata.test.cv[,p]<-factor(qdata.test.cv[,p],levels=train.levels)
 
 
-				print(paste("     p                    =",p))
+				print(paste("     predictor            =",p))
 				print(paste("     train levels[p]      =",paste(train.levels,collapse=",")))
 				print(paste("     test levels[p]       =",paste(test.levels,collapse=",")))
-				print(paste("     invalid              =",paste(invalid,collapse=",")))
-				print(paste("     invalid levels[[p]]  =",paste(invalid.levels[[p]],collapse=",")))
+				#print(paste("     invalid              =",paste(invalid,collapse=",")))
+				#print(paste("     invalid levels[[p]]  =",paste(invalid.levels[[p]],collapse=",")))
 
-				print(paste("          invalid length =",length(invalid.levels[[p]])))
+				#print(paste("          invalid length =",length(invalid.levels[[p]])))
 				
-				print(paste("     levels qdata.test.cv =",paste(levels(qdata.test.cv[,p]),collapse=",")))
+				#print(paste("     levels qdata.test.cv =",paste(levels(qdata.test.cv[,p]),collapse=",")))
 
 				if(length(invalid.levels[[p]])>0){
 					print("     NA action triggered")
@@ -1209,19 +1267,19 @@ if(prediction.type!="CV"){
 				}
 			}
 			
-			print(qdata.test.cv[,predList])
+			#print(qdata.test.cv[,predList])
 			NA.pred<-apply(qdata.test.cv[,predList],1,function(x){any(is.na(x))})
-			print(paste(     "NA.pred =",any(NA.pred)))
-			print("TEST TEST TEST")
+			#print(paste(     "NA.pred =",any(NA.pred)))
+			#print("TEST TEST TEST")
 			if(any(NA.pred)){
 				print("about to treat na's")
 				print("NA.ACTION:")
 				print(NA.ACTION)
-				print("na.action:")
-				print(na.action)
+				#print("na.action:")
+				#print(na.action)
 				qdata.test.cv<-na.action(qdata.test.cv)
 				print("finished treating NA's")}
-			print(qdata.test.cv[,predList])
+			#print(qdata.test.cv[,predList])
 		}
 
 		###build models and make predictions###
@@ -1317,6 +1375,7 @@ return(PRED)
 ###################### Production Prediction - Sub Functions ################################
 #############################################################################################
 #############################################################################################
+
 
 
 #############################################################################################
@@ -1527,6 +1586,17 @@ grd2gri<-function(x){
 
 #############################################################################################
 #############################################################################################
+############################## color translation ############################################
+#############################################################################################
+#############################################################################################
+
+col2trans<-function(col.names,alpha=0.5){
+	col.out <- rgb(t(col2rgb(col.names)/255),alpha=alpha)
+	return(col.out)
+}
+
+#############################################################################################
+#############################################################################################
 #################### Production Prediction - Actual Function ################################
 #############################################################################################
 #############################################################################################
@@ -1552,14 +1622,14 @@ production.prediction<-function(	model.obj,
 
 ### Creat filename for native raster format map output
 
-TMPfn.map <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_map_",sep=""))
+TMPfn.map <- rasterTmpFile(prefix=paste("raster_tmp_",OUTPUTname,"_map_",sep=""))
 
 ### Creat filename for predictor raster brick
 
 if(keep.predictor.brick){
 	OUTPUTfn.brick <- paste(OUTPUTfn.noext,"_brick",sep="")
 }else{
-	OUTPUTfn.brick <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_brick_",sep=""))
+	OUTPUTfn.brick <- rasterTmpFile(prefix=paste("raster_tmp_",OUTPUTname,"_brick_",sep=""))
 }
 
 ### map sd filenames
@@ -1570,14 +1640,13 @@ if(map.sd && model.type=="RF" && response.type=="continuous"){
 	OUTPUTfn.stdev <- paste(OUTPUTfn.noext,"_stdev",OUTPUText,sep="")
 	OUTPUTfn.coefv <- paste(OUTPUTfn.noext,"_coefv",OUTPUText,sep="")
 
-	TMPfn.mean     <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_mean_",sep=""))
-	TMPfn.stdev    <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_stdev_",sep=""))
-	TMPfn.coefv    <- rasterTmpFile(prefix=paste("tmp_",OUTPUTname,"_coefv_",sep=""))	
+	TMPfn.mean     <- rasterTmpFile(prefix=paste("raster_tmp_",OUTPUTname,"_mean_",sep=""))
+	TMPfn.stdev    <- rasterTmpFile(prefix=paste("raster_tmp_",OUTPUTname,"_stdev_",sep=""))
+	TMPfn.coefv    <- rasterTmpFile(prefix=paste("raster_tmp_",OUTPUTname,"_coefv_",sep=""))	
 
 }else{
 	map.sd<-FALSE
 }
-
 
 #####################################################################################
 ########################## Extract predictor names ##################################
@@ -1603,6 +1672,16 @@ if(!is.null(model.obj$levels)){
 	names(extraLevels)<-predFactor
 }
 
+#####################################################################################
+########################## Extract response classes #################################
+#####################################################################################
+
+if(response.type=="categorical"){
+	Rclasses<-model.obj$classes
+	Nrc<-length(Rclasses)
+}
+
+
 ########################################################################################
 ################################ Set Data Type #########################################
 ########################################################################################
@@ -1616,20 +1695,18 @@ if(response.type=="continuous"){data.type <- "FLT4S"}
 ########################################################################################
 ########################### Build raster stack #########################################
 ########################################################################################
-print("building brick")
+
+#require(raster)
 
 RAST<-vector("list", 0)
 
 for(p in predList){
-	
 	rastfn<-rastLUT[rastLUT[,2]==p,1]
 	band<-  rastLUT[rastLUT[,2]==p,3]
-	print(paste(p,"rastfn:",rastfn))
 
 	RAST[[p]]<-raster(rastfn,band=band)
 }
 
-print("checking projections")
 RAST<-projfix(RAST,OUTPUTfn.noext=OUTPUTfn.noext)
 
 #compareRaster(RAST,stopiffalse=TRUE, showwarning=TRUE) #, crs=FALSE)
@@ -1637,7 +1714,7 @@ RAST<-projfix(RAST,OUTPUTfn.noext=OUTPUTfn.noext)
 RS<-stack(RAST)
 RB<-brick(RS,values=TRUE,filename=OUTPUTfn.brick,overwrite=TRUE)
 
-print("successfully built predictor brick")
+print("brick done")
 ########################################################################################
 ############################# Loop through rows ########################################
 ########################################################################################
@@ -1689,7 +1766,8 @@ for(r in 1:(dim(RB)[1])){
 	nonPredict <- apply(((v == -9999)|is.na(v)), 1, any)
 
 	v.pred<-rep(NA,length=nrow(v))
-		
+
+
 	if(any(!nonPredict)){
 		if(model.type=="RF"){
 			if(response.type=="binary"){
@@ -1703,6 +1781,7 @@ for(r in 1:(dim(RB)[1])){
 				}else{
 					v.pred[!nonPredict] <- as.integer(as.character(PRED))
 				}
+	
 			}
 
 			if(response.type=="continuous"){
@@ -1738,6 +1817,7 @@ for(r in 1:(dim(RB)[1])){
 		writeValues(out.stdev, v.stdev, r)
 		writeValues(out.coefv, v.coefv, r)
 	}
+
 }
 
 ################################################################################################
@@ -1784,5 +1864,4 @@ if(map.sd){
 }
 
 }
-
 

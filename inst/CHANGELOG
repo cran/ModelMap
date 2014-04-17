@@ -332,3 +332,33 @@ fixed but when model.build() argument that occured 'strata' was given as column 
 ############# ModelMap 3.0.12 02/25/13 ######################
 
 added MAUC to model.diagnostics for categorical response
+
+############# ModelMap 3.0.13 + 3.0.14 02/25/13 #############
+
+fixed depends field of package description
+
+############# ModelMap 3.0.15 04/03/13 ######################
+
+fixed bug in model.diagnostics in handling na.omit
+
+changed na.action so that na.roughfix only applies to predictors, and NA responses are always omitted
+
+in model.mapmake() changed naming prefix for tmp files so that they all start with 'raster_tmp_' and thus will be detected by showTmpfiles() and removeTmpFiles().
+
+fixed bug that caused model.diagnostics() to crash when calculating MAUC when 'prediction.type="CV"' and 'response.type="categorical"' 
+
+fixed bug that caused model.diagnostics() to crash when calculating MAUC when 'response.type="categorical" andthere was a test set observed response that was not in the training data.
+
+added check to model.build() that all elements in'predList' are found in data column names
+
+added check to model.build() that all elements in'predFactor' are found in 'predList'
+
+added check to model.diagnostics() that 'diagnistic.flag' is found in data column names
+
+added check to model.diagnostics() that 'unique.rownames' is found in data column names
+
+added check to model.build() and model.diagnostics() that unique.rownames really are unique
+
+added check to model.diagnostics(), that for OOB predictions, responses in training data match the responses from data used to build the model
+
+updated readme

@@ -166,6 +166,14 @@ if (is.null(response.name)){
 
 print(paste("response.name =",response.name))
 
+if(!response.name%in%names(qdata)){
+	stop("'response.name' ",response.name,"must be a column name in 'qdata.trainfn'")}
+
+if(response.type=="categorical"){
+	qdata[,response.name]<-as.factor(qdata[,response.name])}
+
+
+
 #############################################################################################
 ##################################### Check Strata ##########################################
 #############################################################################################
@@ -212,6 +220,11 @@ if(is.null(predList)){
 	}	
 }
 
+predMissing<-predList[!predList%in%names(qdata)]
+if(length(predMissing)>0){
+	predMissing.paste<-paste(predMissing,collapse=" ")
+	stop("Predictors: ", predMissing.paste," from 'predList' not found in 'qdata.trainingfn'")}
+
 
 #############################################################################################
 ############################## Select Factored Predictors ###################################
@@ -219,7 +232,6 @@ if(is.null(predList)){
 
 #print("Select factored predictors")
 #print(paste("     predFactor =",predFactor)
-
 
 factored.qdata<-sapply(qdata[,match(predList,names(qdata))],is.factor)
 character.qdata<-sapply(qdata[,match(predList,names(qdata))],is.character)
@@ -235,6 +247,11 @@ if(any(predFactor==FALSE)){
 }
 
 if(!any(predFactor==FALSE)){
+
+	factMissing<-predFactor[!predFactor%in%predList]
+	if(length(factMissing)>0){
+		factMissing.paste<-paste(factMissing,collapse=" ")
+		stop("Factored Predictors: ", factMissing.paste," from 'predFactor' must be included in 'predList'")}
 
 	if(any(!names(factored.qdata)[factored.qdata]%in%predFactor)){
 		fact.q<-paste(names(factored.qdata)[factored.qdata][!names(factored.qdata)[factored.qdata]%in%predFactor],collapse=" ")
@@ -255,14 +272,19 @@ if(!any(predFactor==FALSE)){
 if (is.null(unique.rowname)){
 	unique.rowname <- select.list(c(names(qdata),"row_index"), title="Select unique row identifier")	
 	if(unique.rowname!="row_index" && unique.rowname!=""){
+		if(anyDuplicated(qdata[,unique.rowname])){
+			stop("'unique.rowname' contains duplicated values")}
 		rownames(qdata)<-qdata[,unique.rowname]
 	}	
 }else{
 	if(!(unique.rowname%in%names(qdata))){
 		warning("unique.rowname",unique.rowname,"not found in qdata, row index numbers will be used instead")
 		unique.rowname<-FALSE
+		rownames(qdata)<-1:nrow(qdata)
 	}
 	if(unique.rowname!=FALSE){
+		if(anyDuplicated(qdata[,unique.rowname])){
+			stop("'unique.rowname' contains duplicated values")}
 		rownames(qdata)<-qdata[,unique.rowname]
 	}
 }
@@ -273,6 +295,17 @@ if (is.null(unique.rowname)){
 
 qdata<-qdata[,c(predList,response.name)]
 
+#############################################################################################
+######################### Omit rows with NA response ########################################
+#############################################################################################
+
+NA.resp<-is.na(qdata[,response.name])
+
+if(any(NA.resp)){
+	warning("Omiting ", sum(NA.resp), " datapoints with NA response values")
+	qdata <- qdata[!NA.resp,]
+}
+
 
 #############################################################################################
 ############################### Determine NA.ACTION #########################################
@@ -281,15 +314,16 @@ qdata<-qdata[,c(predList,response.name)]
 ###create logical vector of datarows containing NA in predictors or reponses###
 
 NA.pred<-apply(qdata[,predList],1,function(x){any(is.na(x))})
-NA.resp<-is.na(qdata[,response.name])
-NA.data<-NA.pred|NA.resp
+
+#NA.resp<-is.na(qdata[,response.name])
+#NA.data<-NA.pred|NA.resp
 
 ### if any NA in data ###
 
 #NA.ACTION is character string. Choices: "omit", "rough.fix".
 #na.action is the actual function, no quotes.
 
-if(any(NA.data)){
+if(any(NA.pred)){
 
 	###Check if na.action is valid###
 
@@ -322,13 +356,13 @@ if(any(NA.data)){
 ################################ Deal with NA's #############################################
 #############################################################################################
 
-if(any(NA.data)){
+if(any(NA.pred)){
 
 	###na.omit###
 
 	if(NA.ACTION=="omit"){
-		print("Omiting data points with NA predictors or NA response")
-		warning(paste(sum(NA.data), "data point(s) with NA values for prdictor or response omitted"))
+		print("Omiting data points with NA predictors")
+		warning("Omitting ", sum(NA.pred), " data points with NA values for predictors")
 		qdata<-na.action(qdata)
 	}
 	
@@ -336,22 +370,14 @@ if(any(NA.data)){
 	###na.roughfix###
 
 	if(NA.ACTION=="roughfix"){
-		
-		#for(i in 1:ncol(qdata)){
-		#	print(names(qdata)[i])
-		#	print(mode(qdata[,i]))
-		#}
 
-
-
-		print("Replacing NA predictors and responses with median value or most common category")
-		if(any(NA.resp)){warning(paste(sum(NA.data), "data point(s) with NA values (including", sum(NA.resp),"point(s) with NA response) replaced with median/most common response"))
-		}else{warning(paste(sum(NA.data), "data point(s) with NA values replaced with median/most common value"))}
+		print("Replacing NA predictors with median value or most common category")
+		warning("Rough fixing ",sum(NA.pred), " data points with NA values for predictors by replacing NA with median/most common value")
 
 		qdata<-na.roughfix(qdata)
 
-		na.ac<-(1:nrow(qdata))[NA.data]
-		names(na.ac)<-rownames(qdata)[NA.data]
+		na.ac<-(1:nrow(qdata))[NA.pred]
+		names(na.ac)<-rownames(qdata)[NA.pred]
 		class(na.ac)<-NA.ACTION
 		attr(qdata,"na.action")<-na.ac
 	}
@@ -441,7 +467,7 @@ if(keep.data){model.obj$predictor.data<-qdata}
 ########################## add 'na.action' to the model object ##############################
 #############################################################################################
 
-if(sum(NA.data>0)){
+if(sum(NA.pred>0)){
 	model.obj$na.action<-attr(qdata,"na.action")
 }
 

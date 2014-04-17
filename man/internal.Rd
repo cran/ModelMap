@@ -21,6 +21,7 @@
 \alias{projfix}
 \alias{FNcheck}
 \alias{grd2gri}
+\alias{col2trans}
 
 
 \title{ Internal ModelMap Functions }

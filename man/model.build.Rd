@@ -42,7 +42,7 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{seed}{ Integer.  The number used to initialize randomization to build RF or SGB models.  If you want to produce the same model later, use the same seed.  If \code{seed = NULL} (the default), a new seed is created each run. }
 
-  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction or response data. There are 2 options: (1) \code{na.action = na.omit} where any data point or  with missing predictors or reponse is removed from the model building data; (2) \code{na.action = na.roughfix} where a missing categorical predictor or response is replaced with the most common category, and a missing continuous predictor or response is replaced with the median. Note: it is not recommended that \code{na.roughfix} be used for missing responses (just for missing predictors) (a warning will be generated).  }
+  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the predictor data. There are 2 options: (1) \code{na.action = na.omit} where any data point with missing predictors is removed from the model building data; (2) \code{na.action = na.roughfix} where a missing categorical predictor is replaced with the most common category, and a missing continuous predictor or response is replaced with the median. Note: it is not recommended that \code{na.roughfix} will just be used for missing predictor. Data points with missing response will always be omitted.  }
 
   \item{keep.data}{Logical.  RF and SGB models. Should a copy of the predictor data be included in the model object. Useful for if \code{\link{model.interaction.plot}} will be used later. }
  

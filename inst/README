@@ -1,41 +1,81 @@
 ModalMap: Modeling and Map production using Random Forest and Stochastic Gradient Boosting
 
-############################## before you begin ##############################################
+### before you begin ###
 
+If you are installing from a local zip file
 
-Make certain you have already installed required packages: gbm, randomForest, rgdal, and PresenceAbsence
+Make certain you have already installed packages: gbm, randomForest, rgdal, raster, PresenceAbsence, fields, HandTill2001
 
 Install ModalMap package using Packages > Install package(s) from local zip files...
 
-######################### Sample dataset ######################################################
+### Example datasets ###
 
-After installing ModelMap, there will be a subdirrectory external under the package dirrectory in your installation.
+After installing ModelMap, there will be a subdirectory extdata under the package dirrectory in your installation.
 
-For Example: C:\R\R-2.6.2\library\ModelMap\external 
+For Example: C:\R\R-2.6.2\library\ModelMap\extdata 
 
-This contains the example dataset, along will a word document giving a short tutorial on converting model.map output to view in ArcGIS.
+This contains the example datasets for the help examples and for the vignette examples.
 
-The example dataset contains Training and Test data .csv files with 7 columns
+### Help Example dataset ###
+
+The help example dataset contains Training and Test data .csv files with 8 columns
 
 An index variable to identify each row:
 
      * ID
 
-Two response variables:
+Three response variables:
 
      * BIO        Continuous response variable of above ground Biomass
-     * CONIFTYP   Categorical response variable of presence of Conifer Forest Types
+     * BIOCAT     Categorical response variable
+     * CONIFTYP   Binary response variable of presence/absence of Conifer Forest Types
 
 Four predictor variables:
 
-     * 3 tasselcap (TC) bands as continuous predictor variables
+     * 3 tasselcap (TC) bands as continuous predictor variables 
      * NLCD (National Land Cover Dataset) as a catagorical predictor variable
 
 The .csv files LUT_2001.csv and LUT_2004.csv are look up tables for associating the column headers in the training and test datasets
 with the image files for map production.
 
-The subdirectory 'imagefiles' contains the .img files for the predictor variables over a small rectangular area. 
-
 There is one image file for NLCD data.
-There are two image files for tasselcap data giving 2001 data and 2004 data.
+There are two multiband image files for tasselcap data giving 2001 data and 2004 data.
 
+### Vignette Example dataset ###
+
+The help example dataset contains a training data file: "VModelMapData.csv" with 38 columns (though not all columns are used in the vignette)
+
+The vignette uses:
+
+An index variable to identify each row:
+
+     * ID
+
+Response variables:
+
+     * PINYON and SAGE   Continuous response variables of percent cover of Pinyon and Sage
+     * VEGCAT            Categorical response variable
+
+For Binary Presence/Absence models, the percent cover of PINYON and SAGE are transformed to a 0/1 variable, where any value greater than 0 is counted as presence.
+
+Six predictor variables:
+
+Continuous predictor variables:
+
+     * ELEV250
+     * EVI2005097
+     * NDV2005097
+     * NIR2005097
+     * RED2005097
+
+Factored predictor variable:
+
+     * NLCD01_250
+
+
+The .csv file "VModelMapData_LUT.csv" is a look up table for associating the column headers in the training dataset
+with the image files for map production.
+
+There is one image file for National Landcover Class Dataset.
+There is one image file for elevation.
+There is one multiband image file for remote sensing data.

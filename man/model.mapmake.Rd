@@ -99,6 +99,10 @@ Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. 
 Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
  }
 
+\note{If \code{model.mapmake()} is interupted it may leave orphan \code{.gri} and \code{.grd} files in your temporary directory. The \code{raster} package functions \code{\link[raster]{showTmpFiles}} and \code{\link[raster]{removeTmpFiles}} can be used to locate and remove these files, or they can be deleated manually from the temporary directory.
+}
+
+
 \author{ Elizabeth Freeman and Tracey Frescino }
 
 \seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.diagnostics}}, \code{\link{compareRaster}}, \code{\link{writeRaster}}}

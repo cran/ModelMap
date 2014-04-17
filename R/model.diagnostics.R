@@ -370,6 +370,7 @@ if(response.type=="categorical"){
 
 }
 
+
 #############################################################################################
 ######################## Select unique row identifier #######################################
 #############################################################################################
@@ -382,6 +383,8 @@ if (is.null(unique.rowname)){
 		print(paste("A: rownames length =",length(rownames(qdata)) ))
 		print(paste("A: qdata length =",length(qdata[,unique.rowname]) ))
 
+		if(anyDuplicated(qdata[,unique.rowname])){
+			stop("'unique.rowname' contains duplicated values")}
 		rownames(qdata)<-qdata[,unique.rowname]
 
 	}	
@@ -389,10 +392,14 @@ if (is.null(unique.rowname)){
 	if(!(unique.rowname%in%names(qdata))){
 		warning("unique.rowname ",unique.rowname," not found in qdata therefore row index numbers will be used instead")
 		unique.rowname<-FALSE
+		rownames(qdata)<-1:nrow(qdata)
 	}
 	if(unique.rowname!=FALSE){
 		print(paste("B: rownames length =",length(rownames(qdata))))
 		print(paste("B: qdata length =",length(qdata[,unique.rowname])))
+
+		if(anyDuplicated(qdata[,unique.rowname])){
+			stop("'unique.rowname' contains duplicated values")}
 		rownames(qdata)<-qdata[,unique.rowname]
 	}
 }
@@ -409,7 +416,10 @@ if(!is.null(diagnostic.flag)){DFLAG<-TRUE}
 if(DFLAG){
 
 	if(!(diagnostic.flag%in%names(qdata))){
-		warning("diagnostic.flag ",diagnostic.flag," not found in qdata therefore argument ignored and all data points will be used for diagnostics")
+		if(prediction.type=="TEST"){
+			stop("diagnostic.flag ",diagnostic.flag," is not found in 'qdata.testfn'")
+		}else{
+			stop("diagnostic.flag ",diagnostic.flag," is not found in 'qdata.trainfn'")}
 		DFLAG<-FALSE
 	}
 
@@ -425,7 +435,7 @@ if(DFLAG){
 		if(all(qdata[,diagnostic.flag]%in%c(0,1))){
 			qdata[,diagnostic.flag]<-as.logical(qdata[,diagnostic.flag])
 		}else{
-			stop("diagnostic.flag must be a collumn of either 0 and 1 (0=FALSE, and 1=TRUE), or of TRUE and FALSE")
+			stop("diagnostic.flag must be a column of either 0 and 1 (0=FALSE, and 1=TRUE), or of TRUE and FALSE")
 		}
 	} 
 
@@ -455,6 +465,8 @@ qdata<-qdata[,datakeep]
 print("  qdata dimensions after")
 print(dim(qdata))
 
+
+
 #############################################################################################
 ########## Check for factored predictors with levels not found in training data #############
 #############################################################################################
@@ -470,12 +482,22 @@ if(!is.null(model.obj$levels)){
 		qdata[,p]<-factor(qdata[,p],levels=model.obj$levels[[p]])
 		if(length(invalid.levels[[p]])>0){
 			invalid.lev<-paste(invalid.levels[[p]],collapse=", ")
-			warning(	"categorical factored predictor ",p," contains levels ",invalid.lev,
-					"not found in training data and these categories will be treated as NA and either omited or replaced")
+			warning(	"categorical factored predictor ",p," contains levels: ",invalid.lev,
+					" not found in training data and these categories will be treated as NA and either omited or replaced")
 		}
 	}
 }
 
+#############################################################################################
+######################### Omit rows with NA response ########################################
+#############################################################################################
+
+NA.resp<-is.na(qdata[,response.name])
+
+if(any(NA.resp)){
+	warning("Omiting ", sum(NA.resp), " datapoints with NA values for response")
+	qdata <- qdata[!NA.resp,]
+}
 
 #############################################################################################
 ############################### Determine NA.ACTION #########################################
@@ -486,10 +508,10 @@ print("Na action")
 ###create logical vector of datarows containing NA in predictors or reponses###
 
 NA.pred<-apply(qdata[,predList],1,function(x){any(is.na(x))})
-NA.resp<-is.na(qdata[,response.name])
-NA.data<-NA.pred|NA.resp
 
 
+#NA.resp<-is.na(qdata[,response.name])
+#NA.data<-NA.pred|NA.resp
 #print(any(NA.data))
 
 
@@ -504,7 +526,7 @@ model.NA.ACTION<-NULL
 model.na.action<-NULL
 NA.ACTION<-NULL
 
-if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
+if(any(NA.pred) || (any(var.factors) && prediction.type=="CV")){
 
 	
 	###extract na.action from model.obj and check if valid, and if argument is NULL, default to option from model.obj###
@@ -575,27 +597,26 @@ if(any(NA.data) || (any(var.factors) && prediction.type=="CV")){
 
 print("starting dealing with NA")
 
-if(any(NA.data)){
+if(any(NA.pred)){
 
 	###na.omit###
 
 	if(NA.ACTION=="omit"){
-		print("Omiting data points with NA predictors or NA response")
-		warning(sum(NA.data), " data points with NA values for prdictor or response omitted")
-		qdata[,c(predList,response.name)]<-na.action(qdata[,c(predList,response.name)])
+		print("Omitting data points with NA predictors")
+		warning("Omitting ", sum(NA.pred), " datapoints with NA values for predictors")
+		qdata<-na.action(qdata)
 	}
 	
 
 	###na.roughfix###
 
 	if(NA.ACTION=="roughfix"){
-		print("Replacing NA predictors and responses with median value or most common category")
-		if(any(NA.resp)){warning(sum(NA.data), " data points with NA values including ", sum(NA.resp)," points with NA response replaced with median or most common response")
-		}else{warning(sum(NA.data), " data points with NA values replaced with median or most common value")}
-		qdata[,c(predList,response.name)]<-na.action(qdata[,c(predList,response.name)])
+		warning("Rough fixing ", sum(NA.pred), " data points with NA values for predictors by replacing NA with median or most common value")
 
-		na.ac<-(1:nrow(qdata))[NA.data]
-		names(na.ac)<-rownames(qdata)[NA.data]
+		qdata<-na.action(qdata)
+
+		na.ac<-(1:nrow(qdata))[NA.pred]
+		names(na.ac)<-rownames(qdata)[NA.pred]
 		class(na.ac)<-NA.ACTION
 		attr(qdata,"na.action")<-na.ac
 	}
@@ -605,11 +626,11 @@ print("done dealing with NA")
 
 
 ##for OOB models, check number of rows is equal to data used in building model
-if(prediction.type=="OOB"){
-	if( nrow(qdata)!= length(model.obj$y)){
-		stop("'prediction.type' is OOB but number of rows in 'qdata.train' does not match dataset used to build model")
-	}
-}
+#if(prediction.type=="OOB"){
+#	if( nrow(qdata)!= length(model.obj$y)){
+#		stop("'prediction.type' is OOB but number of rows in 'qdata.train' does not match dataset used to build model")
+#	}
+#}
 
 
 #############################################################################################
@@ -699,6 +720,8 @@ PRED <- prediction.model(		model.obj=model.obj,
 						)
 
 
+###if na.action="na.roughfix" must turn estimated responses back to NA
+
 
 #############################################################################################
 ########################### If DFLAG=T remove unused rows ###################################
@@ -752,6 +775,7 @@ diagnostics.function(	model.obj=model.obj,
 				MODELpredfn=MODELpredfn,
 				response.name=response.name,
 				response.type=response.type,
+				prediction.type=prediction.type,
 				folder=folder,
 				device.type=device.type,
 				jpeg.res=jpeg.res,
@@ -791,7 +815,7 @@ if(is.matrix(qdata.testfn)==TRUE || is.data.frame(qdata.testfn)==TRUE){
 A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
-print(A)
+#print(A)
 #capture.output(print(A),file=ARGfn)
 print("ending argument record")
 
