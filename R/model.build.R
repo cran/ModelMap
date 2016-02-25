@@ -6,7 +6,7 @@
 #############################################################################################
 
 
-model.build<-function(	model.type=NULL,	# "RF", "SGB"
+model.build<-function(	model.type=NULL,	# "RF", "QRF", "CF", "SGB"
 				qdata.trainfn=NULL,
 				folder=NULL,		# No ending slash, to output to working dir = getwd()
 				MODELfn=NULL,
@@ -19,12 +19,22 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
 				na.action=NULL,
 				keep.data = TRUE,
 			# RF arguments:
-				ntree=500,
-				mtry=NULL,
+				ntree=switch(model.type,RF=500,QRF=1000,CF=500,500),
+				mtry=switch(model.type,RF=NULL,QRF=ceiling(length(predList)/3),CF=min(5,length(predList)-1),NULL),
 				replace=TRUE,
 				strata=NULL,
 				sampsize = NULL,
 				proximity = TRUE,
+			# QRF arguments:
+				importance=FALSE,
+				quantiles=c(0.1,0.5,0.9),
+			# CF arguments:
+				subset=NULL, 
+				weights=NULL,
+				controls = NULL,
+				xtrafo = NULL, 
+				ytrafo = NULL, 
+				scores = NULL,
 			# SGB arguments:
 				n.trees=NULL,                 	# number of trees
 				shrinkage=0.001,   	      # shrinkage or learning rate,
@@ -52,7 +62,6 @@ model.build<-function(	model.type=NULL,	# "RF", "SGB"
 
 
 
-
 #############################################################################################
 ################################### Check Platform ##########################################
 #############################################################################################
@@ -77,13 +86,30 @@ if(.Platform$OS.type=="windows"){
 
 
 if(is.null(model.type)){
-	model.type <- select.list(c("RF","SGB"), title="Select model type.")}
+	model.type <- select.list(c("RF","QRF","CF","SGB"), title="Select model type.")}
 if(model.type=="" || is.null(model.type)){
 	stop("'model.type' needed")}
 
-if(!model.type%in%c("RF","SGB")){
+if(!model.type%in%c("RF","QRF","CF","SGB")){
 	stop("ModelMap currently supports only RF and SGB for 'model.type'")}
 
+
+#############################################################################################
+########################### Load modelling packages #########################################
+#############################################################################################
+
+if(model.type=="CF"){REQUIRE.party()}
+if(model.type=="QRF"){REQUIRE.quantregForest()}
+if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
+
+#####################################################################################
+####################### should warnings be immeadiate ###############################
+#####################################################################################
+if(model.type=="CF"){
+	WARN.IM<-TRUE
+}else{
+	WARN.IM<-FALSE
+}
 
 #############################################################################################
 ################################# Select Response Type ######################################
@@ -96,11 +122,49 @@ if(is.null(response.type)){
 if(response.type=="" || is.null(response.type)){
 	stop("'response.type' needed")}	
 
-if(response.type=="categorical" && model.type=="SGB"){
-	stop("categorical response only supported for Random Forest models")}
+#if(response.type=="categorical" && model.type=="SGB"){
+#	stop("categorical response only supported for Random Forest models")}
+
+if(response.type!="continuous" && model.type=="QRF"){
+	stop("Quantile Regression Random Forest models only available for continuous response")}
 
 if(!response.type%in%c("continuous","binary","categorical")){
 	stop("ModelMap currently supports only continuous binary and categorical for 'response.type'")}
+
+
+#############################################################################################
+################################# If Model Type=="QRF" ####################################
+#############################################################################################
+
+if(model.type=="QRF"){
+	if(importance==TRUE){
+		if(any(quantiles>=1) || any(quantiles<=0)){
+			stop("quantiles must all be between 0 and 1")
+		}
+	}
+	if(!is.null(replace)){if(replace!=TRUE){warning("'replace' ignored for QRF models")}}
+	if(!is.null(strata)){warning("'strata' ignored for QRF models")}
+	if(!is.null(sampsize)){warning("'sampsize' ignored for QRF models")}
+	#if(!is.null(proximity)){warning("'proximity' ignored for QRF models")}
+
+}
+
+#############################################################################################
+################################# If Model Type=="CF" ####################################
+#############################################################################################
+
+if(model.type=="CF"){
+	if(!is.null(controls)){
+		warning(	"Because 'contols' is specified, individual arguments 'ntree' and 'mtry' ignored,
+	      	  	for values other than default these parameters must be specified inside of 'controls()'",
+				immediate. = WARN.IM)
+	}else{
+		controls<-party::cforest_unbiased(ntree=ntree,mtry=mtry)
+	}
+	if(is.null(xtrafo)){xtrafo<-party::ptrafo}
+	if(is.null(ytrafo)){ytrafo<-party::ptrafo}
+}
+
 
 #############################################################################################
 ################################ Select Output Folder #######################################
@@ -118,7 +182,7 @@ if(is.null(folder)){
 #############################################################################################
 
 
-print(paste("folder =", folder))
+#print(paste("folder =", folder))
 
 ## MODELfn
 if(is.null(MODELfn)){
@@ -164,7 +228,7 @@ if (is.null(response.name)){
 		stop("'response.name' is needed")}	
 }
 
-print(paste("response.name =",response.name))
+#print(paste("response.name =",response.name))
 
 if(!response.name%in%names(qdata)){
 	stop("'response.name' ",response.name,"must be a column name in 'qdata.trainfn'")}
@@ -185,11 +249,10 @@ if(!is.null(strata)){
 			strata<-qdata[,strata]
 			#print(paste("strata:",strata))
 		}else{
-			stop("'strata' must be either a collumn name from 'qdata' or vector or factor with one element for each row of qdata")
+			stop("'strata' must be either a column name from 'qdata' or vector or factor with one element for each row of qdata")
 		}
 	}
 }  
-
 
 
 #############################################################################################
@@ -278,7 +341,7 @@ if (is.null(unique.rowname)){
 	}	
 }else{
 	if(!(unique.rowname%in%names(qdata))){
-		warning("unique.rowname",unique.rowname,"not found in qdata, row index numbers will be used instead")
+		warning("unique.rowname",unique.rowname,"not found in qdata, row index numbers will be used instead", immediate. = WARN.IM)
 		unique.rowname<-FALSE
 		rownames(qdata)<-1:nrow(qdata)
 	}
@@ -302,7 +365,7 @@ qdata<-qdata[,c(predList,response.name)]
 NA.resp<-is.na(qdata[,response.name])
 
 if(any(NA.resp)){
-	warning("Omiting ", sum(NA.resp), " datapoints with NA response values")
+	warning("Omiting ", sum(NA.resp), " datapoints with NA response values", immediate. = WARN.IM)
 	qdata <- qdata[!NA.resp,]
 }
 
@@ -347,7 +410,6 @@ if(any(NA.pred)){
 	NA.ACTION<-switch(na.action,na.omit="omit",na.roughfix="roughfix","invalid")
 	#turn na.action into function
 	na.action<-switch(na.action,na.omit=na.omit,na.roughfix=na.roughfix)
-
 }
 
 
@@ -361,8 +423,8 @@ if(any(NA.pred)){
 	###na.omit###
 
 	if(NA.ACTION=="omit"){
-		print("Omiting data points with NA predictors")
-		warning("Omitting ", sum(NA.pred), " data points with NA values for predictors")
+		#print("Omiting data points with NA predictors")
+		warning("Omitting ", sum(NA.pred), " data points with NA values for predictors", immediate. = WARN.IM)
 		qdata<-na.action(qdata)
 	}
 	
@@ -371,8 +433,10 @@ if(any(NA.pred)){
 
 	if(NA.ACTION=="roughfix"){
 
-		print("Replacing NA predictors with median value or most common category")
-		warning("Rough fixing ",sum(NA.pred), " data points with NA values for predictors by replacing NA with median/most common value")
+		#print("Replacing NA predictors with median value or most common category")
+		warning(	"Rough fixing ",sum(NA.pred), 
+				" data points with NA values for predictors by replacing NA with median/most common value",
+				immediate. = WARN.IM)
 
 		qdata<-na.roughfix(qdata)
 
@@ -392,7 +456,7 @@ if(model.type=="SGB"){
         stop("parameters 'nTrain' and 'train.fraction' cannot both be specified")
     }
     else if (!is.null(train.fraction)) {
-        warning("parameter 'train.fraction' of gbm.fit is deprecated please specify 'nTrain' instead")
+        warning("parameter 'train.fraction' of gbm.fit is deprecated please specify 'nTrain' instead", immediate. = WARN.IM)
         nTrain <- floor(train.fraction * nrow(qdata))
     }
     else if (is.null(nTrain)) {
@@ -400,10 +464,10 @@ if(model.type=="SGB"){
     }
 }
 
-print("nrow(qdata):")
-print(nrow(qdata))
-print("nTrain:")
-print(nTrain)
+#print("nrow(qdata):")
+#print(nrow(qdata))
+#print("nTrain:")
+#print(nTrain)
 
 #############################################################################################
 ####################################### Build Model #########################################
@@ -412,7 +476,7 @@ print(nTrain)
 if(!is.null(seed)){
 	set.seed(seed)}
 
-print("About to create model")
+#print("About to create model")
 
 if (model.type=="RF"){
 	model.obj<-create.model(qdata=qdata,
@@ -431,9 +495,50 @@ if (model.type=="RF"){
 					sampsize=sampsize,
 					proximity=proximity
 				)
-
-
 }
+
+if (model.type=="QRF"){
+	model.obj<-create.model(qdata=qdata,
+					model.type=model.type,
+					folder=FALSE,
+					predList=predList,
+					response.name=response.name,
+					response.type=response.type,
+
+				# RF arguments:
+					ntree=ntree,
+					mtry=mtry,
+					#replace=replace,
+					#strata=strata,
+					#sampsize=sampsize,
+					proximity=proximity,
+					seed=NULL,
+				# QRF arguments:
+					importance=importance,
+					quantiles=quantiles
+				)
+}
+
+if (model.type=="CF"){
+	model.obj<-create.model(qdata=qdata,
+					model.type=model.type,
+					folder=FALSE,
+					predList=predList,
+					response.name=response.name,
+					response.type=response.type,
+
+				# CF arguments:
+					subset=subset, 
+					weights=weights,
+					controls=controls,
+					xtrafo = xtrafo, 
+					ytrafo = ytrafo, 
+					scores = scores,
+					seed=NULL
+				)
+}
+
+
 if(model.type=="SGB"){
 	model.obj<-create.model(qdata=qdata,
 					model.type=model.type,		
@@ -461,14 +566,44 @@ if(model.type=="SGB"){
 
 #if(keep.data){model.obj$predictor.data<-qdata[,predList]}
 
-if(keep.data){model.obj$predictor.data<-qdata}
+if(model.type!="CF"){
+	if(keep.data){
+		if(model.type=="QRF"){
+			model.obj$QRF$predictor.data<-qdata
+			model.obj$RF$predictor.data<-qdata
+		}else{
+			model.obj$predictor.data<-qdata
+		}
+	}
+}
 
 #############################################################################################
 ########################## add 'na.action' to the model object ##############################
 #############################################################################################
 
-if(sum(NA.pred>0)){
-	model.obj$na.action<-attr(qdata,"na.action")
+if(model.type!="CF"){
+	if(sum(NA.pred>0)){
+		if(model.type=="QRF"){
+			model.obj$QRF$na.action<-attr(qdata,"na.action")
+			model.obj$RF$na.action<-attr(qdata,"na.action")
+		}else{
+			model.obj$na.action<-attr(qdata,"na.action")
+		}
+	}
+}
+
+#############################################################################################
+########################## add 'response.name' to the model object ##########################
+#############################################################################################
+
+
+if(model.type!="CF"){
+	if(model.type=="QRF"){
+		if(!"response.name"%in%names(model.obj$QRF)){model.obj$QRF$response.name<-response.name}
+		if(!"response.name"%in%names(model.obj$RF)){model.obj$RF$response.name<-response.name}
+	}else{
+		model.obj$response.name<-response.name
+	}
 }
 
 #############################################################################################

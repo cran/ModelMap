@@ -8,13 +8,12 @@
 }
 \usage{
 model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, 
-rastLUTfn = NULL, na.action = NULL, keep.predictor.brick=FALSE, map.sd = FALSE,
-OUTPUTfn = NULL, n.trees = NULL)
+rastLUTfn = NULL, na.action = NULL, na.value=-9999, keep.predictor.brick=FALSE, 
+map.sd = FALSE, OUTPUTfn = NULL, quantiles=NULL, n.trees = NULL)
 }
 
 \arguments{
-
-  \item{model.obj}{ \code{R} model object.  The model object to use for prediction, if the model has been previously created.  The model object must be of type RF or SGB.  (Eventually planned to include "GAM".)  If \code{NULL} (the default), a model is generated of type specified by the argument \code{model.type}.  }
+  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
 
   \item{folder}{ String.  The folder used for all output from predictions and/or maps.  Do not add ending slash to path string.  If \code{folder = NULL} (default), a GUI interface prompts user to browse to a folder.  To use the working directory, specify \code{folder = getwd()}.}
 
@@ -29,18 +28,22 @@ Example of comma-delimited file:
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb2,} \tab \code{2}\cr
 	  \tab \tab \tab \code{C:/button_test/tc99_2727subset.img,} \tab \code{tc99_2727subsetb3,} \tab \code{3}}}
 
-  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  Currently, the only supported option for map making is \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{NA} (the \code{NODATA} value).   }
+  \item{na.action}{String.  Model validation.  Specifies the action to take if there are \code{NA} values in the prediction data or if there is a level or class of a categorical predictor variable in the validation test set or the production (mapping) data set, but not in the training data set.  Currently, the only supported option for map making is \code{na.action = "na.omit"} (the default) where any data point or pixel with any new levels for any of the factored predictors is returned as \code{NA} (\code{na.value}, defaults to \code{-9999}).   }
+
+  \item{na.value}{Number. Value that indicates \code{NA} in the predictor rasters. Defaults to \code{-9999}. Note: all predictor rasters must use the same value for \code{NA}. }
 
   \item{keep.predictor.brick}{Logical.  Map Production. If \code{TRUE} then the raster brick containing the predictors from the model object is saved as a native raster package format file. If \code{FALSE} a temporary brick is created and then deleted at the end of map production.   }
 
-  \item{map.sd}{ Logical.  Map Production.  If \code{map.sd = TRUE}, maps of mean, standard deviation, and coefficient of variation of the predictions from all the trees are generated for each pixel.  If \code{map.sd = FALSE} (the default), only the predicted probability map will be built. This option is only available if the \code{model.type = "RF"} the \code{response.type = "continuous"}.  Note: This option requires much more available memory. If you get the error \code{"..cannot allocate vector of size..."}, you must reduce the value of \code{numrow}.  
+  \item{map.sd}{ Logical.  Map Production.  If \code{map.sd = TRUE}, maps of mean, standard deviation, and coefficient of variation of the predictions from all the trees are generated for each pixel.  If \code{map.sd = FALSE} (the default), only the predicted probability map will be built. 
+
+This option is only available if the \code{model.type = "RF"} and the \code{response.type = "continuous"}.  Note: This option requires much more available memory.
 
 The names of the additional maps default to: 
 
 \tabular{llll}{
-	  \tab \tab \tab \code{folder/model.type_response.type_response.name_mean.txt}  \cr
-	  \tab \tab \tab \code{folder/model.type_response.type_response.name_stdev.txt}  \cr
-	  \tab \tab \tab \code{folder/model.type_response.type_response.name_coefv.txt} }
+	  \tab \tab \tab \code{folder/model.type_response.type_response.name_mean.img}  \cr
+	  \tab \tab \tab \code{folder/model.type_response.type_response.name_stdev.img}  \cr
+	  \tab \tab \tab \code{folder/model.type_response.type_response.name_coefv.img} }
 }
 
   \item{OUTPUTfn}{ String.  Map Production.  Filename of output file for map production.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{OUTPUTfn = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map"}. 
@@ -50,6 +53,8 @@ The \code{raster} package uses the filename extension to determine the output fo
 If the output filename does not include an extension, the default extension of \code{".img"} will be added.
 
 For continuous random forest models with \code{map.sd = TRUE} then \code{OUTPUTfn} is also used to create output file names for maps of the mean, standard deviation and coeficient of variation of all the trees predictions for each pixel.}
+
+ \item{quantiles}{ Numeric Vector.  QRF models.  The quantiles to predict. A numeric vector with values between zero and one. The quantile map output will be a multilayer raster with one layer for each quantile. If \code{model.obj} was created with the \code{ModelMap} package, there will also be a single layer outputraster giving the ordinary RF mean predicted values. }
 
 
   \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
@@ -97,11 +102,13 @@ Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(
 Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 
 Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
+
+Simpson, E. H. (1949). Measurement of diversity. Nature.
  }
+
 
 \note{If \code{model.mapmake()} is interupted it may leave orphan \code{.gri} and \code{.grd} files in your temporary directory. The \code{raster} package functions \code{\link[raster]{showTmpFiles}} and \code{\link[raster]{removeTmpFiles}} can be used to locate and remove these files, or they can be deleated manually from the temporary directory.
 }
-
 
 \author{ Elizabeth Freeman and Tracey Frescino }
 

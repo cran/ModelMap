@@ -19,6 +19,14 @@ if (is.null(qdatafn)){
 	}else{stop("you must provide qdatafn")}
 }
 
+## check that qdata.trainfn and qdata.testfn are filenames
+
+if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
+	stop("in the function get.test() 'qdata.trainfn' must be the filename for the new training dataset")}
+
+if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
+	stop("in the function get.test() 'qdata.testfn' must be the filename for the new test dataset")}
+
 ## Check if file name is full path or basename
 if(is.matrix(qdatafn)!=TRUE && is.data.frame(qdatafn)!=TRUE){
 	if(identical(basename(qdatafn),qdatafn)){
@@ -31,14 +39,26 @@ if(is.matrix(qdatafn)!=TRUE && is.data.frame(qdatafn)!=TRUE){
 	}
 }
 
-## check that qdata.trainfn and qdata.testfn are filenames
+## check if qdata.trainfn and qdata.testfn are full path or basename
 
-if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
-	stop("in the function get.test() 'qdata.trainfn' must be the filename for the new training dataset")}
+if(identical(basename(qdata.trainfn),qdata.trainfn)){
+	if(is.null(folder)){
+		if(.Platform$OS.type=="windows"){
+			folder<-choose.dir(default=getwd(), caption="Select directory")
+		}else{
+			folder<-getwd()}}
+	qdata.trainfn<-paste(folder,"/",qdata.trainfn,sep="")
+}
 
+if(identical(basename(qdata.testfn),qdata.testfn)){
+	if(is.null(folder)){
+		if(.Platform$OS.type=="windows"){
+			folder<-choose.dir(default=getwd(), caption="Select directory")
+		}else{
+			folder<-getwd()}}
+	qdata.testfn<-paste(folder,"/",qdata.testfn,sep="")
+}
 
-if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
-	stop("in the function get.test() 'qdata.testfn' must be the filename for the new test dataset")}
 
 ## Read in data
 

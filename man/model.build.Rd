@@ -4,22 +4,27 @@
 
 \title{ Model Building}
 \description{
-  Create sophisticated models using either Random Forest or Stochastic Gradient Boosting from training data
+  Create sophisticated models using Random Forest, Quantile Regression Forests, Conditional Forests, or Stochastic Gradient Boosting from training data
 }
-\usage{
-model.build(model.type = NULL, qdata.trainfn = NULL, folder = NULL, 
-MODELfn = NULL, predList = NULL, predFactor = FALSE, response.name = NULL, 
-response.type = NULL, unique.rowname = NULL, seed=NULL, na.action=NULL, 
-keep.data = TRUE, ntree = 500, mtry = NULL, replace=TRUE, strata=NULL, 
-sampsize = NULL, proximity = TRUE, n.trees = NULL, shrinkage = 0.001, 
-interaction.depth = 10, bag.fraction = 0.5, train.fraction = NULL, 
-nTrain = NULL, n.minobsinnode = 10, 
-var.monotone=NULL)
+\usage{ 
+
+model.build(model.type = NULL, qdata.trainfn = NULL, folder = NULL,
+MODELfn = NULL, predList = NULL, predFactor = FALSE, response.name = NULL,
+response.type = NULL, unique.rowname = NULL, seed = NULL, na.action = NULL,
+keep.data = TRUE, ntree = switch(model.type,RF=500,QRF=1000,CF=500,500),
+mtry = switch(model.type,RF=NULL,QRF=ceiling(length(predList)/3),
+CF = min(5,length(predList)-1),NULL), replace = TRUE, strata = NULL,
+sampsize = NULL, proximity = TRUE, importance=FALSE, 
+quantiles=c(0.1,0.5,0.9), subset = NULL, weights = NULL,
+controls = NULL, xtrafo = NULL, ytrafo = NULL, scores = NULL,
+n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, 
+bag.fraction = 0.5, train.fraction = NULL, nTrain = NULL,
+n.minobsinnode = 10, var.monotone = NULL)
 }
 
 \arguments{
 
-  \item{model.type}{ String.  Model type.  \code{"RF"} or \code{"SGB"}.  (Eventually planned to include \code{"GAM"}.) If \code{model.obj} is specified, the \code{model.type} will be extracted from \code{model.obj}, and the argument \code{model.type} will be ignored (with a warning). }
+  \item{model.type}{ String.  Model type.  \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting).  }
 
   \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -36,7 +41,7 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{response.name}{ String.  The name of the response variable used to build the model.  If \code{response.name = NULL}, a GUI interface prompts user to select a variable from the list of column names from training data file.  \code{response.name} must be column name from the training/test data files. }
 
-  \item{response.type}{ String.  Response type: \code{"binary"}, \code{"categorical"} or \code{"continuous"}.  Binary response must be binary 0/1 variable with only 2 categories.  All zeros will be treated as one category, and everything else will be treated as the second category. Response type \code{"categorical"} only availabel for model type \code{"RF"}. }
+  \item{response.type}{ String.  Response type: \code{"binary"}, \code{"categorical"} or \code{"continuous"}.  Binary response must be binary 0/1 variable with only 2 categories.  All zeros will be treated as one category, and everything else will be treated as the second category.}
 
   \item{unique.rowname}{ String.  The name of the unique identifier used to identify each row in the training data.  If \code{unique.rowname = NULL}, a GUI interface prompts user to select a variable from the list of column names from the training data file.  If \code{unique.rowname = FALSE}, a variable is generated of numbers from \code{1} to \code{nrow(qdata)} to index each row. }
 
@@ -46,9 +51,9 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{keep.data}{Logical.  RF and SGB models. Should a copy of the predictor data be included in the model object. Useful for if \code{\link{model.interaction.plot}} will be used later. }
  
- \item{ntree}{ Integer.  RF models.  The number of random forest trees for a RF model.  The default is 500 trees. }
+ \item{ntree}{ Integer.  RF QRF and CF models.  The number of random forest trees for a RF model.  The default is 500 trees. }
  
-  \item{mtry}{ Integer.  RF models.  Number of variables to try at each node of Random Forest trees.  By default, will use the \code{"tuneRF()"} function to optimize \code{mtry}. }
+  \item{mtry}{ Integer.  RF QRF and CF models.  Number of variables to try at each node of Random Forest trees.  By default, RF models will use the \code{"tuneRF()"} function to optimize \code{mtry}. }
 
   \item{replace}{ Logical.  RF models.  Should sampling of cases be done with or without replacement? }
 
@@ -58,7 +63,29 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{proximity}{ Logical.  RF models.  Should proximity measure among the rows be calculated?}
 
-  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.}. If \code{n.trees} is given and \code{train.fraction} is less than 1, then the SGB model is built with the given number of trees, and the best number of trees is calculated with \code{gbm} \code{method="test"}. In both of these cases \code{best.iter} is included in the returned model object. If \code{n.trees} is given and \code{train.fraction = 1}, then the model is built with the given number of trees, and \code{best.iter} is not calculated.  }
+  \item{importance}{ Logical. QRF models. For QRF models only, importance must be specified at the time of model building. If TRUE importance of predictors is assessed at the given \code{quantiles}. Warning, on large datasets calculating QRF importances is very memory intensive and may require increasing memory limits with \code{memory.limit()}. }
+
+   \item{quantiles}{Numeric. Used for QRF models if \code{importance=TRUE}. Specify which quantiles of response variable to use. Later importance plots can only be made for \code{quantiles} specified at the time of model building.}
+
+  \item{subset}{CF models. An optional vector specifying a subset of observations to be used in the fitting process. Note: \code{subset} is not supported for cross validation diagnostics.}
+
+  \item{weights}{CF models. An optional vector of weights to be used in the fitting process. Non-negative integer valued weights are allowed as well as non-negative real weights. Observations are sampled (with or without replacement) according to probabilities \code{weights/sum(weights)}. The fraction of observations to be sampled (without replacement) is computed based on the sum of the weights if all weights are integer-valued and based on the number of weights greater zero else. Alternatively, \code{weights} can be a double matrix defining case weights for all \code{ncol(weights)} trees in the forest directly. This requires more storage but gives the user more control. Note: \code{weights} is not supported for cross validation diagnostics.}
+
+  \item{controls}{CF models. An object of class \code{\link[party]{ForestControl-class}}, which can be obtained using cforest_control (and its convenience interfaces cforest_unbiased and cforest_classical). If \code{controls} is specified, then stand alone arguments \code{mtry} and \code{ntree} ignored and these parameters must be specified as part of the \code{controls} argument. If \code{controls} not specified, \code{model.build} defaults to \code{cforest_unbiased(mtry=mtry, ntree=ntree)} with the values of \code{mtry} and \code{ntree} specified by the stand alone arguments.}
+
+  \item{xtrafo}{CF models. A function to be applied to all input variables. By default, the \code{\link[party]{ptrafo}} function is applied. Defaults to \code{xtrafo=ptrafo}.}
+
+  \item{ytrafo}{CF models. A function to be applied to all response variables. By default, the \code{\link[party]{ptrafo}} function is applied.  Defaults to \code{ytrafo=ptrafo}.}
+
+  \item{scores}{CF models. An optional named list of scores to be attached to ordered factors. Note: \code{weights} is not supported for cross validation diagnostics.}
+
+  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. 
+
+For \code{response.type="binary"} and \code{"continuous"}, \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.}. 
+
+For \code{response.type="categorical"} the \code{gbm} package has a bug, preventing the use of the function \code{gbm.more}, therefore if \code{n.trees} is not provided, the default is to build a model with 5000 trees. If the best number of trees is within 90% of the total number of trees, a warning is generated suggesting increasing \code{n.trees}.
+
+If \code{n.trees} is given and \code{train.fraction} is less than 1, then the SGB model is built with the given number of trees, and the best number of trees is calculated with \code{gbm} \code{method="test"}. }
 
   \item{shrinkage}{ Numeric. SGB models.  A shrinkage parameter applied to each tree in the expansion. Also known as the learning rate or step-size reduction. }
 
@@ -77,19 +104,27 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
 \details{
  
-This package provides a push button approach to complex model building and production mapping.  It contains four functions: a simple function \code{get.test()} that can be used to randomly divide a training dataset into training and test/validation sets; and the workhorse functions \code{model.build()},\code{model.diagnostics()}, and \code{model.mapmake()}.
+This package provides a push button approach to complex model building and production mapping.  It contains three main functions: \code{\link{model.build}},\code{\link{model.diagnostics}}, and \code{\link{model.mapmake}}. 
 
-These functions can be run in a traditional R command mode, where all arguments are specified in the function call.  However they can also be used in a full push button mode, where you type in, for example, the simple command \code{model.build()}, and GUI pop up windows will ask questions about the type of model, the file locations of the data, etc...
+In addition it contains a simple function \code{\link{get.test}} that can be used to randomly divide a training dataset into training and test/validation sets; \code{\link{build.rastLUT}} that uses GUI prompts to walk a user through the process of setting up a Raster look up table to link predictors from the training data with the rasters used for map contruction; \code{\link{model.explore}}, for preliminary data exploration; and, \code{\link{model.importance.plot}} and \code{\link{model.interaction.plot}} for interpreting the effects of individual model predictors. 
+
+These functions can be run in a traditional R command mode, where all arguments are specified in the function call.  However they can also be used in a full push button mode, where you type in, for example, the simple command \code{\link{model.build}}, and GUI pop up windows will ask questions about the type of model, the file locations of the data, etc...
 
 When running the \code{ModelMap} package on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
-Binary and continuous response models are supported for Random Forest and Stochastic Gradient Boosting. Categorical response models are supported for Random Forest.
+Binary, categorical, and continuous response models are supported for Random Forest, Conditional Forest, and Stochastic Gradient Boosting. Quantile Random Forest is appropriate for only continuous response models.
 
 Random Forest is implemented through the \code{randomForest} package within \code{R}.  Random Forest is more user friendly than Stochastic Gradient Boosting, as it has fewer parameters to be set by the user, and is less sensitive to tuning of these parameters.  A Random Forest model consists of multiple trees that vote on predictions.  For each tree a random subset of the training data is used to construct the tree, with the remaining data points used to construct out-of-bag (OOB) error estimates.  At each node of the tree a random selection of predictors is chosen to determine the split.  The number of predictors used to select the splits (argument \code{mtry}) is the primary user specified parameter that can affect model performance.  
 
-By default \code{mtry} will be automatically optimized using the \code{tuneRF()} function. Note that this is a stochastic process. If there is a chance that models may be combined later with the \code{randomForest} package \code{combine} function then for consistency it is important to provide the \code{mtry} argument rather that using the default optimization process.
+By default \code{mtry} will be automatically optimized using the \code{randomForest} package \code{tuneRF()} function. Note that this is a stochastic process. If there is a chance that models may be combined later with the \code{randomForest} package \code{combine} function then for consistency it is important to provide the \code{mtry} argument rather that using the default optimization process.
 
 Random Forest will not over fit data, therefore the only penalty of increasing the number of trees is computation time.  Random Forest can compute variable importance, an advantage over some "black box" modeling techniques if it is important to understand the ecological relationships underlying a model (Brieman, 2001).
+
+Quantile Regression Forests is implemented through the \code{quantregForest} package.
+
+Conditional Forests is implemented with the \code{cforest()} function in the \code{party} package. As stated in the \code{party} package, ensembles of conditional inference trees have not yet been extensively tested, so this routine is meant for the expert user only and its current state is rather experimental.
+
+For CF models, \code{ModelMap} currently only supports binary, categorical and continuous response models. Also, for some CF model parameters (\code{subset}, \code{weights}, and \code{scores}) \code{MOdelMap} only provides OOB and independent test set diagnostics, and does not support cross validation diagnostics.
 
 Stochastic gradient boosting (Friedman 2001, 2002), is related to both boosting and bagging.  Many small classification or regression trees are built sequentially from "pseudo"-residuals (the gradient of the loss function of the previous tree). 
 
@@ -109,13 +144,27 @@ The function will return the model object. Additionally, it will write a text fi
 \references{ 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
 
+Elith, J., Leathwick, J. R. and Hastie, T. (2008). A working guide to boosted regression trees. Journal of Animal Ecology. 77:802-813.
+
 Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
 
 Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(4):367-378.
 
 Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 
+N. Meinshausen (2006) "Quantile Regression Forests", Journal of Machine Learning Research 7, 983-999 http://jmlr.csail.mit.edu/papers/v7/
+
 Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
+
+Carolin Strobl, Anne-Laure Boulesteix, Achim Zeileis and Torsten Hothorn (2007). Bias in Random Forest variable Importance Measures: Illustrations, Sources and a Solution. BMC Bioinformatics, 8, 25. http://www.biomedcentral.co,/1471-2105/8/25
+
+Carolin Strobl, James Malley and Gerhard Tutz (2009). An Introduction to Recursive Partitioning: Rationale, Application, and Characteristics of Classification and Regression Trees, Bagging, and Random forests. Phsycological Methods, 14(4), 323-348. 
+
+Torsten Hothorn, Berthold Lausen, Axel Benner and Martin Radespiel-Troeger (2004). Bagging Survival Trees. Statistics in Medicine, 23(1), 77-91.
+
+Torsten Hothorn, Peter Buhlmann, Sandrine Dudoit, Annette Molinaro and Mark J. ven der Laan (2006a). Survival Ensembles. Biostatistics, 7(3), 355-373. 
+
+Torston Hothorn, Kurt Hornik and Achim Zeileis (2006b). Unbiased Recursive Partitioning: A Conditional Inference Framework. Journal of Computational and Graphical Statistics, 15(3), 651-674. Preprint available from http://statmath.wu-wein.ac.at/~zeileis/papers/Hothorn+Hornik+Zeileis-2006.pdf
  }
 
 \author{ Elizabeth Freeman and Tracey Frescino }

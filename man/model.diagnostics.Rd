@@ -11,13 +11,15 @@ model.diagnostics(model.obj = NULL, qdata.trainfn = NULL, qdata.testfn = NULL,
 folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL,
  diagnostic.flag=NULL, seed = NULL, prediction.type=NULL, MODELpredfn = NULL, 
  na.action = NULL, v.fold = 10, device.type = NULL, DIAGNOSTICfn = NULL, 
- jpeg.res = 72, device.width = 7,  device.height = 7, cex=par()$cex, 
- req.sens, req.spec, FPC, FNC, n.trees = NULL)
+ res=NULL, jpeg.res = 72, device.width = 7,  device.height = 7, units="in", 
+ pointsize=12, cex=par()$cex, req.sens, req.spec, FPC, FNC, quantiles=NULL, 
+ all=TRUE, subset = NULL, weights = NULL, mtry = NULL, controls = NULL, 
+ xtrafo = NULL, ytrafo = NULL, scores = NULL, n.trees = NULL)
 }
 
 \arguments{
 
-  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type RF or SGB.  (Eventually planned to include "GAM".) }
+  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
 
   \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -53,17 +55,25 @@ Current choices:
 	  \tab \tab \tab \code{"jpeg"} \tab *.jpg files\cr
 	  \tab \tab \tab \code{"none"} \tab no graphics device generated\cr	
 	  \tab \tab \tab \code{"pdf"} \tab *.pdf files\cr
+	  \tab \tab \tab \code{"png"} \tab *.png files\cr
 	  \tab \tab \tab \code{"postscript"} \tab *.ps files\cr
-	  \tab \tab \tab \code{"win.metafile"} \tab *.emf files }
+	  \tab \tab \tab \code{"tiff"} \tab *.tif files }
+
  }
 
   \item{DIAGNOSTICfn}{ String.  Model validation.  Name used as base to create names for output files from model validation diagnostics.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}.  Defaults to \code{DIAGNOSTICfn = MODELfn} followed by the appropriate suffixes (i.e. \code{".csv"}, \code{".jpg"}, etc...). }
 
-  \item{jpeg.res}{ Integer.  Model validation.  Pixels per inch for jpeg plots.  The default is 72dpi, good for on screen viewing. For printing, suggested setting is 300dpi. }
+  \item{res}{ Integer.  Model validation.  Pixels per inch for jpeg, png, and tiff plots.  The default is 72dpi, good for on screen viewing. For printing, suggested setting is 300dpi. }
+
+  \item{jpeg.res}{ Integer.  Model validation.  Deprecated. Ignored unless \code{res} not provided. }
 
   \item{device.width}{ Integer.  Model validation.  The device width for diagnostic plots in inches. }
 
   \item{device.height}{ Integer.  Model validation.  The device height for diagnostic plots in inches. }
+
+  \item{units}{ Model validation.  The units in which \code{device.height} and \code{device.width} are given. Can be \code{"px"} (pixels), \code{"in"} (inches, the default), \code{"cm"} or \code{"mm"}. }
+
+  \item{pointsize}{ Integer.  Model validation.  The default pointsize of plotted text, interpreted as big points (1/72 inch) at \code{res} ppi}
 
   \item{cex}{ Integer.  Model validation.  The cex for diagnostic plots. }
 
@@ -74,6 +84,24 @@ Current choices:
   \item{FPC}{ Numeric.  Model validation.  The False Positive Cost for threshold optimization for binary response model evaluation. }
 
   \item{FNC}{ Numeric.  Model validation.  The False Negative Cost for threshold optimization for binary response model evaluation. }
+
+  \item{quantiles}{ Numeric Vector.  QRF models.  The quantiles to predict. A numeric vector with values between zero and one. If model was built without specifying quantiles, quantile importance can not be calculated, but \code{quantiles} can still be used to specify prediction quantiles. If model was built with quantiles specified, then the model quantiles will be used for  importance graph.  If quantiles are not specified for model building or diagnostics, prediction quantiles will default to \code{quantiles=c(0.1,0.5,0.9)}}
+
+  \item{all}{ Logical.  QRF models. \code{all=TRUE} uses all observations for prediction. \code{all=FALSE} uses only a certain number of observations per node for prediction (set with argument obs). Unlike in the quantredForest package itself, the default in ModelMap is \code{all=TRUE}, to more closely parallel ordinary random forest models. }
+
+  \item{subset}{CF models. NOT SUPPORTED. Only needed for \code{prediction.type="CV"} for CF models. An optional vector specifying a subset of observations to be used in the fitting process. Note: \code{subset} is not yet supported for cross validation diagnostics.}
+
+  \item{weights}{CF models. NOT SUPPORTED. Only needed for \code{prediction.type="CV"} for CF models. An optional vector of weights to be used in the fitting process. Non-negative integer valued weights are allowed as well as non-negative real weights. Observations are sampled (with or without replacement) according to probabilities \code{weights/sum(weights)}. The fraction of observations to be sampled (without replacement) is computed based on the sum of the weights if all weights are integer-valued and based on the number of weights greater zero else. Alternatively, \code{weights} can be a double matrix defining case weights for all \code{ncol(weights)} trees in the forest directly. This requires more storage but gives the user more control. Note: \code{weights} is not yet supported for cross validation diagnostics.}
+
+ \item{mtry}{ Integer. Only needed for \code{prediction.type="CV"} for CF models (for RF and QRF models mtry will be determined from the model object).  Number of variables to try at each node of Random Forest trees. }
+
+  \item{controls}{CF models. Only needed for \code{prediction.type="CV"} for CF models. An object of class \code{\link[party]{ForestControl-class}}, which can be obtained using cforest_control (and its convenience interfaces cforest_unbiased and cforest_classical). If \code{controls} is specified, then stand alone arguments \code{mtry} and \code{ntree} ignored and these parameters must be specified as part of the \code{controls} argument. If \code{controls} not specified, \code{model.build} defaults to \code{cforest_unbiased(mtry=mtry, ntree=ntree)} with the values of \code{mtry} and \code{ntree} specified by the stand alone arguments.}
+
+  \item{xtrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all input variables. By default, the \code{\link[party]{ptrafo}} function is applied. }
+
+  \item{ytrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all response variables. By default, the \code{\link[party]{ptrafo}} function is applied.  }
+
+  \item{scores}{CF models. NOT SUPPORTED. Only needed for \code{prediction.type="CV"} for CF models. An optional named list of scores to be attached to ordered factors. Note: \code{scores} is not yet supported for cross validation diagnostics.}
 
   \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
@@ -90,6 +118,8 @@ Diagnostic predictions are made my one of four methods, and a text file is gener
 
 A variable importance graph is made. If \code{response.type = "categorical"}, category specific graphs are generated for variable importance. These show how much the model accuracy for each category is affected when the values of each predictor variable is randomly permuted.
 
+The package \code{corrplot} is used to generate a plot of correlation between predictor variables. If there are highly correlated predictor variables, then the variable importances of \code{"RF"}, \code{"QRF"}, \code{"SGB"} and \code{"QSGB"} models need to be interpreted with care, and users may want to consider looking at the conditional variable importances available for \code{"CF"} models produced by the \code{party} package.
+
 If \code{model.type = "RF"}, the OOB error is plotted as a function of number of trees in the model. If \code{response.type = "binary"} or If \code{response.type = "categorical"} category specific graphs are generated for  OOB error as a function of number of trees.
 
 If \code{response.type = "binary"}, a summary graph is made using the \code{PresenceAbsence} package and a \code{*.csv} spreadsheets are created of optimized thresholds by several methods with their associated error statistics, and predicted prevalence.
@@ -99,6 +129,13 @@ If \code{response.type = "continuous"} a scatterplot of observed vs.  predicted 
 If \code{response.type = "categorical"}, a confusion matrix is generated, that includes erros of ommission and comission, as well as Kappa, Percent Correctly Classified (PCC) and the Multicategorical Area Under the Curve (MAUC) as defined by Hand and Till (2001) and calculated by the package \code{HandTill2001}.
 
 }
+
+\note{If you are running cross validation diagnostics on a CF model, the model parameters will NOT automatically be passed to \code{model.diagnostics()}. For cross validation, it is the users responsibility to be certain that the CF arguments are the same in \code{model.build()} and \code{model.diagnostics()}.
+
+Also, for some CF model parameters (\code{subset}, \code{weights}, and \code{scores}) \code{ModelMap} only provides OOB and independent test set diagnostics, and does not support cross validation diagnostics.
+
+}
+
 \value{
 
 The function will return a dataframe of the row ID, and the Observed and predicted values. 

@@ -9,22 +9,32 @@ Image or Perspective plot of two-way model interactions. Ranges of two specified
 }
 \usage{
 model.interaction.plot(model.obj = NULL, x = NULL, y = NULL, 
-response.category=NULL, qdata.trainfn = NULL, folder = NULL, 
-MODELfn = NULL,  PLOTfn = NULL, pred.means = NULL, xlab = NULL, 
-ylab = NULL, x.range = NULL, y.range = NULL, z.range = NULL, 
-ticktype = "detailed", theta = 55, phi = 40, smooth = "none", 
-plot.type = NULL, device.type = NULL, jpeg.res = 72, 
-device.width = 7,  device.height = 7, cex=par()$cex, col = NULL, ...)
+response.category=NULL, quantiles=NULL, all=FALSE, obs=1, qdata.trainfn = NULL, 
+folder = NULL, MODELfn = NULL,  PLOTfn = NULL, pred.means = NULL, 
+xlab = NULL, ylab = NULL, x.range = NULL, y.range = NULL, 
+z.range = NULL, ticktype = "detailed", theta = 55, phi = 40, 
+smooth = "none", plot.type = NULL, device.type = NULL, 
+res=NULL, jpeg.res = 72, device.width = 7,  device.height = 7, 
+units="in", pointsize=12, cex=par()$cex, 
+col = NULL, xlim = NULL, ylim = NULL, zlim = NULL, ...)
 }
 
 \arguments{
-  \item{model.obj}{ \code{R} model object.  A RF or SGB model object produced by \code{model.build}.}
+    \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
 
   \item{x}{String or Integer. Name of predictor variable to be plotted on the x axis. Alternativly, can be a number indicating a variable name from \code{predList}.}
 
   \item{y}{String or Integer. Name of predictor variable to be plotted on the y axis. Alternatively, can be a number indicating a variable name from \code{predList}.}
 
-   \item{response.category}{String. Used for categorical response RF models. Specify which category of response variable to use. This category's probabilities will be plotted on the z axis.}
+   \item{response.category}{String. Used for categorical response models. Specify which category of response variable to use. This category's probabilities will be plotted on the z axis.}
+
+   \item{quantiles}{Numeric. Used for QRF models. Specify which quantile of response variable to use. This quantile will be plotted on the z axis. Note: unlike other functions \code{model.interaction.plot} will only use a single quantile. If \code{quantiles} is a vector only the first value will be used.}
+
+
+   \item{all}{Logical. Used for QRF models. A logical value. \code{all=TRUE} uses all observations for prediction. \code{all=FALSE} uses only a certain number of observations per node for prediction (set with argument \code{obs}). The default is \code{all=FALSE}.}
+
+
+   \item{obs}{Numeric. Used for QRF models. An integer number. Determines the maximal number of observations per node to use for prediction. The input is ignored for all=TRUE. The default is obs=1.}
 
    \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -40,11 +50,11 @@ device.width = 7,  device.height = 7, cex=par()$cex, col = NULL, ...)
 
   \item{ylab}{String. Allows manual specification of the y label.}
 
-  \item{x.range}{Vector. Manual range specification for the x axis.}
+  \item{x.range}{Vector. Manual range specification for the x axis. Alternate argument name for \code{xlim}. Use one or the other. Do not provide both \code{x.range} and \code{xlim}.}
 
-  \item{y.range}{Vector. Manual range specification for the y axis.}
+  \item{y.range}{Vector. Manual range specification for the y axis. Alternate argument name for \code{ylim}. Use one or the other. Do not provide both \code{y.range} and \code{ylim}.}
 
-  \item{z.range}{Vector. Manual range specification for the z axis.}
+  \item{z.range}{Vector. Manual range specification for the z axis. Alternate argument name for \code{zlim}. Use one or the other. Do not provide both \code{z.range} and \code{zlim}.}
 
   \item{ticktype}{Character: "simple" draws just an arrow parallel to the axis to indicate direction of increase; "detailed" (default) draws normal ticks as per 2D plots. If \code{X} or \code{y} is factored, ticks will be drawn on both axes.}
 
@@ -67,18 +77,31 @@ Current choices:
 	  \tab \tab \tab \code{"pdf"} \tab *.pdf files\cr
 	  \tab \tab \tab \code{"postscript"} \tab *.ps files\cr
 	  \tab \tab \tab \code{"win.metafile"} \tab *.emf files }
+
  }
 
-  \item{jpeg.res}{ Integer.  Pixels per inch for jpeg plots.  The default is 72dpi, good for on screen viewing. For printing, suggested setting is 300dpi. }
+  \item{res}{ Integer.  Model validation.  Pixels per inch for jpeg, png, and tiff plots.  The default is 72dpi, good for on screen viewing. For printing, suggested setting is 300dpi. }
 
-  \item{device.width}{ Integer.  The device width for diagnostic plots in inches. }
+  \item{jpeg.res}{ Integer.  Model validation.  Deprecated. Ignored unless \code{res} not provided. }
 
-  \item{device.height}{ Integer.  The device height for diagnostic plots in inches. }
+  \item{device.width}{ Integer.  Model validation.  The device width for diagnostic plots in inches. }
 
-  \item{cex}{ Integer.  The cex for diagnostic plots. }
+  \item{device.height}{ Integer.  Model validation.  The device height for diagnostic plots in inches. }
+
+  \item{units}{ Model validation.  The units in which \code{device.height} and \code{device.width} are given. Can be \code{"px"} (pixels), \code{"in"} (inches, the default), \code{"cm"} or \code{"mm"}. }
+
+  \item{pointsize}{ Integer.  Model validation.  The default pointsize of plotted text, interpreted as big points (1/72 inch) at \code{res} ppi}
+
+  \item{cex}{ Integer.  Model validation.  The cex for diagnostic plots. }
 
   \item{col}{ Vector.  Color table to use for image plots ( see help file on image for details). }
- 
+
+  \item{xlim}{Vector. X limits. Alternate argument name for \code{x.range}. Use one or the other. Do not provide both \code{x.range} and \code{xlim}.}
+
+  \item{ylim}{Vector. Y limits. Alternate argument name for \code{y.range}. Use one or the other. Do not provide both \code{y.range} and \code{ylim}.}
+
+  \item{zlim}{Vector. Z limits. Alternate argument name for \code{z.range}. Use one or the other. Do not provide both \code{z.range} and \code{zlim}.}
+
   \item{\dots}{additional graphical parameters (see \code{\link{par}}).}
 }
 \details{
@@ -172,9 +195,10 @@ model.interaction.plot(	model.obj,
 			plot.type="persp", 
 			device.type="default") 
 
+\dontrun{
 ### specify predictors in 'predList' by name (one continuous one factored) ###
 
-model.interaction.plot(	model.obj,
+model.interaction.plot(model.obj,
 			x="TCB", y="NLCD", 
 			main=response.name, 
 			plot.type="persp", 
@@ -193,13 +217,12 @@ c <- seq(0,100,length.out=101)
 col.ramp <- hcl(h = 120, c = c, l = l)
  
 
-model.interaction.plot(		model.obj,
+model.interaction.plot(	model.obj,
 				x="TCB", y="NLCD",
 				main=response.name,
 				plot.type="image", 
 				device.type="default",
 				col = col.ramp) 
-
 
 
 #########################
@@ -210,7 +233,7 @@ model.interaction.plot(		model.obj,
 
 ### factored 3rd predictor ###
 
-#interaction between TCG and TCW for 3 most common values of NLCD
+interaction between TCG and TCW for 3 most common values of NLCD
 
 nlcd<-levels(model.obj$predictor.data$NLCD)
 nlcd.counts<-table(model.obj$predictor.data$NLCD)
@@ -273,7 +296,7 @@ for(i in 1:3){
 				plot.type="persp", 
 				device.type="default") 
 }
-
+} #end dontRun
 
 }
 

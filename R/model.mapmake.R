@@ -13,15 +13,17 @@ model.mapmake<-function(model.obj=NULL,
 				rastLUTfn=NULL,
 			# Model Evaluation Arguments
 				na.action=NULL,	# also used for mapping
+				na.value=-9999,	# NA value for rasters, note, internal code changes this to NAval
 			# Mapping arguments
 				keep.predictor.brick=FALSE,	
 				map.sd=FALSE,
 				OUTPUTfn=NULL,
+			# QRF arguments
+				quantiles=NULL,
 			# SGB arguments
 				n.trees=NULL
 ){
 
-print("RASTER version")
 
 ## Note: Must have R version 2.5.1 or greater
 ## Note: Must have all rasters in same size, same resolution, and with -9999 for nodata values.
@@ -78,104 +80,75 @@ if(is.null(model.obj)){
 ##################### Extract Model Type from model.obj #############################
 #####################################################################################
 
+model.type<-check.model.type(model.obj)
 
-model.type.long<-attr(model.obj,"class")
-if(is.null(model.type.long)){model.type.long <- "unknown"}
+#############################################################################################
+########################### Load modelling packages #########################################
+#############################################################################################
 
-#model.type<-switch(model.type.long,	"randomForest"="RF",
-#						"gbm"="SGB",
-#						"unknown")
+if(model.type=="CF"){REQUIRE.party()}
+if(model.type=="QRF"){REQUIRE.quantregForest()}
+if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
 
-if("randomForest"%in%model.type.long){
-	model.type<-"RF"
-}else{
-	if("gbm"%in%model.type.long){
-		model.type<-"SGB"
-	}else{
-		model.type<-"unknown"
+
+#####################################################################################
+############################# Check if map.sd legal #################################
+#####################################################################################
+
+if(map.sd){
+	if(!model.type%in%c("RF")){
+		if(!(model.type=="QRF" && "RF"%in%names(model.obj))){
+			warning("Standard deviation maps only available for \"RF\" models")
+			map.sd<-FALSE
+		}
 	}
+	if(response.type!="continuous"){
+		warning("Standard deviation maps only available for continuous response models")
+		map.sd<-FALSE}
 }
 
-if(model.type=="unknown"){
-	stop("model.obj is of unknown type")}
-	
-print(paste("model.type =",model.type))
+#####################################################################################
+############################# Check Quantiles #######################################
+#####################################################################################
 
-#if (model.type == "SGB") {
-#	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling gbm.perf in the gbm package but OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive however using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap")
-#}
+if(model.type=="QRF"){
+	if(is.null(quantiles)){
+		model.quantiles<-if("QRF"%in%names(model.obj)){model.obj$QRF$quantiles}else{model.obj$quantiles}
+		quantiles<-if(!is.null(model.quantiles)){model.quantiles}else{c(0.1, 0.5, 0.9)}
+	}
+	if(!is.numeric(quantiles)){
+		stop("'quantiles' must be numbers between 0 and 1")}
+	if(any(quantiles<=0) || any(quantiles>=1)){
+		stop("'quantiles' must be numbers between 0 and 1")}
+}
+
 
 #############################################################################################
 ########################### Extract predList from model.obj #################################
 #############################################################################################
 
-
-if(model.type == "RF"){predList<-row.names(model.obj$importance)}
-
-if(model.type == "SGB"){predList<-model.obj$var.names}
+predList<-check.predList(model.obj=model.obj,model.type=model.type)
 
 #############################################################################################
 ####################### Extract Factored Predictors from model.obj ##########################
 #############################################################################################
 
-if(model.type=="SGB"){
-	var.factors<-model.obj$var.type!=0
-	if( any(var.factors)){
-		model.levels<-as.list(1:sum(var.factors))
-		names(model.levels)<-model.obj$var.names[var.factors]
-		for(p in 1:sum(var.factors)){
-			model.levels[[p]]<-model.obj$var.levels[var.factors][[p]]
-		}
-		model.obj$levels<-model.levels
-	}
-}
-if(model.type=="RF"){
-	var.factors<-!sapply(model.obj$forest$xlevels,identical,0)
-	if( any(var.factors)){
-		model.levels<-as.list(1:sum(var.factors))
-		names(model.levels)<-names(var.factors)[var.factors]
-		for(p in 1:sum(var.factors)){
-			model.levels[[p]]<-model.obj$forest$xlevels[var.factors][[p]]
-		}
-		model.obj$levels<-model.levels
-	}
-}
+model.levels<-check.model.levels(model.obj=model.obj,model.type=model.type)
 
+#predFactor<-NULL
+#if(!is.null(model.levels)){predFactor<-names(model.levels)}
 
 #############################################################################################
 ###################### Extract response.name from model.obj #################################
 #############################################################################################
 
-if(is.null(MODELfn) && is.null(OUTPUTfn)){
-	if(!is.null(model.obj$response)){
-		response.name<-model.obj$response
-	}
-
-	## If the response variable is NULL, then the user selects variable from pop-up list.
-	if (is.null(response.name)){
-		stop("if model is built outside of ModelMap then either MODELfn or OUTPUTfn must be provided in argument list")
-	}
-}
+response.name<-check.response.name(model.obj=model.obj,model.type=model.type,response.name=NULL,qdata=NA)
 
 #############################################################################################
 ###################### Extract response.type from model.obj #################################
 #############################################################################################
 
-if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
-	if(response.type=="classification"){
-		if(identical(levels(model.obj$y),c("0","1"))){
-			response.type<-"binary"
-		}else{
-			response.type<-"categorical"}}}
-if(model.type=="SGB"){
-	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
-if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
-
-if(response.type=="categorical"){
-	
-}
-	
+response.type<-check.response.type(model.obj=model.obj,model.type=model.type,ONEorTWO="model.obj")
 
 #############################################################################################
 ################################ Load Libraries #############################################
@@ -210,8 +183,6 @@ if(is.null(folder)){
 	}else{
 		folder<-getwd()}
 }
-
-
 
 #############################################################################################
 ############################# Generate Output File Names ####################################
@@ -273,14 +244,19 @@ if(!is.null(na.action)){
 	}
 }else{
 ###if 'na.action not specified in 'model.map make()' then check if model was built with a valid na.action###
-	if(!is.null(model.obj$na.action)){
-		model.NA.ACTION<-class(model.obj$na.action)
-		if(!model.NA.ACTION%in%model.NAvalid){
-			warning("Model Object built with 'na.action' ",model.NA.ACTION," not supported for map making threfore default 'na.action' is \"na.omit\"")
-		}else{
-			NA.ACTION<-model.NA.ACTION	
-			print("Using 'na.action' from 'model.obj'")	
-			#na.action<-model.na.action
+	if(model.type!="CF"){
+		model.NA.ACTION<-if("QRF"%in%names(model.obj)){class(model.obj$QRF$na.action)}else{class(model.obj$na.action)}
+		print(paste("model.NA.ACTION:",model.NA.ACTION))
+		if(!is.null(model.NA.ACTION)){
+			if(model.NA.ACTION!="NULL"){	
+				if(!model.NA.ACTION%in%model.NAvalid){
+					warning("Model Object built with 'na.action' ",model.NA.ACTION," not supported for map making therefore default 'na.action' is \"na.omit\"")
+				}else{
+					NA.ACTION<-model.NA.ACTION	
+					#print("Using 'na.action' from 'model.obj'")	
+					#na.action<-model.na.action
+				}
+			}
 		}
 	}
 }
@@ -342,7 +318,7 @@ if(is.matrix(rastLUTfn)==TRUE || is.data.frame(rastLUTfn)==TRUE){
 }
 
 
-### Check that collumns of rastLUT are correct format
+### Check that columns of rastLUT are correct format
 
 if(is.factor(rastLUT[,1])){rastLUT[,1]<-as.character(rastLUT[,1])}
 if(is.factor(rastLUT[,2])){rastLUT[,2]<-as.character(rastLUT[,2])}
@@ -375,7 +351,10 @@ production.prediction(	model.obj=model.obj,
 				rastLUT=rastLUT,
 				#na.action=na.action,
 				NA.ACTION=NA.ACTION,
+				NAval=na.value,
+				model.levels=model.levels,
 				response.type=response.type,
+				#response.name=response.name,
 				keep.predictor.brick=keep.predictor.brick,
 				map.sd=map.sd,
 				OUTPUTfn=OUTPUTfn,			#path, name, extension
@@ -383,9 +362,10 @@ production.prediction(	model.obj=model.obj,
 				#OUTPUTpath=OUTPUTpath,			#path
 				OUTPUTname=OUTPUTname,			#name
 				OUTPUText=OUTPUText,			#extension
+				quantiles=quantiles,
 				n.trees=n.trees)
 
-print("finished production prediction")
+#print("finished production prediction")
 #############################################################################################
 ############## If response/type=="categorical Write a key to levels #########################
 #############################################################################################
@@ -393,7 +373,12 @@ print("finished production prediction")
 if(response.type=="categorical"){
 	#mapkey<-mapLevels(model.obj$y)
 
-	Ylev<-levels(model.obj$y)
+	#Ylev<-levels(model.obj$y)
+	#Ylev<-model.obj$classes
+	if(model.type=="RF"){ Ylev<-colnames(model.obj$votes)}
+	#if(model.type=="QRF"){}#not needed as QRF always continuous
+	if(model.type=="CF"){Ylev<-model.obj@responses@levels[[response.name]]}
+	if(model.type=="SGB"){Ylev<-model.obj$classes}
 
 	if(any(is.na(suppressWarnings(as.numeric(Ylev))))){
 		mapkey<-data.frame(row=1:length(Ylev), category=Ylev,integercode=1:length(Ylev))
@@ -423,8 +408,7 @@ if(is.matrix(rastLUTfn)==TRUE || is.data.frame(rastLUTfn)==TRUE){
 A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
-print("ARGfn:")
-print(ARGfn)
+print(paste("ARGfn:",ARGfn))
 
 capture.output(print(A),file=ARGfn)
 

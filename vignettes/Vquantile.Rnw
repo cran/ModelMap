@@ -1,0 +1,912 @@
+\documentclass[a4paper]{article} 
+%\usepackage{a4wide} 
+
+%\setlength{\parskip}{0.7ex plus0.1ex minus0.1ex} 
+%\setlength{\parindent}{0em} 
+
+\usepackage[a4paper]{geometry}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% packages for paper
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[round]{natbib}
+\bibliographystyle{abbrvnat}
+
+\usepackage{tabularx}
+\usepackage{appendix}
+
+%\usepackage{graphicx}
+%\usepackage{wrapfig}
+%\usepackage{lscape}
+\usepackage{rotating}
+%\usepackage{epstopdf}
+\usepackage{pdflscape}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for vignette
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% instead of \usepackage{Sweave} 
+\RequirePackage[T1]{fontenc} 
+\RequirePackage{graphicx,ae,fancyvrb} 
+\IfFileExists{upquote.sty}{\RequirePackage{upquote}}{} 
+\setkeys{Gin}{width=0.8\textwidth} 
+\DefineVerbatimEnvironment{Sinput}{Verbatim}{fontshape=sl} 
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{} 
+\DefineVerbatimEnvironment{Scode}{Verbatim}{fontshape=sl} 
+\newenvironment{Schunk}{}{} 
+
+%% Set PDF 1.5 and compression, including object compression
+%% Needed for MiKTeX -- most other distributions default to this
+\ifx\pdfoutput\undefined
+\else
+  \ifx\pdfoutput\relax
+  \else
+    \ifnum\pdfoutput>0
+      % PDF output
+      \pdfminorversion=5
+      \pdfcompresslevel=9
+      \pdfobjcompresslevel=2
+    \fi
+  \fi
+\fi
+
+
+%% special latex commands
+\makeatletter
+\newcommand\code{\bgroup\@makeother\_\@makeother\~\@makeother\$\@codex}
+\def\@codex#1{{\normalfont\ttfamily\hyphenchar\font=-1 #1}\egroup}
+\makeatother
+
+\let\proglang=\textsf
+\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
+\newcommand{\email}[1]{\href{mailto:#1}{\normalfont\texttt{#1}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\author{Elizabeth A. Freeman, Tracey S. Frescino, Gretchen G. Moisen}
+        
+\title{Pick Your Flavor of Random Forest}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\SweaveOpts{engine=R}
+%\VignetteIndexEntry{Pick your flavor of Random Forest} 
+%\VignetteDepends{randomForest, party, quantregForest, raster} 
+%\VignetteKeywords{species distribution models, random forest, quantile regression forest, conditional inference forest, map production, raster, R} 
+%\VignettePackage{ModelMap} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+  The \pkg{ModelMap} package \citep{ModelMap} for \proglang{R} \citep{R} has added two additional variants of random forests: quantile regression forests and conditional inference forests. The \pkg{quantregForest} package \citep{quantregForest} is used for quantile regression forest (QRF) models. QRF models provide the ability to map the predicted median and individual quantiles. This makes it possible to map lower and upper bounds for the predictions without relying on the assumption that the predictions of individual trees in the model follow a normal distribution. The \pkg{party} package \citep{hothorn06, strobl07, strobl08} is used for conditional inference forest (CF) models. CF models offer two advantages over traditional RF models: they avoid RF's bias towards predictor variables with higher numbers of categories; and, they provide a conditional importance measure, allowing a better understanding of the relative importance of correlated predictor variables.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+The \pkg{ModelMap} package \citep{ModelMap} for \proglang{R} \citep{R} has added two additional variants of random forests: quantile regression forests and conditional inference forests. 
+
+Quantile regression forest (QRF) models provide the ability to map the predicted median as well individual quantiles. This makes it possible to map lower and upper bounds for the predictions without relying on the assumption that the predictions of individual trees in the model follow a normal distribution. Mapping the predicted median rather than the predicted mean also may help avoid non-linearity of data leading to biased mean predictions \citep{anderson14}. The \pkg{quantregForest} package \citep{quantregForest} is used for QRF models. 
+
+Conditional inference forest CF models offer two advantages over traditional RF models: they avoid RF's bias towards predictor variables with higher numbers of categories; and, they provide a conditional importance measure, allowing a better understanding of the relative importance of correlated predictor variables. CF models avoid the potential bias found in RF variable importance measures when the predictors vary in their scale or their number of categories \citep{strobl07}. This potential bias in RF models is caused by the modeling process itself, where CART decision trees \citep{breiman84} based on the Gini criterion favor predictors with more categories or larger scales \citep{strobl07}. In addition to the biases in the model building process, when the permutation importance is calculated, the permutation process favors correlated predictor variables \citep{strobl08}. CF models can avoid both these pitfalls, though one potential draw back is that CF models are very computer intensive, especially for large datasets. The \pkg{party} package \citep{hothorn06, strobl07, strobl08} is used for CF models. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Example dataset}
+
+The \code{model.explore} function can be used for both continuous and factored predictors, and for binary, categorical, and continuous responses. The out put graphics vary depending on the predictor and response types.
+
+The data set used in this vignette is from a pilot study in Nevada launched in 2004 involving acquisition and photo-interpretation of large-scale aerial photography, the Nevada Photo-Based Inventory Pilot (NPIP) \citep{Frescino09}. The data files for these examples are included in the \pkg{ModelMap} package installation in the \proglang{R} library directory. The data sets are under the 'external' then under 'vignetteexamples'.
+
+The predictor data set consists of 6 predictor variables: 5 continuous variables, and 1 categorical variable \mbox{(Table \ref{tab:one})}. The predictor layers are 250-meter resolution, pixel-based raster layers including Moderate Resolution Imaging Spectro-radiometer (MODIS) satellite imagery \citep{justice02}, a Landsat Thematic Mapper-based, thematic layer of predicted land cover, National Land Cover Data (NLCD) \citep{homer04}, and a topographic layer of elevation from the National Elevation Data \citep{gesch02}. 
+
+The continuous response variables are percent cover of Pinyon and Sage. The binary response variables are presence of Pinyon and Sage. The categorical response variable is the vegetation category: TREE, SHRUB, OTHERVEG, and NONVEG.  
+
+The MODIS data included 250-meter, 16-day, cloud-free, composites of MODIS imagery for April 6, 2005: visible-red (RED) and near-infrared (NIR) bands and 2 vegetation indices, normalized difference vegetation index (NDVI) and enhanced vegetation index (EVI)  \citep{huete02}. The land cover and topographic layers were 30-meter products re-sampled to 250 meter using majority and mean summaries, respectively.
+
+The rectangular subset of Nevada chosen for these maps was deliberately selected to lie along the diagonal edge of the study region to illustrate how \pkg{ModelMap} handles unsampled regions of a rectangle \mbox{(Figure \ref{fig:ExElev})}.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+Name&	Type&	Description\\
+\hline
+ELEV250&	Continuous&	90m NED elevation (ft)\\
+       &            & resampled to 250m, average of 49 points\\
+NLCD01\_250&	Categorical&	National Land Cover Dataset 2001 \\
+       &            & resampled to 250m - min. value of 49 points\\
+EVI2005097&	Continuous&	MODIS Enhanced vegetation index\\
+NDV2005097&	Continuous&	MODIS Normalized difference vegetation index\\
+NIR2005097&	Continuous&	MODIS Band 2 (Near Infrared)\\
+RED2005097&	Continuous&	MODIS Band 1 (Red)\\
+\hline
+\end{tabular}
+\end{center}
+\caption{\label{tab:one}Predictor variables}
+\end{table}
+
+
+<<ExSetup set options,echo=FALSE>>=
+options(prompt = "R> ")
+options(width = 75)
+options(continue=" ")
+pdf("Vplots.pdf")
+@
+
+<<ExSetup set width,echo=false>>=
+options(width=60)
+@
+
+Load the \pkg{ModelMap} package.
+
+<<ExSetup load package, results=hide>>=
+library("ModelMap")
+@
+
+
+<<ExElevReadGDAL, results=hide>>=
+
+library(raster)
+elevfn <- paste(getwd(),"/VModelMapData_dem_ELEVM_250.img",sep="")
+mapgrid <- raster(elevfn)
+@
+
+<<ExElev,include=TRUE,width=4.5,height=6.5, results=hide, echo=FALSE>>=
+
+opar <- par(mar=c(4,4,3,6),xpd=NA,mgp=c(3, 2, .3))
+
+col.ramp<-terrain.colors(101)
+
+zlim <- c(1500,maxValue(mapgrid))
+legend.label<-rev(pretty(zlim,n=5))
+legend.colors<-col.ramp[trunc((legend.label/max(legend.label))*100)+1]
+legend.label<-paste(legend.label,"m",sep="")
+
+legend.label<-paste((7:3)*500,"m")
+legend.colors<-col.ramp[c(100,75,50,25,1)]
+
+image( mapgrid, 
+       col = col.ramp,
+       xlab="", ylab="", 
+       zlim=zlim,
+       asp=1, bty="n", main="")
+
+legend( x=xmax(mapgrid),y=ymax(mapgrid),
+        legend=legend.label,
+        fill=legend.colors,
+        bty="n",
+        cex=1.2)
+mtext("Elevation of Study Region",side=3,line=1,cex=1.5)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<ExElevFig,fig=TRUE, echo=FALSE, width=4.7,height=5.7>>=
+<<ExElev>>
+@
+\end{center}
+\caption{\label{fig:ExElev}Elevation of the subset of the study region used for this vignette. This is a small area located along the southeast edge of nevada, containing a portion of a small mountain range. The Projection: Universal Transverse Mercator (UTM) Zone 11, Datum: NAD83}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Set up}
+
+After installing the \pkg{ModelMap} package, find the sample data sets from the \proglang{R} installation and copy them to your working directory. The data consists of five files and is located in the vignette directory of \pkg{ModelMap}, for example, in \verb+C:\R\R-2.15.0\library\ModelMap\vignettes+.
+
+There are 5 files:
+
+\begin{tabular}{lll}
+
+ & & VModelMapData.csv\\
+ & & VModelMapData\_LUT.csv\\
+ & & VModelMapData\_dem\_ELEVM\_250.img\\
+ & & VModelMapData\_modis\_STK2005097.img\\
+ & & VModelMapData\_nlcd\_NLCD01\_250.img\\
+
+\end{tabular}
+
+Next define some of the arguments.
+
+Define training and test data file names. Note that the arguments \code{qdata.trainfn} and \code{qdata.testfn} will accept either character strings giving the file names of CSV files of data, or the data itself in the form of a data frame. 
+
+<<ExSetup Define training and test files, results=hide>>=
+qdatafn <- "VModelMapData.csv"
+qdata.trainfn <- "VModelMapData_TRAIN.csv"
+qdata.testfn  <- "VModelMapData_TEST.csv"
+@
+
+Define the output folder.
+
+<<ExSetup define folder, results=hide>>=
+folder <- getwd()
+@
+
+Split the data into training and test sets. In example 1, an independent test set is used for model validation diagnostics. The function \code{get.test()} randomly divides the original data into training and test sets. This function writes the training and test sets to the folder specified by \code{folder}, under the file names specified by \code{qdata.trainfn} and \code{qdata.testfn}. If the arguments \code{qdata.trainfn} and \code{qdata.testfn} are not included, file names will be generated by appending \code{"_train"} and \code{"_test"} to \code{qdatafn}.
+
+<<ExSetup split training and test, results=hide>>=
+get.test(       proportion.test=0.2,
+                qdatafn=qdatafn,
+                seed=42,
+                folder=folder,
+                qdata.trainfn=qdata.trainfn,
+                qdata.testfn=qdata.testfn)
+@
+
+
+Define the predictors and define which predictors are categorical. Example 1 uses five continuous predictors: the four predictor layers from the MODIS imagery plus the topographic elevation layer. As none of the chosen predictors are categorical set \code{predFactor} to \code{FALSE}.
+
+<<ExSetup Define predictors, results=hide>>=
+predList <- c( "ELEV250",
+               "NLCD01_250",
+               "EVI2005097",
+               "NDV2005097",
+               "NIR2005097",
+               "RED2005097")
+predFactor <- c("NLCD01_250")
+@
+
+Define the column that contains unique identifiers for each data point. These identifiers will be used to label the output file of observed and predicted values when running model validation. 
+
+<<Ex1 Define Identifier, results=hide>>=
+unique.rowname <- "ID"
+@
+
+Define raster look up table.
+
+<<ExSetup update raster LUT, results=hide>>=
+rastLUTfn     <- "VModelMapData_LUT.csv"
+rastLUTfn     <- read.table( rastLUTfn,
+                             header=FALSE,
+                             sep=",",
+                             stringsAsFactors=FALSE)
+rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Example 1 - Quantile Regression Forest}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Build Models}
+
+Unlike with RF and SGB models, QRF models require you decide if you are interested in variable importance before building the initial model. You also need to specify which quantiles you wish to find the variable importances for. Note: you can make predictions later for any quantile, but the variable importances will only be calculated for the quantiles you specify before building the model.
+
+Also, when working with QRF models, \pkg{ModelMap} will create two models: the QRF model, and a RF model built with from the same training data and with the same model parameters. This allows simple comparison of predicted median and predicted mean. When \code{model.type="QRF"} the \code{model.build()} function returns these models as a list with two components. This list can be used as the \code{model.obj} argument to the other \pkg{ModelMap} functions. If you wish to use functions from outside \pkg{ModelMap} on these models you can extract the individual QRF and RF models by name. For example: \code{model.obj$QRF} and \code{model.obj$RF}.
+
+<<Ex1 Define model filenames, results=hide>>=
+MODELfn.pinyon    <- "VQuantile_QRF_Pinyon"
+MODELfn.sage    <- "VQuantile_QRF_Sage"
+@
+
+<<Ex1 Define response, results=hide>>=
+response.name.pinyon <- "PINYON"
+response.name.sage <- "SAGE"
+response.type   <- "continuous"
+@
+
+<<Ex1 Create Model, results=hide>>=
+QRF.pinyon <- model.build( model.type="QRF",
+                               qdata.trainfn=qdata.trainfn,
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
+                               MODELfn=MODELfn.pinyon,
+                               predList=predList,
+                               predFactor=predFactor,
+                               response.name=response.name.pinyon,
+                               response.type=response.type,
+                               importance=TRUE, 
+                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+           
+QRF.sage <- model.build( model.type="QRF",
+                               qdata.trainfn=qdata.trainfn,
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
+                               MODELfn=MODELfn.sage,
+                               predList=predList,
+                               predFactor=predFactor,
+                               response.name=response.name.sage,
+                               response.type=response.type,
+                               importance=TRUE, 
+                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Diagnostics}
+
+<<Ex1 Model Diagnostics, results=hide>>=
+QRF.pinyon.pred <- model.diagnostics( model.obj=QRF.pinyon,
+                                      qdata.testfn=qdata.testfn,
+                                      folder=folder,           
+                                      MODELfn=MODELfn.pinyon,
+                                      unique.rowname=unique.rowname,
+                                      quantiles=c(0.1,0.5,0.9),
+                             # Model Validation Arguments
+                                      prediction.type="TEST",
+                                      device.type=c("pdf","png"),
+                                      cex=1.2)
+           
+QRF.sage.pred <- model.diagnostics( model.obj=QRF.sage,
+                                      qdata.testfn=qdata.testfn,
+                                      folder=folder,           
+                                      MODELfn=MODELfn.sage,
+                                      unique.rowname=unique.rowname,
+                                      quantiles=c(0.1,0.5,0.9),
+                              # Model Validation Arguments
+                                      prediction.type="TEST",
+                                      device.type=c("pdf","png"),
+                                      cex=1.2)
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Importance Plots}
+
+Here we will compare the variable importances from the RF model with those of the QRF model. The variable importances of QRF models are specific to each quantile. To make this comparison most aplicable, we will contrast the RF importance for the mean predictions with the QRF importances for the median predictions (50\% quantile) \mbox{(Figure \ref{fig:Ex1CompImpRF_QRF}).} 
+
+<<Ex1CompImpRF_QRF,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$RF,
+                       model.obj.2=QRF.pinyon$QRF,
+                       model.name.1="RFmean",
+                       model.name.2="QRF median",
+                       quantile.2=0.5,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                      
+Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$RF,
+                       model.obj.2=QRF.sage$QRF,
+                       model.name.1="RFmean",
+                       model.name.2="QRF median",
+                       quantile.2=0.5,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1CompImpFigRF_QRF,fig=TRUE, echo=FALSE, results=hide, width=7.5,height=7.5>>=
+<<Ex1CompImpRF_QRF>>
+@
+\end{center}
+\caption{\label{fig:Ex1CompImpRF_QRF} Comparison of variable importances between RF mean predictions and QRF median (50\% cover) predictions for Pinyon and Sage percent cover.}
+\end{figure}
+
+
+It is also possible to use the back-to-back importance plots to compare the lower and upper quantiles \mbox{(Figure \ref{fig:Ex1CompImpLow_Up}).}  This can help identify if any of the predictors are more important for predicting the low canopy cover plots versus the high canopy cover plots.
+
+
+<<Ex1CompImpLow_Up,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$QRF,
+                       model.obj.2=QRF.pinyon$QRF,
+                       model.name.1="Lower Quantile",
+                       model.name.2="Upper Quantile",
+                       quantile.1=0.1,
+                       quantile.2=0.9,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                      
+Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$QRF,
+                       model.obj.2=QRF.sage$QRF,
+                       model.name.1="Lower Quantile",
+                       model.name.2="Upper Quantile",
+                       quantile.1=0.2,
+                       quantile.2=0.8,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1CompImpFigLow_Up,fig=TRUE,echo=FALSE, results=hide, width=7.5,height=7.5>>=
+<<Ex1CompImpLow_Up>>
+@
+\end{center}
+\caption{\label{fig:Ex1CompImpLow_Up}Comparison of variable importances between QRF lower quantile  and upper quantile (10\% and 90\% cover for Pinyon and 20\% and 80\%cover for Sage). Note that the sage model is lower quality than than the Pinyon model, leading to a much broader confidence interval. This meant that the 10\% quantile predictions nearly entirely zero, all 6 of the predictor variables had negative importance values, and thus the importance graphic for the 10\% quantile was not particularly informative.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Interaction Plots}
+
+For QRF models, interaction plots can be generated for the median predicted value, as well as for individual quantiles.
+
+The \code{model.interaction.plot()} function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations over the range of both variables. The remaining predictor variables are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis. The \code{model.interaction.plot()} function was devoloped from the \code{gbm.perspec} function from the tutorial provided as appendix S3 in \citet{elith08}.
+
+The \code{model.interaction.plot()} function provides two graphical options: an image plot, and a 3-D perspective plot. These options are selected by setting \code{plot.type = "image"} or \code{plot.type = "persp"}. The \code{x} and \code{y} arguments are used to specify the predictor variables for the X and Y axis. The predictors can be specified by name, or by number, with the numbers referring to the order the variables appear in \code{predList}.
+
+The \code{pred.means} argument allows you to use a named vector to specify values for the predictors not being used as X and Y axis variables. In the example below, \code{pred.means} are set to values associated with high levels of Pinyon, as determined from the \code{model.explore()} plots. The reasoning behind this, is to see what effect the X and Y axis variables have on Pinyon cover, when the other predictors are at their ideal values (
+
+<<Ex1InteractionPlots,include=TRUE,include=TRUE,width=5,height=10, results=hide>>=
+
+pred.means <- c( ELEV250    = 2300,
+                 NLCD01_250 = 42,
+                 EVI2005097 = 1800,
+                 NDV2005097 = 3100,
+                 NIR2005097 = 2000,
+                 RED2005097 = 1000)
+
+
+opar <- par(mfrow=c(3,1),mar=c(2,3,0,2),oma=c(0,0,3,0))
+for(quantile in c(0.1,0.5,0.9)){
+     model.interaction.plot( QRF.pinyon$QRF,
+                             x="ELEV250",
+                             y="EVI2005097",
+                             main="",
+                             plot.type="persp",
+                             device.type=c("none"),
+                             MODELfn=MODELfn.pinyon,
+                             folder=paste(folder,"/interaction",sep=""),
+                             quantile=quantile,
+                             pred.means=pred.means,
+                             zlim=c(0,60))
+     mtext(paste( quantile*100,"% Quantile",sep=""),side=2,line=1,font=2,cex=1)
+}
+
+mtext("Pinyon Cover by Quantile",side=3,line=1,cex=1.8,outer=TRUE)
+par(opar)
+
+@
+
+\newgeometry{top=1cm}
+\begin{figure}
+\begin{center}
+<<Ex1InteractionPlots,fig=TRUE,echo=FALSE, results=hide, width=5,height=10,message=FALSE>>=
+<<Ex1InteractionPlots>>
+@
+\end{center}
+\caption{\label{fig:Ex1InteractionPlots}Pinyon Percent Cover - Interaction between elevation and EVI with other predictors fixed at optimum values for Pinyon.}
+\end{figure}
+\restoregeometry
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Map production}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Raster Lookup Table}
+
+The \code{model.mapmake()} uses a look up table to associate the predictor variables with the rasters. The function argument \code{rastLUTfn} will accept either a file name of the CSV file containing the table, or the data frame itself.
+
+Although in typical user applications the raster look up table must include the full path for predictor rasters, the table provided for the examples will be incomplete when initially downloaded, as the working directory of the user is unknown and will be different on every computer. This needs to be corrected by pasting the full paths to the user's working directory to the first column, using the value from \code{folder} defined above.
+
+<<Ex1 update raster LUT, results=hide>>=
+rastLUTfn     <- "VModelMapData_LUT.csv"
+rastLUTfn     <- read.table(  rastLUTfn,
+                              header=FALSE,
+                              sep=",",
+                              stringsAsFactors=FALSE)
+rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Predict Over the Rasters}
+
+<<Ex1 Produce Maps, results=hide>>=
+
+model.mapmake(  model.obj=QRF.pinyon,
+                folder=folder,           
+                MODELfn=MODELfn.pinyon,
+                rastLUTfn=rastLUTfn,
+                na.action="na.omit",
+             # Mapping arguments
+                map.sd=TRUE,
+                quantiles=c(0.1,0.5,0.9))
+            
+
+model.mapmake(  model.obj=QRF.sage,
+                folder=folder,           
+                MODELfn=MODELfn.sage,
+                rastLUTfn=rastLUTfn,
+                na.action="na.omit",
+             # Mapping arguments
+                map.sd=TRUE,
+                quantiles=c(0.1,0.5,0.9))
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{RF Map}
+
+When building QRF models, \pkg{ModelMap} creates both a QRF model and an ordinary RF model. We will start by comparing the maps of mean predicted canopy cover from the RF model \mbox{(Figure \ref{fig:Ex1RFMap})} with those of median predicted canopy cover from teh QRF model \mbox{(Figure \ref{fig:Ex1QRFMap})}. 
+
+From the RF and the QRF maps, we can see that Pinyon percent cover is higher in the mountains, while Sage percent cover is higher in the foothills at the edges of the mountains.
+
+Note that the sample map data was taken from the South Eastern edge of our study region, to illustrate how \pkg{ModelMap} deals with portions of the rectangle that fall outside of the study region. The empty wedge at lower right in the maps is the portion outside the study area. \pkg{ModelMap} uses \code{-9999} for unsampled data. When viewing maps in a GIS, a mask file can be used to hide unsampled regions, or other commands can be used to set the color for \code{-9999} values. 
+
+Since we know that percent cover can not be negative, we will set \code{zlim} to range from zero to the maximum value found in our map and define a color ramp such that zero values will display as white, shading to dark green for high values of cover.
+
+<<Ex1 define color sequence, results=hide>>=
+l <- seq(100,0,length.out=101)
+c <- seq(0,100,length.out=101)
+col.ramp <- hcl(h = 120, c = c, l = l)
+@
+
+
+%%%RF Map%%%
+<<Ex1RFMap,include=TRUE,width=7.5,height=5.7, results=hide>>=
+opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+
+mapgrid.pinyon <- raster(paste(MODELfn.pinyon,"_map_RF.img",sep=""))
+mapgrid.sage <- raster(paste(MODELfn.sage,"_map_RF.img",sep=""))
+
+zlim <- c(0,60)
+legend.label<-rev(pretty(zlim,n=5))
+legend.colors<-col.ramp[trunc((legend.label/max(legend.label))*100)+1]
+legend.label<-paste(legend.label,"%",sep="")
+
+image( mapgrid.pinyon,
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.pinyon,side=3,line=1,cex=1.2)
+image( mapgrid.sage, 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.sage,side=3,line=1,cex=1.2)
+
+legend( x=xmax(mapgrid.sage),y=ymax(mapgrid.sage),
+	    	legend=legend.label,
+		    fill=legend.colors,
+		    bty="n",
+		    cex=1.2)
+mtext("RF - Mean Percent Cover",side=3,line=1,cex=1.5,outer=T)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1RFMapFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex1RFMap>>
+@
+\end{center}
+\caption{\label{fig:Ex1RFMap}RF Maps of mean percent cover for Pinyon and Sage (RF models).}
+\end{figure}
+
+
+
+%%%QRF Median%%%
+<<Ex1QRFMap,include=TRUE,width=7.5,height=5.7, results=hide>>=
+opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+
+mapgrid.pinyon <- brick(paste(MODELfn.pinyon,"_map_QRF.img",sep=""))
+mapgrid.sage <- brick(paste(MODELfn.sage,"_map_QRF.img",sep=""))
+
+image( mapgrid.pinyon[[2]],
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.pinyon,side=3,line=1,cex=1.2)
+image( mapgrid.sage[[2]], 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.sage,side=3,line=1,cex=1.2)
+
+legend( x=xmax(mapgrid.sage),y=ymax(mapgrid.sage),
+	    	legend=legend.label,
+		    fill=legend.colors,
+		    bty="n",
+		    cex=1.2)
+mtext("QRF - Median (50% quantile) Percent Cover",side=3,line=1,cex=1.5,outer=T)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1QRFMapFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex1QRFMap>>
+@
+
+\end{center}
+\caption{\label{fig:Ex1QRFMap}Maps of median percent cover (50\% quantile) for Pinyon and Sage (QRF models).}
+\end{figure}
+
+
+
+%%%QRF Low%%%
+<<Ex1QRFMapLow,include=TRUE,width=7.5,height=5.7, results=hide>>=
+opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+
+
+image( mapgrid.pinyon[[1]],
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.pinyon,side=3,line=1,cex=1.2)
+image( mapgrid.sage[[1]], 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.sage,side=3,line=1,cex=1.2)
+
+legend( x=xmax(mapgrid.sage),y=ymax(mapgrid.sage),
+	    	legend=legend.label,
+		    fill=legend.colors,
+		    bty="n",
+		    cex=1.2)
+mtext("QRF - Lower bound (10% quantile)",side=3,line=1,cex=1.5,outer=T)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1QRFMapLowFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex1QRFMapLow>>
+@
+\end{center}
+\caption{\label{fig:Ex1QRFMapLow}Maps of Lower bound (10\% quantile) for Pinyon and Sage (QRF models).}
+\end{figure}
+
+
+
+%%%QRF Upper%%%
+<<Ex1QRFMapUp,include=TRUE,width=7.5,height=5.7, results=hide>>=
+opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+
+image( mapgrid.pinyon[[3]],
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.pinyon,side=3,line=1,cex=1.2)
+image( mapgrid.sage[[3]], 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.sage,side=3,line=1,cex=1.2)
+
+legend( x=xmax(mapgrid.sage),y=ymax(mapgrid.sage),
+	    	legend=legend.label,
+		    fill=legend.colors,
+		    bty="n",
+		    cex=1.2)
+mtext("QRF model - Upper - 90% quantile",side=3,line=1,cex=1.5,outer=T)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex1QRFMapUpFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex1QRFMapUp>>
+@
+\end{center}
+\caption{\label{fig:Ex1QRFMapUp}Maps of upper bound (90\% quantile) for Pinyon and Sage (QRF models).}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conditional Inference Forest}
+
+Conditional Inference (CF) models (from the \pkg{party} package) address two possible biases in Random Forest models. First, it has been shown that variable importance in Random Forest is biased in cases where predictor variables are different is scale (for continuous predictors) or number of categories (for factored predictors) \citep{strobl07}. Second, when predictor variables are correlated, traditional random forest will divide the importance amongst the correlated predictors, sometimes giving the impression that none of these predictors are important to the model.
+
+CF models do not preferentially select for predictors of larger scale or higher numbers of categories. And CF models have an option to calculate the conditional importance, to distinguish between predictors that are truly important to the model, and predictors that only appear important due to their correlation with other predictors.
+
+A draw back with CF models is that they are much more memory intensive than RF models. And currently if you have more than just 3 or 4 predictors, it is not possible for most desktop or laptop computers to calculate the conditional importance for more than approximately 400 data points.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Build Models}
+
+
+<<Ex1 Define model filenames, results=hide>>=
+MODELfn.pinyon    <- "VQuantile_CF_Pinyon"
+MODELfn.sage    <- "VQuantile_CF_Sage"
+@
+
+<<Ex1 Define response, results=hide>>=
+response.name.pinyon <- "PINYON"
+response.name.sage <- "SAGE"
+response.type   <- "continuous"
+@
+
+<<Ex1 Create Model, results=hide>>=
+
+  qdata<-read.csv(qdata.trainfn)
+	IS.NUM<-sapply(qdata,is.numeric)
+	qdata[,IS.NUM]<-sapply(qdata[,IS.NUM],as.numeric)
+
+CF.pinyon  <- model.build( model.type="CF",
+                               qdata.trainfn=qdata,
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
+                               MODELfn=MODELfn.pinyon,
+                               predList=predList,
+                               predFactor=predFactor,
+                               response.name=response.name.pinyon,
+                               response.type=response.type)
+           
+CF.sage  <- model.build( model.type="CF",
+                               qdata.trainfn=qdata,
+                               folder=folder,
+                               unique.rowname=unique.rowname,          
+                               MODELfn=MODELfn.sage,
+                               predList=predList,
+                               predFactor=predFactor,
+                               response.name=response.name.sage,
+                               response.type=response.type)
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Importance Plots}
+
+Here we will compare the conditional variable importances from the CF model with the unconditional importances from the ordinary RF model \mbox{(Figure \ref{fig:Ex2CompImpCF_RF}).} 
+
+<<Ex2CompImpCF_RF,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
+
+opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
+
+Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
+                       model.obj.2=QRF.pinyon$RF,
+                       model.name.1="conditional (CF)",
+                       model.name.2="unconditional (RF)",
+                       cf.conditional.1=FALSE,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Pinyon Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                      
+Imp.sage<-model.importance.plot( model.obj.1=CF.sage,
+                       model.obj.2=QRF.sage$RF,
+                       model.name.1="conditional (CF)",
+                       model.name.2="unconditional (RF)",
+                       cf.conditional.1=FALSE,
+                       sort.by="predList",
+                       predList=predList,
+                       scale.by="sum",
+                       main="Sage Percent Cover",
+                       device.type="none",
+                       cex=0.9)
+                       
+mtext("CF versus RF Variable Importance",side=3,line=0,cex=1.8,outer=TRUE)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex2CompImpFigCF_RF,fig=TRUE,echo=FALSE, results=hide, width=7.5,height=7.5>>=
+<<Ex2CompImpCF_RF>>
+@
+\end{center}
+\caption{\label{fig:Ex2CompImpCF_RF}Comparison of conditional variable importance from the CF model with unconditional importance form the RF model .}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Map production}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Predict Over the Rasters}
+
+<<Ex1 Produce Maps, results=hide>>=
+
+model.mapmake(  model.obj=CF.pinyon,
+                folder=folder,           
+                MODELfn=MODELfn.pinyon,
+                rastLUTfn=rastLUTfn,
+                na.action="na.omit"
+             )
+            
+
+model.mapmake(  model.obj=CF.sage,
+                folder=folder,           
+                MODELfn=MODELfn.sage,
+                rastLUTfn=rastLUTfn,
+                na.action="na.omit"
+             )
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{CF Map}
+
+Maps of CF models \mbox{(Figure \ref{fig:Ex2CFMap}).} 
+
+%%%CF Map%%%
+<<Ex2CFMap,include=TRUE,width=7.5,height=5.7, results=hide>>=
+opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
+
+mapgrid.pinyon <- raster(paste(MODELfn.pinyon,"_map.img",sep=""))
+mapgrid.sage <- raster(paste(MODELfn.sage,"_map.img",sep=""))
+
+zlim <- c(0,60)
+
+image( mapgrid.pinyon,
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.pinyon,side=3,line=1,cex=1.2)
+image( mapgrid.sage, 
+       col=col.ramp,
+       xlab="",ylab="",xaxt="n",yaxt="n",
+       zlim=zlim,
+       asp=1,bty="n",main="")
+mtext(response.name.sage,side=3,line=1,cex=1.2)
+
+legend( x=xmax(mapgrid.sage),y=ymax(mapgrid.sage),
+	    	legend=legend.label,
+		    fill=legend.colors,
+		    bty="n",
+		    cex=1.2)
+mtext("CF - Mean Percent Cover",side=3,line=1,cex=1.5,outer=T)
+par(opar)
+@
+
+\begin{figure}
+\begin{center}
+<<Ex2CFMapFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
+<<Ex2CFMap>>
+@
+\end{center}
+\caption{\label{fig:Ex2CFMap}RF Maps of mean percent cover for Pinyon and Sage (RF models).}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<Remove Rplots pdf, results=hide, echo=FALSE>>=
+dev.off()
+
+file.remove("Vplots.pdf")
+@
+
+%file.remove("Rplots.pdf")
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{V}
+\bibliography{QuantileModelMap}
+\end{document}

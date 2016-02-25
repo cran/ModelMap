@@ -5,6 +5,9 @@ function(	model.obj=NULL,
 		x = NULL,					# the first variable to be plotted
 		y = NULL,					# the second variable to be plotted
 		response.category=NULL,			# for categorical response, which category to show in plot 
+		quantiles=NULL,				# if QRF model, which quantile to show in plot
+		all=FALSE,					# if QRF model,
+		obs=1,					# if QRF model
 		qdata.trainfn=NULL,			# if RF model was built outside ModelMap, need to supply training data 
 		folder=NULL,				# No ending slash, to output to working dir = getwd()
 		MODELfn=NULL,
@@ -21,12 +24,19 @@ function(	model.obj=NULL,
 		smooth = "none",      			# controls smoothing of the predicted surface
 #		mask = FALSE,         			# controls masking using a sample intensity model
 		plot.type = NULL,   			# controls whether a "persp" or "image" plot is drawn
-		device.type=NULL,	# options: "default", "jpeg", "none","postscript" 
+	# Graphics Arguments
+		device.type=NULL,	
+		res=NULL,
 		jpeg.res=72,
 		device.width=7,
 		device.height=7,
+		units="in",
+		pointsize=12,
 		cex=par()$cex,
 		col=NULL,
+		xlim = NULL,
+		ylim = NULL,
+		zlim = NULL,
 		...)                  			# allows the passing of additional arguments to plotting routine
                           	 			# useful options include shade, ltheta, lphi for controlling illumination
                           	 			# and cex for controlling text size - cex.axis and cex.lab have no effect
@@ -80,31 +90,11 @@ plot.type<-switch(plot.type,	"persp"="persp",
 					"image.plot"="image",
 					"persp")
 
-### Check Device Type ###
+### Check Graphics Device Type ###
 
-if(is.null(device.type)){
-	device.type <- select.list(c("default","jpeg","none","pdf","postscript"), title="Diagnostic Output?", multiple = TRUE)
-	device.type <- c(device.type,"default")
-}
-if(length(device.type)==0 || is.null(device.type)){
-	device.type <- "default"
-}
+device.type<-check.device.type(device.type)
 
-
-device.type[device.type=="windows"]<-"default"
-if(any(!device.type%in%c("default","jpeg","none","pdf","postscript"))){
-	stop("illegal 'device.type' device types must be one or more of 'default', 'jpeg', 'pdf', or 'postscript'")
-}
-device.type<-sort(device.type)
-if("default"%in%device.type){
-	device.type<-c(device.type[device.type!="default"],"default")
-}
-
-
-if("none"%in%device.type){
-	device.type<-"none"
-}
-
+if(is.null(res)){res<-jpeg.res}
 
 ### Select Output Folder ###
 
@@ -146,70 +136,88 @@ if(is.null(model.obj)){
 
 ### Extract Model Type from model.obj ###
 
+model.type<-check.model.type(model.obj)
 
-model.type.long<-attr(model.obj,"class")
-if(is.null(model.type.long)){model.type.long <- "unknown"}
+if(model.type=="QRF"){if("QRF"%in%names(model.obj)){model.obj<-model.obj$QRF}}
 
-if("randomForest"%in%model.type.long){
-	model.type<-"RF"
+### Load modelling packages ###
+
+if(model.type=="CF"){REQUIRE.party()}
+if(model.type=="QRF"){REQUIRE.quantregForest()}
+if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
+
+if(model.type=="CF"){
+	WARN.IM<-TRUE
 }else{
-	if("gbm"%in%model.type.long){
-		model.type<-"SGB"
-	}else{
-		model.type<-"unknown"
-	}
+	WARN.IM<-FALSE
 }
-
-
-
-if(model.type=="unknown"){stop("model.obj is of unknown type")}
 
 ### Extract predList from model.obj ###
 
-if(model.type == "RF"){predList<-row.names(model.obj$importance)}
-if(model.type == "SGB"){predList<-model.obj$var.names}
-
+predList<-check.predList(model.obj=model.obj,model.type=model.type)
 n.preds <- length(predList)
   
-
 ### Extract Response Type from model.obj ###
 
-if(model.type=="RF"){
-	response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
-	if(response.type=="classification"){
-		if(identical(levels(model.obj$y),c("0","1"))){
-			response.type<-"binary"
-		}else{
-			response.type<-"categorical"}}}
-if(model.type=="SGB"){
-	response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","unknown")}
-if(response.type=="unknown"){stop("supplied model.obj has an unknown response type")}
-
+response.type<-check.response.type(model.obj=model.obj,model.type=model.type,ONEorTWO="model.obj")
 
 ### Extract Response Name from model.obj ###
 
-if(!is.null(model.obj$response)){
-	response.name<-model.obj$response
+if(model.type=="CF"){
+	if(length(model.obj@responses@variables)==1){
+		response.name <- names(model.obj@responses@variables)
+	}else{
+		stop("ModelMap does not support multivariate response")
+	}
+	#response.name <- as.character(model.obj@data@formula$response[2])
 }else{
-	response.name<-""
+	if(!is.null(model.obj$response)){
+#*#
+		response.name<-model.obj$response
+#*#
+	}else{
+		response.name<-""
+	}
 }
 
 ### check response.category ###
 
 if(response.type=="categorical"){
+	if(model.type=="RF"){ response.levels<-colnames(model.obj$votes)}
+	if(model.type=="CF"){ response.levels<-model.obj@responses@levels[[1]]}
+	if(model.type=="SGB"){response.levels<-model.obj$classes}
+
 	if(is.null(response.category)){
-		response.levels<-levels(model.obj$y)
 		response.category <- select.list(response.levels, title="Select response category.")
 		if(response.category=="" || is.null(response.category)){
 			stop("must choose response category")
 		}
 	}
+	if(!response.category%in%response.levels){
+		stop("supplied 'response.category' of ",response.category," is not one of the response categories of 'model.obj'")}
 	response.category<-as.character(response.category)
 }	
 
+### check quantiles ###
 
-
-
+if(model.type=="QRF"){
+	if(is.null(quantiles)){
+		quantiles <- select.list(c("0.01","0.10","0.50","0.90","0.99"), title="Quantile", multiple = FALSE)	
+		if(quantiles=="" || is.null(quantiles)){quantiles<-"0.50"}
+		quantiles<-as.numeric(quantiles)
+	}
+	
+	if(length(quantiles)>1){
+		warning("'quantiles' is of length greater than 1, only first element will be used",immediate. = WARN.IM )
+		quantiles<-quantiles[1]
+	}
+	
+	if(!is.numeric(quantiles)){
+		stop("'quantiles' must be a number between 0 and 1")}
+	
+	if(quantiles<=0 || quantiles>=1){
+		stop("'quantiles' must be a number between 0 and 1")}
+}
 
 ### define x labels ###
 
@@ -259,73 +267,132 @@ if(is.numeric(y)){
 
 if(is.null(ylab)){ylab <- y.name}
 
-## if RF, extract var.type and var.levels
-if(model.type=="RF"){
+## extract var.type and var.levels
+
+var.type<-NULL
+var.levels<-NULL
+
+#RF + QRF
+if(model.type=="RF" || model.type=="QRF"){
 	var.factors<-!sapply(model.obj$forest$xlevels,identical,0)
-	model.obj$var.type<-rep(0,n.preds)
-	model.obj$var.levels<-as.list(rep(0,n.preds))
+	var.type<-rep(0,n.preds)
+	var.levels<-as.list(rep(0,n.preds))
 	if( any(var.factors)){
-		model.obj$var.type[var.factors]<-sapply(model.obj$forest$xlevels[var.factors],length)
-		model.obj$var.levels[var.factors]<-model.obj$forest$xlevels[var.factors]
+		var.type[var.factors]<-sapply(model.obj$forest$xlevels[var.factors],length)
+		var.levels[var.factors]<-model.obj$forest$xlevels[var.factors]
 	}	
+}
+
+##CF
+if(model.type=="CF"){
+	inputs<-model.obj@data@get("input")
+	var.factors<-sapply(inputs,is.factor)
+	var.type<-rep(0,n.preds)
+	var.levels<-as.list(rep(0,n.preds))
+	if( any(var.factors)){
+		var.type[var.factors]<-sapply(lapply(inputs,levels),length)[var.factors]
+		var.levels[var.factors]<-lapply(inputs,levels)[var.factors]
+	}	
+}
+
+##SGB
+if(model.type=="SGB"){
+	if(!is.null(model.obj$var.type)){var.type<-model.obj$var.type}
+	if(!is.null(model.obj$var.levels)){var.levels<-model.obj$var.type}
 }
 
 ### define predictor data ###
 
-if(!is.null(model.obj$predictor.data)){
-	qdata <- model.obj$predictor.data
-}
+qdata<-NULL
 
-if(is.null(model.obj$predictor.data )){
-	if(model.type=="SGB" && !is.null(model.obj$data$x)){
-		qdata<-model.obj$data$x
-		Nrow<-length(qdata)/n.preds
-		qdata<-data.frame(matrix(qdata,Nrow,n.preds))
-		names(qdata)<-predList
-
-		for(p in (1:n.preds)[model.obj$var.type!=0]   ){
-			qdata[,p]<-factor(qdata[,p],labels=model.obj$var.levels[[p]])
-		}
+if(model.type!="CF"){
+	if(!is.null(model.obj$predictor.data)){
+		qdata <- model.obj$predictor.data
 	}else{
-		## If training data is NULL, then the user selects file from pop-up browser.
-		if (is.null(qdata.trainfn)){
-			if(.Platform$OS.type=="windows"){
-				qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
-				if(is.null(qdata.trainfn)){stop("")}
-			}else{stop("if RF model built outside of ModelMap package you must provide qdata.trainfn")}
+		if(model.type=="SGB" && !is.null(model.obj$data$x)){
+			qdata<-model.obj$data$x
+			Nrow<-length(qdata)/n.preds
+			qdata<-data.frame(matrix(qdata,Nrow,n.preds))
+			names(qdata)<-predList
+	
+			for(p in (1:n.preds)[var.type!=0]   ){
+				qdata[,p]<-factor(qdata[,p],labels=var.levels[[p]])
+			}
 		}
-
-		## Check if file name is full path or basename
-		if(is.matrix(qdata.trainfn)!=TRUE && is.data.frame(qdata.trainfn)!=TRUE){
-			if(identical(basename(qdata.trainfn),qdata.trainfn)){
-				qdata.trainfn<-file.path(folder,qdata.trainfn)}
-		}
-
-		## Read in training data
-		if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
-			qdata<-qdata.trainfn
-			qdata<-data.frame(qdata)
-		}else{
-			qdata<-read.table(file=qdata.trainfn,sep=",",header=TRUE,check.names=FALSE,as.is=TRUE)
-		}
-
-		## Extract predictor data
-		qdata<-qdata[,predList]
-
-		## apply levels to qdata
-		for(p in (1:n.preds)[model.obj$var.type!=0]   ){
-			qdata[,p]<-factor(qdata[,p],labels=model.obj$var.levels[[p]])
-		}
-	}	
+	}
 }
+
+if(model.type=="CF"){
+	qdata<-inputs
+}
+	
+if(is.null(qdata)){
+
+	## If training data is NULL, then the user selects file from pop-up browser.
+	if (is.null(qdata.trainfn)){
+		if(.Platform$OS.type=="windows"){
+			qdata.trainfn <- choose.files(caption="Select data file", filters = Filters["csv",], multi = FALSE)
+			if(is.null(qdata.trainfn)){stop("")}
+		}else{stop("if RF model built outside of ModelMap package you must provide qdata.trainfn")}
+	}
+	
+	## Check if file name is full path or basename
+	if(is.matrix(qdata.trainfn)!=TRUE && is.data.frame(qdata.trainfn)!=TRUE){
+		if(identical(basename(qdata.trainfn),qdata.trainfn)){
+			qdata.trainfn<-file.path(folder,qdata.trainfn)}
+	}
+	
+	## Read in training data
+	if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
+		qdata<-qdata.trainfn
+		qdata<-data.frame(qdata)
+	}else{
+		qdata<-read.table(file=qdata.trainfn,sep=",",header=TRUE,check.names=FALSE,as.is=TRUE)
+	}
+
+	## Extract predictor data
+	qdata<-qdata[,predList]
+
+	## apply levels to qdata
+	for(p in (1:n.preds)[var.type!=0]   ){
+		qdata[,p]<-factor(qdata[,p],labels=var.levels[[p]])
+	}
+}	
+
 
 ########################################################################################
 ############################ Actual Plot Setup Stuff ###################################
 ########################################################################################
 
+### deal with xlim vs x.range ###
+
+if(!is.null(xlim)){
+	if(!is.null(x.range)){
+		if(!identical(x.range,xlim)){stop("'x.range' and 'xlim' control the same thing, do not supply both arguments")}
+	}else{
+		x.range<-xlim
+	}
+}
+
+if(!is.null(ylim)){
+	if(!is.null(y.range)){
+		if(!identical(y.range,ylim)){stop("'y.range' and 'ylim' control the same thing, do not supply both arguments")}
+	}else{
+		y.range<-ylim
+	}
+}
+
+if(!is.null(zlim)){
+	if(!is.null(z.range)){
+		if(!identical(z.range,zlim)){stop("'z.range' and 'zlim' control the same thing, do not supply both arguments")}
+	}else{
+		z.range<-zlim
+	}
+}
+
 ### build grid of x and y values ###
 
-if(model.obj$var.type[x]==0){
+if(var.type[x]==0){
 	xaxt<-"s"
 	N.x<-50
   	if (is.null(x.range)) {
@@ -333,11 +400,11 @@ if(model.obj$var.type[x]==0){
   	}else{x.var <- seq(x.range[1],x.range[2],length = N.x)}
 }else{
 	xaxt<-"n"
-	N.x<-model.obj$var.type[x]
+	N.x<-var.type[x]
 	x.var <- as.factor(levels(qdata[,x]))
 }
 
-if(model.obj$var.type[y]==0){
+if(var.type[y]==0){
 	yaxt<-"s"
 	N.y<-50
   	if (is.null(y.range)) {
@@ -345,7 +412,7 @@ if(model.obj$var.type[y]==0){
   	}else{y.var <- seq(y.range[1],y.range[2],length = N.y)}
 }else{
 	yaxt<-"n"
-	N.y<-model.obj$var.type[y]
+	N.y<-var.type[y]
 	y.var <- as.factor(levels(qdata[,y]))
 }
 
@@ -356,7 +423,7 @@ j <- 3
 for (i in 1:n.preds) {
 	if (i != x && i != y) {
 		# find mean of continuous predictors
-		if (model.obj$var.type[i]==0) {
+		if (var.type[i]==0) {
 			m <- match(predList[i],names(pred.means))
 			if (is.na(m)) {
 				pred.frame[,j] <- mean(qdata[,i],na.rm=TRUE)
@@ -365,7 +432,7 @@ for (i in 1:n.preds) {
 			}
 		}
 		# find most common value of factored predictors #
-		if (model.obj$var.type[i]!=0) { 			
+		if (var.type[i]!=0) { 			
 			m <- match(predList[i],names(pred.means))
 			temp.table <- table(qdata[,i])
 			temp.table <- sort(temp.table,decreasing = TRUE)
@@ -378,7 +445,7 @@ for (i in 1:n.preds) {
 					stop("'pred.means' contains a value for factored predictor ",predList[i]," not found in training data")
 				}
 			}
-			pred.frame[,j] <- factor(pred.frame[,j],levels=names(temp.table))
+			pred.frame[,j] <- factor(pred.frame[,j],levels=var.levels[[i]])
 		}
 		names(pred.frame)[j] <- predList[i]
 		j <- j + 1
@@ -389,15 +456,6 @@ pred.frame<-pred.frame[,predList]
 
 
 ### form the prediction ###
-
-if(model.type=="SGB"){
-	if(is.null(model.obj$best.iter)){
-		n.trees<-model.obj$n.trees
-	}else{
-		n.trees<-model.obj$best.iter
-	}
-	prediction <- predict.gbm(model.obj,pred.frame,n.trees = n.trees, type="response")
-}
 
 if(model.type=="RF"){
 	if(response.type=="binary"){
@@ -413,12 +471,46 @@ if(model.type=="RF"){
 	}
 }
 
+if(model.type=="QRF"){
+
+	prediction<-predict(model.obj, pred.frame, quantiles=quantiles, all=all, obs=obs)
+
+}
+
+if(model.type=="CF"){
+	if(response.type=="binary"){
+		prediction<-CF.list2df(predict(model.obj, newdata=pred.frame, OOB=FALSE, type="prob"))
+		colnames(prediction)<-sapply(strsplit(colnames(prediction),paste(response.name,".",sep="")),'[',2)
+		prediction<-prediction[,2]
+	}
+
+	if(response.type=="categorical"){
+		prediction<-CF.list2df(predict(model.obj, newdata=pred.frame, OOB=FALSE, type="prob"))
+		colnames(prediction)<-sapply(strsplit(colnames(prediction),paste(response.name,".",sep="")),'[',2)
+		prediction<-prediction[,response.category]
+	}
+
+	if(response.type=="continuous"){
+		prediction<-predict(model.obj, newdata=pred.frame, OOB=FALSE)
+	}
+}
+
+if(model.type=="SGB"){
+	if(is.null(model.obj$best.iter)){
+		n.trees<-model.obj$n.trees
+	}else{
+		n.trees<-model.obj$best.iter
+	}
+	prediction <- gbm::predict.gbm(model.obj,pred.frame,n.trees = n.trees, type="response")
+}
+
+
 ### model smooth if specified ###
 
 if (smooth == "model") {
 	
 	if(any(is.factor(x.var),is.factor(y.var))){
-		warning("smoothing is not appropriate for factored predictors")}
+		warning("smoothing is not appropriate for factored predictors",immediate. = WARN.IM)}
 
 	pred.glm <- glm(prediction ~ ns(pred.frame[,1], df = 8) * ns(pred.frame[,2], df = 8), data=pred.frame,family=poisson)
 	prediction <- fitted(pred.glm)
@@ -429,6 +521,7 @@ if (smooth == "model") {
 max.pred <- max(prediction)
 cat("maximum value = ",round(max.pred,2),"\n")
 
+#print("STARTING Z.RANGE")
 if (is.null(z.range)) {
 	if (response.type == "binary" || response.type == "categorical") {
 		z.range <- c(0,1)
@@ -448,7 +541,10 @@ if (is.null(z.range)) {
 	}
 }
 
+if(z.range[2]==z.range[1]){z.range[2]<-z.range[2]+0.1}
+
 ### form the matrix ###
+#print("starting pred.matrix")
 
 	pred.matrix <- matrix(prediction,ncol=N.y,nrow=N.x)
 
@@ -456,7 +552,7 @@ if (is.null(z.range)) {
 
 if (smooth == "average") {  #apply a 3 x 3 smoothing average
 	if(any(is.factor(x.var),is.factor(y.var))){
-		warning("smoothing is not appropriate for factored predictors")}
+		warning("smoothing is not appropriate for factored predictors",immediate. = WARN.IM)}
 
 	pred.matrix.smooth <- pred.matrix
 		for (i in 2:49) {
@@ -471,7 +567,7 @@ if (smooth == "average") {  #apply a 3 x 3 smoothing average
 
 #if (mask) {
 #	mask.trees <- mask.object$gbm.call$best.trees
-#	point.prob <- predict.gbm(mask.object[[1]],pred.frame, n.trees = mask.trees, type="response")
+#	point.prob <- gbm::predict.gbm(mask.object[[1]],pred.frame, n.trees = mask.trees, type="response")
 #	point.prob <- matrix(point.prob,ncol=50,nrow=50)
 #	pred.matrix[point.prob < 0.5] <- 0.0
 #}
@@ -481,52 +577,50 @@ if (smooth == "average") {  #apply a 3 x 3 smoothing average
 ########################################################################################
 
 ### check output filename ###
-
+#print("check output filename")
 if(is.null(PLOTfn)){
 	if(is.null(MODELfn)){
 		if(response.type=="categorical"){
 			PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",response.category,"_",plot.type,"_",x.name,"_",y.name,sep="")
 		}else{
-			PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",plot.type,"_",x.name,"_",y.name,sep="")
+			if(model.type=="QRF"){
+				PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",plot.type,"_",x.name,"_",y.name,"_",quantiles,"_quantile",sep="")
+			}else{
+				PLOTfn<- paste(model.type,"_",response.type,"_",response.name,"_",plot.type,"_",x.name,"_",y.name,sep="")
+			}
 		}
 	}else{
 		if(response.type=="categorical"){
 			PLOTfn<- paste(MODELfn,"_",response.category,"_",plot.type,"_",x.name,"_",y.name,sep="")
 		}else{
-			PLOTfn<- paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,sep="")
+			if(model.type=="QRF"){
+				PLOTfn<- paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,"_",quantiles,"_quantile",sep="")
+			}else{
+				PLOTfn<- paste(MODELfn,"_",plot.type,"_",x.name,"_",y.name,sep="")
+			}
 		}
 	}
 }
 
+#print("PLOTfn:")
+#print(PLOTfn)
+
 if(identical(basename(PLOTfn),PLOTfn)){
 	PLOTfn<-file.path(folder,PLOTfn)}
 
-### loop thru devices ###
 
+### loop thru devices ###
+#print("starting loops")
 #if(!"none"%in%device.type){
 for(i in 1:length(device.type)){
 
-### Output filenames ###
+#print(paste("Loop =" i))
 
-if(device.type[i] == "jpeg"){
-	INTERACTIONfn<-paste(PLOTfn,".jpg",sep="")
-}
+### initialize graphics device ###
 
-if(device.type[i] == "pdf"){
-	INTERACTIONfn<-paste(PLOTfn,".pdf",sep="")
-}
-
-if(device.type[i] == "postscript"){
-	INTERACTIONfn<-paste(PLOTfn,".ps",sep="")
-}
-
-
-###################################################################
-
-if(device.type[i]=="default"){dev.new(width = device.width, height = device.height,  record = TRUE)}
-if(device.type[i]=="jpeg"){jpeg(filename=INTERACTIONfn,width = device.width, height = device.height, res=jpeg.res, units="in")}
-if(device.type[i]=="postscript"){postscript(file=INTERACTIONfn,width = device.width, height = device.height)}
-if(device.type[i]=="pdf"){pdf(file=INTERACTIONfn,width = device.width, height = device.height)}
+initialize.device(	PLOTfn=PLOTfn,DEVICE.TYPE=device.type[i],
+				res=res,device.width=device.width,device.height=device.height,
+				units=units,pointsize=pointsize,cex=cex)
 
 ###################################################################################
 
@@ -535,6 +629,8 @@ if (plot.type=="image") {
 	zlab<-""
 	if(response.type=="categorical"){
 		zlab<-paste("probability of", response.category)}
+	if(model.type=="QRF"){
+		zlab<-paste("prediction for ", quantiles*100, "% quantile", sep="")}
 
 
 	x.min<-min(unclass(x.var))
@@ -552,6 +648,8 @@ if (plot.type=="image") {
 	image.plot(	x = unclass(x.var), y = unclass(y.var), 
 		z = pred.matrix, zlim = z.range, 
 		xlab = xlab, ylab = ylab,
+		legend.lab=zlab, 
+		legend.line=2.5,
 		xaxs="i",yaxs="i",
 		xlim=xlim,ylim=ylim,
 		xaxt=xaxt,yaxt=yaxt,
@@ -580,17 +678,22 @@ if (plot.type=="image") {
 		for(j in 1:length(y.loc)){lines(c(xlim[1],xlim[1]-offset1),c(y.loc[j],y.loc[j])) }
 		par(xpd=FALSE)
 	}
-	par(xpd=TRUE)
-	mtext(zlab,side=4,line=4.5)
-	par(xpd=FALSE)
+	#par(xpd=TRUE)
+	#mtext(zlab,side=4,line=4.5,outer=TRUE)
+	#par(xpd=FALSE)
 }
 if(plot.type=="persp"){
 
 	zlab<-"fitted value"
 	if(response.type=="categorical"){
 		zlab<-paste("probability of", response.category)}
+	if(model.type=="QRF"){
+		zlab<-paste("prediction for ", quantiles*100, "% quantile", sep="")}
 
     	if(!any(is.factor(x.var),is.factor(y.var))){
+		xlab<-paste("\n\n",xlab,sep="")
+		ylab<-paste("\n\n",ylab,sep="")
+		zlab<-paste("\n\n",zlab,sep="")
     		persp(x=unclass(x.var), y=unclass(y.var), z=pred.matrix, zlim= z.range,      	# input vars
       		xlab = xlab, ylab = ylab, zlab = zlab,   						# labels
       		theta=theta, phi=phi, r = sqrt(10), d = 3,               			# viewing pars
@@ -634,7 +737,7 @@ if(plot.type=="persp"){
 		X2<-xlim[MM$X[a]]+0.08*PN$X[a]*(xlim[2]-xlim[1])	#outer tick
 		X3<-xlim[MM$X[a]]+0.15*PN$X[a]*(xlim[2]-xlim[1]) 	#axis values
 		X4<-xlim[MM$X[a]]+0.30*PN$X[a]*(xlim[2]-xlim[1]) 	#axis label
-		X5<-xlim[MM$X[a]]+0.4*PN$X[a]*(xlim[2]-xlim[1])  	#catagorical tag
+		X5<-xlim[MM$X[a]]+0.40*PN$X[a]*(xlim[2]-xlim[1])  	#catagorical tag
 	
 		if(is.factor(y.var)){
 			y.loc<-unclass(y.var)
@@ -660,7 +763,7 @@ if(plot.type=="persp"){
 		Y2<-ylim[MM$Y[a]]+0.08*PN$Y[a]*(ylim[2]-ylim[1])
 		Y3<-ylim[MM$Y[a]]+0.15*PN$Y[a]*(ylim[2]-ylim[1])
 		Y4<-ylim[MM$Y[a]]+0.30*PN$Y[a]*(ylim[2]-ylim[1])
-		Y5<-ylim[MM$Y[a]]+0.4*PN$Y[a]*(ylim[2]-ylim[1])
+		Y5<-ylim[MM$Y[a]]+0.40*PN$Y[a]*(ylim[2]-ylim[1])
 
 
 		ZX1<-xlim[MM$ZX[a]]
@@ -682,7 +785,7 @@ if(plot.type=="persp"){
 		VT<-persp(x=x.dloc, y=y.dloc, z=pred.matrix, zlim=z.range,      	
 		      xlab = xlab, ylab = ylab, zlab = "fitted value",     
 			theta=theta, phi=phi, r = sqrt(10), d = 3,
-		      ticktype = ticktype, mgp = c(4,1,0), xaxt=xaxt, yaxt=yaxt,axes=FALSE,...)
+		      ticktype = ticktype, mgp = c(5,1,0), xaxt=xaxt, yaxt=yaxt,axes=FALSE,...)
 
 		par(xpd=NA)
 
