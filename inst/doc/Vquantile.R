@@ -173,8 +173,10 @@ QRF.pinyon <- model.build( model.type="QRF",
                                predFactor=predFactor,
                                response.name=response.name.pinyon,
                                response.type=response.type,
-                               importance=TRUE, 
-                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+															 #importance currently unavailable for QRF
+                               #importance=TRUE, 
+                               #quantiles=c(0.1,0.2,0.5,0.8,0.9)				
+)
            
 QRF.sage <- model.build( model.type="QRF",
                                qdata.trainfn=qdata.trainfn,
@@ -185,8 +187,10 @@ QRF.sage <- model.build( model.type="QRF",
                                predFactor=predFactor,
                                response.name=response.name.sage,
                                response.type=response.type,
-                               importance=TRUE, 
-                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+															 #importance currently unavailable for QRF
+                               #importance=TRUE, 
+                               #quantiles=c(0.1,0.2,0.5,0.8,0.9)
+)
 
 
 ###################################################
@@ -216,147 +220,7 @@ QRF.sage.pred <- model.diagnostics( model.obj=QRF.sage,
 
 
 ###################################################
-### code chunk number 17: Ex1CompImpRF_QRF
-###################################################
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$RF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$RF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-
-
-###################################################
-### code chunk number 18: Ex1CompImpFigRF_QRF
-###################################################
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$RF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$RF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-
-
-###################################################
-### code chunk number 19: Ex1CompImpLow_Up
-###################################################
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$QRF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.1,
-                       quantile.2=0.9,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$QRF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.2,
-                       quantile.2=0.8,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-
-
-###################################################
-### code chunk number 20: Ex1CompImpFigLow_Up
-###################################################
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$QRF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.1,
-                       quantile.2=0.9,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$QRF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.2,
-                       quantile.2=0.8,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-
-
-###################################################
-### code chunk number 21: Ex1InteractionPlots
+### code chunk number 17: Ex1InteractionPlots
 ###################################################
 
 pred.means <- c( ELEV250    = 2300,
@@ -389,7 +253,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 22: Ex1InteractionPlots
+### code chunk number 18: Ex1InteractionPlots
 ###################################################
 
 pred.means <- c( ELEV250    = 2300,
@@ -422,7 +286,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 23: Ex1 update raster LUT
+### code chunk number 19: Ex1 update raster LUT
 ###################################################
 rastLUTfn     <- "VModelMapData_LUT.csv"
 rastLUTfn     <- read.table(  rastLUTfn,
@@ -433,7 +297,7 @@ rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 
 
 ###################################################
-### code chunk number 24: Ex1 Produce Maps
+### code chunk number 20: Ex1 Produce Maps
 ###################################################
 
 model.mapmake(  model.obj=QRF.pinyon,
@@ -457,7 +321,7 @@ model.mapmake(  model.obj=QRF.sage,
 
 
 ###################################################
-### code chunk number 25: Ex1 define color sequence
+### code chunk number 21: Ex1 define color sequence
 ###################################################
 l <- seq(100,0,length.out=101)
 c <- seq(0,100,length.out=101)
@@ -465,7 +329,7 @@ col.ramp <- hcl(h = 120, c = c, l = l)
 
 
 ###################################################
-### code chunk number 26: Ex1RFMap
+### code chunk number 22: Ex1RFMap
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -500,7 +364,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 27: Ex1RFMapFig
+### code chunk number 23: Ex1RFMapFig
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -535,7 +399,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 28: Ex1QRFMap
+### code chunk number 24: Ex1QRFMap
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -565,7 +429,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 29: Ex1QRFMapFig
+### code chunk number 25: Ex1QRFMapFig
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -595,7 +459,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 30: Ex1QRFMapLow
+### code chunk number 26: Ex1QRFMapLow
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -623,7 +487,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 31: Ex1QRFMapLowFig
+### code chunk number 27: Ex1QRFMapLowFig
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -651,7 +515,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 32: Ex1QRFMapUp
+### code chunk number 28: Ex1QRFMapUp
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -678,7 +542,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 33: Ex1QRFMapUpFig
+### code chunk number 29: Ex1QRFMapUpFig
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -705,14 +569,14 @@ par(opar)
 
 
 ###################################################
-### code chunk number 34: Ex1 Define model filenames
+### code chunk number 30: Ex1 Define model filenames
 ###################################################
 MODELfn.pinyon    <- "VQuantile_CF_Pinyon"
 MODELfn.sage    <- "VQuantile_CF_Sage"
 
 
 ###################################################
-### code chunk number 35: Ex1 Define response
+### code chunk number 31: Ex1 Define response
 ###################################################
 response.name.pinyon <- "PINYON"
 response.name.sage <- "SAGE"
@@ -720,7 +584,7 @@ response.type   <- "continuous"
 
 
 ###################################################
-### code chunk number 36: Ex1 Create Model
+### code chunk number 32: Ex1 Create Model
 ###################################################
 
   qdata<-read.csv(qdata.trainfn)
@@ -749,15 +613,17 @@ CF.sage  <- model.build( model.type="CF",
 
 
 ###################################################
-### code chunk number 37: Ex2CompImpCF_RF
+### code chunk number 33: Ex2CompImpCF_RF
 ###################################################
 
 opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
 
 Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                        model.obj.2=QRF.pinyon$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
@@ -768,8 +634,10 @@ Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                       
 Imp.sage<-model.importance.plot( model.obj.1=CF.sage,
                        model.obj.2=QRF.sage$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
@@ -783,15 +651,17 @@ par(opar)
 
 
 ###################################################
-### code chunk number 38: Ex2CompImpFigCF_RF
+### code chunk number 34: Ex2CompImpFigCF_RF
 ###################################################
 
 opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
 
 Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                        model.obj.2=QRF.pinyon$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
@@ -802,8 +672,10 @@ Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                       
 Imp.sage<-model.importance.plot( model.obj.1=CF.sage,
                        model.obj.2=QRF.sage$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
@@ -817,7 +689,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 39: Ex1 Produce Maps
+### code chunk number 35: Ex1 Produce Maps
 ###################################################
 
 model.mapmake(  model.obj=CF.pinyon,
@@ -837,7 +709,7 @@ model.mapmake(  model.obj=CF.sage,
 
 
 ###################################################
-### code chunk number 40: Ex2CFMap
+### code chunk number 36: Ex2CFMap
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -869,7 +741,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 41: Ex2CFMapFig
+### code chunk number 37: Ex2CFMapFig
 ###################################################
 opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
 
@@ -901,7 +773,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 42: Remove Rplots pdf
+### code chunk number 38: Remove Rplots pdf
 ###################################################
 dev.off()
 

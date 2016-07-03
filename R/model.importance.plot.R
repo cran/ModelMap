@@ -123,8 +123,12 @@ if(is.null(model.obj.2)){
 model.type.1<-check.model.type(model.obj.1)
 model.type.2<-check.model.type(model.obj.2)
 
-if(model.type.1=="QRF"){if("QRF"%in%names(model.obj.1)){model.obj.1<-model.obj.1$QRF}}
-if(model.type.2=="QRF"){if("QRF"%in%names(model.obj.2)){model.obj.2<-model.obj.2$QRF}}
+if(model.type.1=="QRF"){
+	stop("Importance not currently available for QRF models")
+	if("QRF"%in%names(model.obj.1)){model.obj.1<-model.obj.1$QRF}}
+if(model.type.2=="QRF"){
+	stop("Importance not currently available for QRF models")
+	if("QRF"%in%names(model.obj.2)){model.obj.2<-model.obj.2$QRF}}
 
 #############################################################################################
 ########################### Load modelling packages #########################################

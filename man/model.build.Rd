@@ -14,7 +14,7 @@ response.type = NULL, unique.rowname = NULL, seed = NULL, na.action = NULL,
 keep.data = TRUE, ntree = switch(model.type,RF=500,QRF=1000,CF=500,500),
 mtry = switch(model.type,RF=NULL,QRF=ceiling(length(predList)/3),
 CF = min(5,length(predList)-1),NULL), replace = TRUE, strata = NULL,
-sampsize = NULL, proximity = TRUE, importance=FALSE, 
+sampsize = NULL, proximity = FALSE, importance=FALSE, 
 quantiles=c(0.1,0.5,0.9), subset = NULL, weights = NULL,
 controls = NULL, xtrafo = NULL, ytrafo = NULL, scores = NULL,
 n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, 
@@ -61,9 +61,9 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{sampsize}{ Vector.  RF models.  Size(s) of sample to draw.  For classification, if \code{sampsize} is a vector of the length the number of factor levels \code{strata}, then sampling is stratified by \code{strata}, and the elements of \code{sampsize} indicate the numbers to be drawn from each strata. If argument \code{strata} is not provided, and \code{repsonse.type = "binary"} then sampling is stratified by presence/absence. If argument \code{sampsize} is not provided \code{model.build()} will use the default value from the \code{randomForest} package: \code{if (replace) nrow(data) else ceiling(.632*nrow(data))}. }
 
-  \item{proximity}{ Logical.  RF models.  Should proximity measure among the rows be calculated?}
+  \item{proximity}{ Logical.  RF models.  Should proximity measure among the rows be calculated for unsupervised models?}
 
-  \item{importance}{ Logical. QRF models. For QRF models only, importance must be specified at the time of model building. If TRUE importance of predictors is assessed at the given \code{quantiles}. Warning, on large datasets calculating QRF importances is very memory intensive and may require increasing memory limits with \code{memory.limit()}. }
+  \item{importance}{ Logical. QRF models. For QRF models only, importance must be specified at the time of model building. If TRUE importance of predictors is assessed at the given \code{quantiles}. Warning, on large datasets calculating QRF importances is very memory intensive and may require increasing memory limits with \code{memory.limit()}. NOTE: Importance currently unavailable for QRF models.}
 
    \item{quantiles}{Numeric. Used for QRF models if \code{importance=TRUE}. Specify which quantiles of response variable to use. Later importance plots can only be made for \code{quantiles} specified at the time of model building.}
 

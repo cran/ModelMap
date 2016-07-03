@@ -24,7 +24,7 @@ model.build<-function(	model.type=NULL,	# "RF", "QRF", "CF", "SGB"
 				replace=TRUE,
 				strata=NULL,
 				sampsize = NULL,
-				proximity = TRUE,
+				proximity = FALSE,
 			# QRF arguments:
 				importance=FALSE,
 				quantiles=c(0.1,0.5,0.9),
@@ -138,6 +138,8 @@ if(!response.type%in%c("continuous","binary","categorical")){
 
 if(model.type=="QRF"){
 	if(importance==TRUE){
+		warning("Importance not currently available for QRF models")
+		importance<-FALSE
 		if(any(quantiles>=1) || any(quantiles<=0)){
 			stop("quantiles must all be between 0 and 1")
 		}

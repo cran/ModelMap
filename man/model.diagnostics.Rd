@@ -130,7 +130,10 @@ If \code{response.type = "categorical"}, a confusion matrix is generated, that i
 
 }
 
-\note{If you are running cross validation diagnostics on a CF model, the model parameters will NOT automatically be passed to \code{model.diagnostics()}. For cross validation, it is the users responsibility to be certain that the CF arguments are the same in \code{model.build()} and \code{model.diagnostics()}.
+\note{
+Importance currently unavailable for QRF models.
+
+If you are running cross validation diagnostics on a CF model, the model parameters will NOT automatically be passed to \code{model.diagnostics()}. For cross validation, it is the users responsibility to be certain that the CF arguments are the same in \code{model.build()} and \code{model.diagnostics()}.
 
 Also, for some CF model parameters (\code{subset}, \code{weights}, and \code{scores}) \code{ModelMap} only provides OOB and independent test set diagnostics, and does not support cross validation diagnostics.
 

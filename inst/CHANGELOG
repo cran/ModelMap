@@ -470,3 +470,15 @@ Fixed output of model.diagnostics
 ################ ModelMap 3.3.2 02/25/16 ###########################
 
 NAMESPACE fix: added check on OS before importing 'choose.dir' and 'choose.files' 
+
+################ ModelMap 3.3.4 06/17/16 ###########################
+
+In model.build(), changed default value for 'proximity' from TRUE to FALSE.
+
+Changed quantregForest argument 'quantiles' to 'what' (change in internal code only - does not affect ModelMap function arguments)
+
+Temporarily disabled importance for QRF models, as current version of quantregForest does not support quantile importances. Will re-enable when new version of quantregForest is released.
+
+######################ModelMap 3.3.5 7/2/16 ########################
+
+RF version of QRF models now created dirrectly from QRF model by simply changing class.

@@ -12,8 +12,8 @@ Creates sophisticated models of training data and validates the models with an i
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 3.3.2\cr
-Date: \tab 2016-02-25
+Version: \tab 3.3.5\cr
+Date: \tab 2016-07-01
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, 
 and therefore it is in the public domain and not subject to copyright.\cr

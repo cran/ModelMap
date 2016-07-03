@@ -150,10 +150,11 @@ if(model.type=="QRF"){
 		if(!is.numeric(quantiles)){                stop("'quantiles' must be numbers between 0 and 1")}
 		if(any(quantiles<=0) || any(quantiles>=1)){stop("'quantiles' must be numbers between 0 and 1")}}
 
-	if("QRF"%in%names(model.obj)){imp.quantiles<-model.obj$QRF$quantiles}else{imp.quantiles<-model.obj$quantiles}
-
-	if(is.null(quantiles)){
-		if(!is.null(imp.quantiles)){quantiles<-imp.quantiles}else{quantiles<-c(.1,.5,.9)}}
+	imp.quantiles<-NULL
+#	if("QRF"%in%names(model.obj)){imp.quantiles<-model.obj$QRF$quantiles}else{imp.quantiles<-model.obj$quantiles}
+#
+#	if(is.null(quantiles)){
+#		if(!is.null(imp.quantiles)){quantiles<-imp.quantiles}else{quantiles<-c(.1,.5,.9)}}
 }
 
 #############################################################################################

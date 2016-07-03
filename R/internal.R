@@ -1153,6 +1153,7 @@ imp.extract.sgb<-function(model.obj,imp.type=NULL){
 
 imp.extract.rf<-function(model.obj,imp.type=NULL,class=NULL){
 	IMP.RF<-importance(model.obj,type=imp.type,class=class)
+	if(ncol(IMP.RF)==0){stop("Importance type ",imp.type," not available for this model")}
 	IMP.RF<-data.frame(pred=rownames(IMP.RF),imp=IMP.RF[,1])
 	IMP.RF<-IMP.RF[order(IMP.RF[,2],decreasing=FALSE),]
 	return(IMP.RF)
@@ -1410,7 +1411,6 @@ if(response.type == "categorical"){
 	CMX.out[nrow(CMX.out),2]<-MAUC
 
 	write.table(CMX.out,file=CMXfn,sep=",",row.names=FALSE,col.names = FALSE)
-
 }
 
 
@@ -1590,23 +1590,23 @@ for(i in 1:length(device.type)){
 		par(opar)
 		if(!device.type[i]%in%c("default","none")){dev.off()}
 
-		###QRF Importance plot###
-		if(!is.null(imp.quantiles)){
- 			initialize.device(	PLOTfn=paste(IMPORTANCEfn,"_QRF",sep=""),DEVICE.TYPE=device.type[i],
-							res=res,device.width=device.width,device.height=device.height,
-							units=units,pointsize=pointsize,cex=cex)
-
-			opar<-par(cex=cex)
-			if("QRF"%in%names(model.obj)){
-				quantregForest::varImpPlot.qrf(model.obj$QRF,main="Quantile Importance",cex=cex)
-			}else{
-				quantregForest::varImpPlot.qrf(model.obj,main=paste(main,"Quantile Importance"),cex=cex)
-			}
-			
-			mtext(main,side=3,line=.2,cex=1.3*cex)
-			par(opar)
-			if(!device.type[i]%in%c("default","none")){dev.off()}
-		}
+#		###QRF Importance plot###
+#		if(!is.null(imp.quantiles)){
+# 			initialize.device(	PLOTfn=paste(IMPORTANCEfn,"_QRF",sep=""),DEVICE.TYPE=device.type[i],
+#							res=res,device.width=device.width,device.height=device.height,
+#							units=units,pointsize=pointsize,cex=cex)
+#
+#			opar<-par(cex=cex)
+#			if("QRF"%in%names(model.obj)){
+#				quantregForest::varImpPlot.qrf(model.obj$QRF,main="Quantile Importance",cex=cex)
+#			}else{
+#				quantregForest::varImpPlot.qrf(model.obj,main=paste(main,"Quantile Importance"),cex=cex)
+#			}
+#			
+#			mtext(main,side=3,line=.2,cex=1.3*cex)
+#			par(opar)
+#			if(!device.type[i]%in%c("default","none")){dev.off()}
+#		}
 		###RF Importance plot###
 		if("RF"%in%names(model.obj)){
 
@@ -2478,12 +2478,12 @@ A<-list(	x=quote(qdata.x), y=quote(qdata.y),
 		#importance=TRUE,
 		#proximity=proximity,
 		mtry=mtry,
-		ntree=ntree,
+		ntree=ntree#,
 		#replace=replace,
 		#strata=strata,
 		#sampsize=sampsize,
-		importance=importance,
-		quantiles=quantiles
+		#importance=importance,
+		#quantiles=quantiles
 	)
 
 A<-A[!sapply(A, is.null)]
@@ -2524,13 +2524,13 @@ if(is.null(response.name)){
 	stop("must provide response name")}
 
 if(prediction.type=="OOB"){
-	pred<-predict(QRF,quantiles=quantiles,all=all)
+	pred<-predict(QRF,what=quantiles,all=all)
 	qdata.y<-QRF$y
 }
 if(prediction.type=="TEST"){
 	predList<-row.names(QRF$importance)
 	qdata.x<-qdata[,match(predList,names(qdata))]
-	pred<-predict(QRF, newdata=qdata.x,quantiles=quantiles,all=all)
+	pred<-predict(QRF, newdata=qdata.x,what=quantiles,all=all)
 	qdata.y<-qdata[,response.name]
 }
 
@@ -2961,16 +2961,19 @@ if(model.type=="QRF"){
 						importance=importance,
 						quantiles=quantiles)
 		#print("creating quantreg model now: calling rF.continuous")
-		RF<-rF.continuous(	qdata=qdata,
-					predList=predList,
-					response.name=response.name,
-					ntree=ntree,
-					mtry=mtry,
-					#replace=replace,
-					#strata=strata,
-					#sampsize=sampsize,
-					proximity=proximity,
-					seed=NULL)
+
+		RF<-QRF
+		class(RF) <- "randomForest"
+		#RF<-rF.continuous(	qdata=qdata,
+		#			predList=predList,
+		#			response.name=response.name,
+		#			ntree=ntree,
+		#			mtry=mtry,
+		#			#replace=replace,
+		#			#strata=strata,
+		#			#sampsize=sampsize,
+		#			proximity=proximity,
+		#			seed=NULL)
 		model.obj<-list(QRF=QRF,RF=RF)
 
 }
@@ -3437,13 +3440,16 @@ if(prediction.type!="CV"){
 									quantiles=c(quantiles,0.05,0.50,0.95),
 									all=all)
 
-			RF.cv<-rF.continuous(	qdata=qdata.train.cv,
-						predList=predList,
-						response.name=response.name,
-						ntree=ntree,
-						mtry=mtry,
-						replace=replace,
-						seed=NULL)
+
+			RF.cv<-QRF.cv
+			class(RF.cv) <- "randomForest"
+			#RF.cv<-rF.continuous(	qdata=qdata.train.cv,
+			#			predList=predList,
+			#			response.name=response.name,
+			#			ntree=ntree,
+			#			mtry=mtry,
+			#			replace=replace,
+			#			seed=NULL)
 			RFPRED.cv<-prediction.rF.continuous(prediction.type="TEST",
 								qdata=qdata.test.cv,
 								response.name=response.name,
@@ -3851,6 +3857,8 @@ if(map.sd && model.type%in%c("RF","QRF") && response.type=="continuous"){
 	map.sd<-FALSE
 }
 
+
+
 #####################################################################################
 ########################## Extract predictor names ##################################
 #####################################################################################
@@ -3962,6 +3970,7 @@ if(map.sd){
 	out.coefv <- writeStart(out.coefv, filename=extension(TMPfn.coefv,""), overwrite=TRUE, datatype=data.type)
 }
 
+
 ###############################################################################################################
 print("starting row by row predictions")
 for(r in 1:(dim(RB)[1])){
@@ -3997,6 +4006,7 @@ for(r in 1:(dim(RB)[1])){
 
 		if(!is.null(model.obj.RF)){v.pred.RF<-rep(NA,length=nrow(v))}
 	}
+
 		
 	if(any(!nonPredict)){
 		if(model.type=="RF"){
@@ -4011,6 +4021,7 @@ for(r in 1:(dim(RB)[1])){
 				}else{
 					v.pred[!nonPredict] <- as.integer(as.character(PRED))
 				}
+
 			}
 
 			if(response.type=="continuous"){
@@ -4036,7 +4047,7 @@ for(r in 1:(dim(RB)[1])){
 		}
 		if(model.type=="QRF"){
 			#v.pred[!nonPredict,,drop=FALSE] <- ###doesn't work!
-			v.pred[!nonPredict,] <- predict(model.obj.QRF, v[!nonPredict,,drop=FALSE], quantiles=quantiles)
+			v.pred[!nonPredict,] <- predict(model.obj.QRF, v[!nonPredict,,drop=FALSE], what=quantiles)
 			if(!is.null(model.obj.RF)){
 				v.pred.RF[!nonPredict] <- predict(model.obj.RF, newdata=v[!nonPredict,,drop=FALSE], OOB=FALSE, type="response")
 				writeValues(out.RF, v.pred.RF, r)
@@ -4055,6 +4066,7 @@ for(r in 1:(dim(RB)[1])){
 				}else{
 					v.pred[!nonPredict] <- as.integer(as.character(PRED))
 				}
+
 			}else{
 				v.pred[!nonPredict] <- gbm::predict.gbm(	object=model.obj,
 											newdata=v[!nonPredict,,drop=FALSE],
@@ -4090,6 +4102,7 @@ for(r in 1:(dim(RB)[1])){
 		writeValues(out.stdev, v.stdev, r)
 		writeValues(out.coefv, v.coefv, r)
 	}
+
 }
 
 ################################################################################################
@@ -4124,6 +4137,7 @@ if(map.sd){
 	out.coefv <- setMinMax(out.coefv)
 	writeRaster(out.coefv,OUTPUTfn.coefv,overwrite=TRUE,datatype=data.type)
 }
+
 
 ###clean up tmp files
 

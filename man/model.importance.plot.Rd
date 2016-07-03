@@ -153,6 +153,9 @@ For SGB models:
 The function returns a two element list: \code{IMP1} is the variable importance for \code{model.obj.1}; and, \code{IMP2} is the variable importance for \code{model.obj.2}. This is mostly intended for CF models, where calculating the conditional importance can represent a considerable time investment. For other model types it would be just as easy to recalcuate importances on the fly as needed.
 }
 
+\note{
+Importance currently unavailable for QRF models.}
+
 \references{
 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.

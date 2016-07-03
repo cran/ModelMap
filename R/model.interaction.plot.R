@@ -473,7 +473,7 @@ if(model.type=="RF"){
 
 if(model.type=="QRF"){
 
-	prediction<-predict(model.obj, pred.frame, quantiles=quantiles, all=all, obs=obs)
+	prediction<-predict(model.obj, pred.frame, what=quantiles, all=all, obs=obs)
 
 }
 

@@ -280,7 +280,7 @@ rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Build Models}
 
-Unlike with RF and SGB models, QRF models require you decide if you are interested in variable importance before building the initial model. You also need to specify which quantiles you wish to find the variable importances for. Note: you can make predictions later for any quantile, but the variable importances will only be calculated for the quantiles you specify before building the model.
+%Unlike with RF and SGB models, QRF models require you decide if you are interested in variable importance before building the initial model. You also need to specify which quantiles you wish to find the variable importances for. Note: you can make predictions later for any quantile, but the variable importances will only be calculated for the quantiles you specify before building the model.
 
 Also, when working with QRF models, \pkg{ModelMap} will create two models: the QRF model, and a RF model built with from the same training data and with the same model parameters. This allows simple comparison of predicted median and predicted mean. When \code{model.type="QRF"} the \code{model.build()} function returns these models as a list with two components. This list can be used as the \code{model.obj} argument to the other \pkg{ModelMap} functions. If you wish to use functions from outside \pkg{ModelMap} on these models you can extract the individual QRF and RF models by name. For example: \code{model.obj$QRF} and \code{model.obj$RF}.
 
@@ -305,8 +305,10 @@ QRF.pinyon <- model.build( model.type="QRF",
                                predFactor=predFactor,
                                response.name=response.name.pinyon,
                                response.type=response.type,
-                               importance=TRUE, 
-                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+															 #importance currently unavailable for QRF
+                               #importance=TRUE, 
+                               #quantiles=c(0.1,0.2,0.5,0.8,0.9)				
+)
            
 QRF.sage <- model.build( model.type="QRF",
                                qdata.trainfn=qdata.trainfn,
@@ -317,8 +319,10 @@ QRF.sage <- model.build( model.type="QRF",
                                predFactor=predFactor,
                                response.name=response.name.sage,
                                response.type=response.type,
-                               importance=TRUE, 
-                               quantiles=c(0.1,0.2,0.5,0.8,0.9))
+															 #importance currently unavailable for QRF
+                               #importance=TRUE, 
+                               #quantiles=c(0.1,0.2,0.5,0.8,0.9)
+)
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,102 +355,14 @@ QRF.sage.pred <- model.diagnostics( model.obj=QRF.sage,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Importance Plots}
 
-Here we will compare the variable importances from the RF model with those of the QRF model. The variable importances of QRF models are specific to each quantile. To make this comparison most aplicable, we will contrast the RF importance for the mean predictions with the QRF importances for the median predictions (50\% quantile) \mbox{(Figure \ref{fig:Ex1CompImpRF_QRF}).} 
-
-<<Ex1CompImpRF_QRF,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$RF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$RF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="RFmean",
-                       model.name.2="QRF median",
-                       quantile.2=0.5,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-@
-
-\begin{figure}
-\begin{center}
-<<Ex1CompImpFigRF_QRF,fig=TRUE, echo=FALSE, results=hide, width=7.5,height=7.5>>=
-<<Ex1CompImpRF_QRF>>
-@
-\end{center}
-\caption{\label{fig:Ex1CompImpRF_QRF} Comparison of variable importances between RF mean predictions and QRF median (50\% cover) predictions for Pinyon and Sage percent cover.}
-\end{figure}
-
-
-It is also possible to use the back-to-back importance plots to compare the lower and upper quantiles \mbox{(Figure \ref{fig:Ex1CompImpLow_Up}).}  This can help identify if any of the predictors are more important for predicting the low canopy cover plots versus the high canopy cover plots.
-
-
-<<Ex1CompImpLow_Up,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-Imp.pinyon<-model.importance.plot( model.obj.1=QRF.pinyon$QRF,
-                       model.obj.2=QRF.pinyon$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.1,
-                       quantile.2=0.9,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                      
-Imp.sage<-model.importance.plot( model.obj.1=QRF.sage$QRF,
-                       model.obj.2=QRF.sage$QRF,
-                       model.name.1="Lower Quantile",
-                       model.name.2="Upper Quantile",
-                       quantile.1=0.2,
-                       quantile.2=0.8,
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Percent Cover",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-@
-
-\begin{figure}
-\begin{center}
-<<Ex1CompImpFigLow_Up,fig=TRUE,echo=FALSE, results=hide, width=7.5,height=7.5>>=
-<<Ex1CompImpLow_Up>>
-@
-\end{center}
-\caption{\label{fig:Ex1CompImpLow_Up}Comparison of variable importances between QRF lower quantile  and upper quantile (10\% and 90\% cover for Pinyon and 20\% and 80\%cover for Sage). Note that the sage model is lower quality than than the Pinyon model, leading to a much broader confidence interval. This meant that the 10\% quantile predictions nearly entirely zero, all 6 of the predictor variables had negative importance values, and thus the importance graphic for the 10\% quantile was not particularly informative.}
-\end{figure}
+Importance is currently unavailable for QRF models. It will be re-enabled when the quantregForest package is updated.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Interaction Plots}
 
 For QRF models, interaction plots can be generated for the median predicted value, as well as for individual quantiles.
 
-The \code{model.interaction.plot()} function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations over the range of both variables. The remaining predictor variables are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis. The \code{model.interaction.plot()} function was devoloped from the \code{gbm.perspec} function from the tutorial provided as appendix S3 in \citet{elith08}.
+The \code{model.interaction.plot()} function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations over the range of both variables. The remaining predictor variables are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis. The \code{model.interaction.plot()} function was developed from the \code{gbm.perspec} function from the tutorial provided as appendix S3 in \citet{elith08}.
 
 The \code{model.interaction.plot()} function provides two graphical options: an image plot, and a 3-D perspective plot. These options are selected by setting \code{plot.type = "image"} or \code{plot.type = "persp"}. The \code{x} and \code{y} arguments are used to specify the predictor variables for the X and Y axis. The predictors can be specified by name, or by number, with the numbers referring to the order the variables appear in \code{predList}.
 
@@ -777,7 +693,11 @@ CF.sage  <- model.build( model.type="CF",
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Importance Plots}
 
-Here we will compare the conditional variable importances from the CF model with the unconditional importances from the ordinary RF model \mbox{(Figure \ref{fig:Ex2CompImpCF_RF}).} 
+Here we will compare the unconditional variable importances from the CF model with the unconditional importances from the ordinary RF model \mbox{(Figure \ref{fig:Ex2CompImpCF_RF}).} For conditional CF importances, change \code{cf.conditional.1} to \code{TRUE}. It is also possible to use \code{model.importance.plot()} to compare conditional and unconditional importances for a single CF model.
+
+Be aware that conditional importance will take much longer to calculate, and may fail completely if your training data has more than approximately 400 data points.
+
+Note, importances are currently unavailable for QRF models, and even the RF model built as part of a QRF model only currently has \code{imp.type} equals \code{2} (the node impurity).
 
 <<Ex2CompImpCF_RF,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
 
@@ -785,8 +705,10 @@ opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
 
 Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                        model.obj.2=QRF.pinyon$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
@@ -797,8 +719,10 @@ Imp.pinyon<-model.importance.plot( model.obj.1=CF.pinyon,
                       
 Imp.sage<-model.importance.plot( model.obj.1=CF.sage,
                        model.obj.2=QRF.sage$RF,
-                       model.name.1="conditional (CF)",
+                       model.name.1="unconditional (CF)",
                        model.name.2="unconditional (RF)",
+                       imp.type.1=1,
+                       imp.type.2=2,
                        cf.conditional.1=FALSE,
                        sort.by="predList",
                        predList=predList,
