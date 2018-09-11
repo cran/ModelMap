@@ -8,7 +8,7 @@ exportPattern(".")
 
 importFrom("graphics", "abline", "axis", "bxp", "layout", "legend", "lines", "mtext", "par", "plot", "points", "polygon")
 importFrom("grDevices", "col2rgb", "dev.new", "dev.off", "hcl", "jpeg", "palette", "pdf","png", "postscript", "rainbow", "rgb", "tiff", "trans3d")
-importFrom("stats", "as.formula", "cor", "fitted", "gaussian", "glm", "lm", "na.omit", "poisson", "sd")
+importFrom("stats", "as.formula", "cor", "fitted", "gaussian", "glm", "lm", "na.omit", "poisson", "sd", "var")
 importFrom("utils", "capture.output", "read.table", "select.list", "write.table")
 if(.Platform$OS.type == "windows"){importFrom("utils", "choose.dir", "choose.files")}
 

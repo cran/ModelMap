@@ -22,17 +22,17 @@ cex=par()$cex,...)
 
 \arguments{
 
-  \item{model.obj.1}{\code{R} model object. The model object to use for left side of barchart. The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). The model object must have the exact same predictors as \code{model.obj.2}.}
+  \item{model.obj.1}{\code{R} model object. The model object to use for left side of barchart. The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. The model object must have the exact same predictors as \code{model.obj.2}.}
 
-  \item{model.obj.2}{\code{R} model object. The model object to use for right side of barchart. The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting).The model object must have the exact same predictors as \code{model.obj.1}.}
+  \item{model.obj.2}{\code{R} model object. The model object to use for right side of barchart. The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. The model object must have the exact same predictors as \code{model.obj.1}.}
 
   \item{model.name.1}{String. Label for left side of barchart.}
 
   \item{model.name.2}{String. Label for right side of barchart.}
  
-  \item{imp.type.1}{Number. Type of importance to use for model 1. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.1 = 1}. Default for SGB models is \code{imp.type.1 = 2}.}
+  \item{imp.type.1}{Number. Type of importance to use for model 1. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.1 = 1}. }
 
-  \item{imp.type.2}{Number. Type of importance to use for model 2. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.2 = 1}. Default for SGB models is \code{imp.type.2 = 2}.}
+  \item{imp.type.2}{Number. Type of importance to use for model 2. Importance type 1 is permutation based, as described in Breiman (2001).  Importance type 2 is model based. For RF models is the decrease in node impurities attributable to each predictor variable. For SGB models, it is the reduction attributable to each variable in predicting the gradient on each iteration. Default for random forest models is \code{imp.type.2 = 1}. }
 
   \item{type.label}{Logical. Should axis labels include importance type for each side of plot.}
 
@@ -139,14 +139,6 @@ For CF models:
 For binary CF models, if{importance.type = 2}, function uses AUC-based variables importances as described by Janitza et al. (2012). Here, the area under the curve instead of the accuracy is used to calculate the importance of each variable. This AUC-based variable importance measure is more robust towards class imbalance. 
 
 Also, for CF models, if \code{cf.conditional = TRUE}, the importance of each variable is computed by permuting within a grid defined by the covariates that are associated (with 1 - p-value greater than threshold) to the variable of interest. The resulting variable importance score is conditional in the sense of beta coefficients in regression models, but represents the effect of a variable in both main effects and interactions. See Strobl et al. (2008) for details. Conditional improtance can be slow for large datasets.
-
-For SGB models:
-\tabular{lllclll}{
-	  \tab \tab  \code{response type} \tab \code{type}	\tab				\tab \tab Importance Measure \cr
-	  \tab \tab  \code{"continuous"}  \tab \code{1}		\tab permutation 		\tab \tab reduction predictive performance \cr
-	  \tab \tab  \code{"binary"}      \tab \code{1}		\tab permutation		\tab \tab reduction predictive performance \cr
-	  \tab \tab  \code{"continuous"}  \tab \code{2}		\tab gradient of loss function	\tab \tab reduction of squared error \cr
-	  \tab \tab  \code{"binary"}      \tab \code{2}		\tab gradient of loss function	\tab \tab reduction in sum of squared error }
 }
 
 \value{
@@ -159,8 +151,6 @@ Importance currently unavailable for QRF models.}
 \references{
 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
-
-Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
 
 Alexander Hapfelmeier, Torsten Hothorn, Kurt Ulm, and Carolin Strobl (2012). A New Variable Importance Measure for Random Forests with Missing Data. Statistics and Computing, http://dx.doi.org/10.1007/s11222-012-9349-1 
 
@@ -204,7 +194,6 @@ unique.rowname="ID"
 
 #file names:
 MODELfn.RF="RF_Bio_TC"				
-MODELfn.SGB="SGB_Bio_TC"
 
 #predictors:
 predList=c("TCB","TCG","TCW")	
@@ -229,30 +218,6 @@ model.obj.RF = model.build( model.type="RF",
                        response.type=response.type,
                        seed=seed
 )
-
-model.obj.SGB = model.build( model.type="SGB",
-                       qdata.trainfn=qdata.trainfn,
-                       folder=folder,		
-                       unique.rowname=unique.rowname,		
-                       MODELfn=MODELfn.SGB,
-                       predList=predList,
-                       predFactor=predFactor,
-                       response.name=response.name,
-                       response.type=response.type,
-                       seed=seed+1
-)
-
-############## Make Imortance Plot - RF vs. SGB ###################
-
-model.importance.plot(	model.obj.1=model.obj.RF, 
-			model.obj.2=model.obj.SGB, 
-			model.name.1="RF Model", 
-			model.name.2="SGB Model", 
-			scale.by="sum",
-			sort.by="predList", 
-			predList=predList,
-			main="RF verses SGB",
-			device.type="default")
 
 ########## Make Imortance Plot - RF Importance type 1 vs 2 #######
 

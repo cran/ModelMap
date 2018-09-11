@@ -17,11 +17,12 @@ model.mapmake<-function(model.obj=NULL,
 			# Mapping arguments
 				keep.predictor.brick=FALSE,	
 				map.sd=FALSE,
+
 				OUTPUTfn=NULL,
 			# QRF arguments
-				quantiles=NULL,
-			# SGB arguments
-				n.trees=NULL
+				quantiles=NULL#,
+#			# SGB arguments
+#				n.trees=NULL
 ){
 
 
@@ -74,8 +75,6 @@ if(is.null(model.obj)){
 	assign("model.obj",get(modelname))
 }
 
-
-
 #####################################################################################
 ##################### Extract Model Type from model.obj #############################
 #####################################################################################
@@ -88,24 +87,7 @@ model.type<-check.model.type(model.obj)
 
 if(model.type=="CF"){REQUIRE.party()}
 if(model.type=="QRF"){REQUIRE.quantregForest()}
-if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
-
-
-#####################################################################################
-##################### Check if map.sd and legal ###########################
-#####################################################################################
-
-if(map.sd){
-	if(!model.type%in%c("RF")){
-		if(!(model.type=="QRF" && "RF"%in%names(model.obj))){
-			warning("Standard deviation maps only available for \"RF\" models")
-			map.sd<-FALSE
-		}
-	}
-	if(response.type!="continuous"){
-		warning("Standard deviation maps only available for continuous response models")
-		map.sd<-FALSE}
-}
+#if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
 
 #####################################################################################
 ############################# Check Quantiles #######################################
@@ -149,6 +131,23 @@ response.name<-check.response.name(model.obj=model.obj,model.type=model.type,res
 #############################################################################################
 
 response.type<-check.response.type(model.obj=model.obj,model.type=model.type,ONEorTWO="model.obj")
+
+#############################################################################################
+######################## Check if map.sd and  legal ################################
+#############################################################################################
+
+
+if(map.sd){
+	if(!model.type%in%c("RF")){
+		if(!(model.type=="QRF" && "RF"%in%names(model.obj))){
+			warning("Standard deviation maps only available for \"RF\" models")
+			map.sd<-FALSE
+		}
+	}
+	if(response.type!="continuous"){
+		warning("Standard deviation maps only available for continuous response models")
+		map.sd<-FALSE}
+}
 
 #############################################################################################
 ################################ Load Libraries #############################################
@@ -271,13 +270,13 @@ if(is.null(NA.ACTION)){
 ############################# SGB + CV: check for n.trees ###################################
 #############################################################################################
 
-if(model.type=="SGB" && is.null(n.trees)){
-	if(!is.null(model.obj$best.iter)){
-		n.trees<-model.obj$best.iter
-	}else{
-		n.trees<-model.obj$n.trees
-	}
-}
+#if(model.type=="SGB" && is.null(n.trees)){
+#	if(!is.null(model.obj$best.iter)){
+#		n.trees<-model.obj$best.iter
+#	}else{
+#		n.trees<-model.obj$n.trees
+#	}
+#}
 
 
 #############################################################################################
@@ -357,13 +356,15 @@ production.prediction(	model.obj=model.obj,
 				#response.name=response.name,
 				keep.predictor.brick=keep.predictor.brick,
 				map.sd=map.sd,
+				
 				OUTPUTfn=OUTPUTfn,			#path, name, extension
 				OUTPUTfn.noext=OUTPUTfn.noext,	#path, name
 				#OUTPUTpath=OUTPUTpath,			#path
 				OUTPUTname=OUTPUTname,			#name
 				OUTPUText=OUTPUText,			#extension
-				quantiles=quantiles,
-				n.trees=n.trees)
+				quantiles=quantiles#,
+				#n.trees=n.trees
+				)
 
 #print("finished production prediction")
 #############################################################################################
@@ -378,7 +379,7 @@ if(response.type=="categorical"){
 	if(model.type=="RF"){ Ylev<-colnames(model.obj$votes)}
 	#if(model.type=="QRF"){}#not needed as QRF always continuous
 	if(model.type=="CF"){Ylev<-model.obj@responses@levels[[response.name]]}
-	if(model.type=="SGB"){Ylev<-model.obj$classes}
+	#if(model.type=="SGB"){Ylev<-model.obj$classes}
 
 	if(any(is.na(suppressWarnings(as.numeric(Ylev))))){
 		mapkey<-data.frame(row=1:length(Ylev), category=Ylev,integercode=1:length(Ylev))

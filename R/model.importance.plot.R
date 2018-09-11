@@ -136,7 +136,7 @@ if(model.type.2=="QRF"){
 
 if(model.type.1=="CF"  || model.type.2=="CF"){REQUIRE.party()}
 if(model.type.1=="QRF" || model.type.2=="QRF"){REQUIRE.quantregForest()}
-if(model.type.1=="SGB" || model.type.1=="QSGB" || model.type.2=="SGB" || model.type.2=="QSGB"){REQUIRE.gbm()}
+#if(model.type.1=="SGB" || model.type.1=="QSGB" || model.type.2=="SGB" || model.type.2=="QSGB"){REQUIRE.gbm()}
 
 #####################################################################################
 ####################### should warnings be immeadiate ###############################
@@ -219,16 +219,16 @@ if(model.type.1=="CF"){
 	IMP.1<-imp.extract.cf(	model.obj.1,imp.type=imp.type.1,mincriterion=cf.mincriterion.1, 
 					conditional=cf.conditional.1,threshold=cf.threshold.1,nperm=cf.nperm.1)
 }
-if(model.type.1=="SGB"){
-	if(is.null(imp.type.1)){imp.type.1<-2}
-	if(response.type.1=="categorical" && imp.type.1==1){
-		imp.type.1<-2
-		warning("'response.type' categorical is not yet supported for permutation importance, relative influence will be used instead",immediate.=WARN.IM)}
-	if(!is.null(class.1)){
-		warning("no class specific measure for SGB models therefore 'class.1' ignored",immediate.=WARN.IM)}
-	print(paste("imp.type.1:",imp.type.1))
-	IMP.1<-imp.extract.sgb(model.obj.1,imp.type=imp.type.1)
-}
+#if(model.type.1=="SGB"){
+#	if(is.null(imp.type.1)){imp.type.1<-2}
+#	if(response.type.1=="categorical" && imp.type.1==1){
+#		imp.type.1<-2
+#		warning("'response.type' categorical is not yet supported for permutation importance, relative influence will be used instead",immediate.=WARN.IM)}
+#	if(!is.null(class.1)){
+#		warning("no class specific measure for SGB models therefore 'class.1' ignored",immediate.=WARN.IM)}
+#	print(paste("imp.type.1:",imp.type.1))
+#	IMP.1<-imp.extract.sgb(model.obj.1,imp.type=imp.type.1)
+#}
 
 #print("IMP.1")
 #print(IMP.1)
@@ -272,16 +272,16 @@ if(model.type.2=="CF"){
 	IMP.2<-imp.extract.cf(	model.obj.2,imp.type=imp.type.2,mincriterion=cf.mincriterion.2, 
 					conditional=cf.conditional.2,threshold=cf.threshold.2,nperm=cf.nperm.2)
 }
-if(model.type.2=="SGB"){
-	if(is.null(imp.type.2)){imp.type.2<-2}
-	if(response.type.2=="categorical" && imp.type.2==1){
-		imp.type.2<-2
-		warning("'response.type' categorical is not yet supported for permutation importance, relative influence will be used instead",immediate.=WARN.IM)}
-	if(!is.null(class.2)){
-		warning("no class specific measure for SGB models therefore 'class.2' ignored",immediate.=WARN.IM)}
-	print(paste("imp.type.2:",imp.type.2))
-	IMP.2<-imp.extract.sgb(model.obj.2,imp.type=imp.type.2)
-}
+#if(model.type.2=="SGB"){
+#	if(is.null(imp.type.2)){imp.type.2<-2}
+#	if(response.type.2=="categorical" && imp.type.2==1){
+#		imp.type.2<-2
+#		warning("'response.type' categorical is not yet supported for permutation importance, relative influence will be used instead",immediate.=WARN.IM)}
+#	if(!is.null(class.2)){
+#		warning("no class specific measure for SGB models therefore 'class.2' ignored",immediate.=WARN.IM)}
+#	print(paste("imp.type.2:",imp.type.2))
+#	IMP.2<-imp.extract.sgb(model.obj.2,imp.type=imp.type.2)
+#}
 
 #print("IMP.2")
 #print(IMP.2)
@@ -345,27 +345,27 @@ if(model.type.1=="CF"){
 	}
 }
 
-if(model.type.1=="SGB"){
-	if(imp.type.1==1){
-		if(response.type.1%in%c("continuous")){
-			print("model.obj.1 is a continuous SGB model with importance measured by decrease in predictive performance with permutation")
-			IMP.MEASURE.1<-"DecPredPerf"} 
-		if(response.type.1%in%c("binary")){
-			print("model.obj.1 is a binary SGB model with importance measured by decrease in predictive performance with permutation")
-			IMP.MEASURE.1<-"DecPredPerf"}
-	}
-	if(imp.type.1==2){
-		if(response.type.1%in%c("continuous")){
-			print("model.obj.1 is a continuous SGB model with importance measured by decrease of squared error")
-			IMP.MEASURE.1<-"DecSqError"} 
-		if(response.type.1%in%c("binary")){
-			print("model.obj.1 is a binary SGB model with importance measured by decrease in sum of squared error")
-			IMP.MEASURE.1<-"DecSumSqError"}
-		if(response.type.1%in%c("categorical")){
-			print("model.obj.1 is a categorical SGB model with importance measured by decrease in sum of squared error")
-			IMP.MEASURE.1<-"DecSumSqError"}
-	}
-}
+#if(model.type.1=="SGB"){
+#	if(imp.type.1==1){
+#		if(response.type.1%in%c("continuous")){
+#			print("model.obj.1 is a continuous SGB model with importance measured by decrease in predictive performance with permutation")
+#			IMP.MEASURE.1<-"DecPredPerf"} 
+#		if(response.type.1%in%c("binary")){
+#			print("model.obj.1 is a binary SGB model with importance measured by decrease in predictive performance with permutation")
+#			IMP.MEASURE.1<-"DecPredPerf"}
+#	}
+#	if(imp.type.1==2){
+#		if(response.type.1%in%c("continuous")){
+#			print("model.obj.1 is a continuous SGB model with importance measured by decrease of squared error")
+#			IMP.MEASURE.1<-"DecSqError"} 
+#		if(response.type.1%in%c("binary")){
+#			print("model.obj.1 is a binary SGB model with importance measured by decrease in sum of squared error")
+#			IMP.MEASURE.1<-"DecSumSqError"}
+#		if(response.type.1%in%c("categorical")){
+#			print("model.obj.1 is a categorical SGB model with importance measured by decrease in sum of squared error")
+#			IMP.MEASURE.1<-"DecSumSqError"}
+#	}
+#}
 
 if(model.type.2=="RF"){
 	if(response.type.2%in%c("continuous")){
@@ -407,27 +407,27 @@ if(model.type.2=="CF"){
 	}
 }
 
-if(model.type.2=="SGB"){
-	if(imp.type.2==1){
-		if(response.type.2%in%c("continuous")){
-			print("model.obj.2 is a continuous SGB model with importance measured by decrease in predictive performance with permutation")
-			IMP.MEASURE.2<-"DecPredPerf"} 
-		if(response.type.2%in%c("binary")){
-			print("model.obj.2 is a binary SGB model with importance measured by decrease in predictive performance with permutation")
-			IMP.MEASURE.2<-"DecPredPerf"}
-	}
-	if(imp.type.2==2){
-		if(response.type.2%in%c("continuous")){
-			print("model.obj.2 is a continuous SGB model with importance measured by decrease of squared error")
-			IMP.MEASURE.2<-"DecSqError"} 
-		if(response.type.2%in%c("binary")){
-			print("model.obj.2 is a binary SGB model with importance measured by decrease in sum of squared error")
-			IMP.MEASURE.2<-"DecSumSqError"}
-		if(response.type.2%in%c("categorical")){
-			print("model.obj.2 is a categorical SGB model with importance measured by decrease in sum of squared error")
-			IMP.MEASURE.2<-"DecSumSqError"}
-	}
-}
+#if(model.type.2=="SGB"){
+#	if(imp.type.2==1){
+#		if(response.type.2%in%c("continuous")){
+#			print("model.obj.2 is a continuous SGB model with importance measured by decrease in predictive performance with permutation")
+#			IMP.MEASURE.2<-"DecPredPerf"} 
+#		if(response.type.2%in%c("binary")){
+#			print("model.obj.2 is a binary SGB model with importance measured by decrease in predictive performance with permutation")
+#			IMP.MEASURE.2<-"DecPredPerf"}
+#	}
+#	if(imp.type.2==2){
+#		if(response.type.2%in%c("continuous")){
+#			print("model.obj.2 is a continuous SGB model with importance measured by decrease of squared error")
+#			IMP.MEASURE.2<-"DecSqError"} 
+#		if(response.type.2%in%c("binary")){
+#			print("model.obj.2 is a binary SGB model with importance measured by decrease in sum of squared error")
+#			IMP.MEASURE.2<-"DecSumSqError"}
+#		if(response.type.2%in%c("categorical")){
+#			print("model.obj.2 is a categorical SGB model with importance measured by decrease in sum of squared error")
+#			IMP.MEASURE.2<-"DecSumSqError"}
+#	}
+#}
 
 #####################################################################################
 ############################ Scale Importace ########################################

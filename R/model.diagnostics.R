@@ -45,9 +45,9 @@ model.diagnostics<-function(	model.obj=NULL,
 					controls=NULL,
 					xtrafo=NULL, 
 					ytrafo=NULL,
-					scores=NULL,
-				# SGB arguments
-					n.trees=NULL
+					scores=NULL#,
+#				# SGB arguments
+#					n.trees=NULL
 ){
 
 #WARN<-NULL
@@ -128,7 +128,7 @@ model.type<-check.model.type(model.obj)
 
 if(model.type=="CF"){REQUIRE.party()}
 if(model.type=="QRF"){REQUIRE.quantregForest()}
-if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
+#if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
 
 
 #####################################################################################
@@ -148,9 +148,13 @@ if(model.type=="QRF"){
 	###quantiles###
 	if(!is.null(quantiles)){
 		if(!is.numeric(quantiles)){                stop("'quantiles' must be numbers between 0 and 1")}
-		if(any(quantiles<=0) || any(quantiles>=1)){stop("'quantiles' must be numbers between 0 and 1")}}
-
+		if(any(quantiles<=0) || any(quantiles>=1)){stop("'quantiles' must be numbers between 0 and 1")}
+	}else{
+		quantiles<-c(0.1,0.5,0.9)
+	}
+	
 	imp.quantiles<-NULL
+
 #	if("QRF"%in%names(model.obj)){imp.quantiles<-model.obj$QRF$quantiles}else{imp.quantiles<-model.obj$quantiles}
 #
 #	if(is.null(quantiles)){
@@ -189,8 +193,8 @@ if (is.null(prediction.type)){
 		prediction.type <- select.list(c("TEST","CV","OOB"), title="Select prediction type.")}
 	if(model.type=="CF"){
 		prediction.type <- select.list(c("TEST","CV","OOB"), title="Select prediction type.")}
-	if(model.type=="SGB"){
-		prediction.type <- select.list(c("TEST","CV","TRAIN"), title="Select prediction type.")}
+#	if(model.type=="SGB"){
+#		prediction.type <- select.list(c("TEST","CV","TRAIN"), title="Select prediction type.")}
 }
 
 if(prediction.type=="" || is.null(prediction.type)){
@@ -198,8 +202,8 @@ if(prediction.type=="" || is.null(prediction.type)){
 if(prediction.type=="TRAIN"){
 	warning("predictions will be made made on the training data and will yeild unrealistic accuracy estimates with regard to independant data",immediate. = WARN.IM)}
 
-if(model.type=="SGB" && prediction.type=="OOB"){
-	stop("'OOB' predictions not available for 'SGB' models")}
+#if(model.type=="SGB" && prediction.type=="OOB"){
+#	stop("'OOB' predictions not available for 'SGB' models")}
 
 if(model.type%in%c("RF","QRF","CF") && prediction.type=="TRAIN"){
 	stop("'TRAIN' predictions not available for 'RF' models")}
@@ -725,20 +729,20 @@ if(is.null(res)){res<-jpeg.res}
 
 #print("check n.trees")
 
-if(model.type=="SGB"){
-	if(is.null(n.trees)){
-		if(!is.null(model.obj$best.iter)){
-			n.trees<-model.obj$best.iter
-		}else{
-			n.trees<-model.obj$n.trees
-		}
-	}
-	#if(!is.null(model.obj$nTrain)){
-	#	nTrain <- model.obj$nTrain
-	#}else{
-	#	nTrain <- length(model.obj$train.error)
-	#}
-}
+#if(model.type=="SGB"){
+#	if(is.null(n.trees)){
+#		if(!is.null(model.obj$best.iter)){
+#			n.trees<-model.obj$best.iter
+#		}else{
+#			n.trees<-length(gbm:::trees(model.obj))
+#		}
+#	}
+#	#if(!is.null(model.obj$nTrain)){
+#	#	nTrain <- model.obj$nTrain
+#	#}else{
+#	#	nTrain <- length(model.obj$train.error)
+#	#}
+#}
 
 
 #############################################################################################
@@ -785,10 +789,10 @@ PRED <- prediction.model(		model.obj=model.obj,
 						controls=controls,
 						xtrafo=xtrafo, 
 						ytrafo=ytrafo,
-						scores=NULL,
+						scores=NULL#,
 
 					# SGB arguments
-						n.trees=n.trees
+					#	n.trees=n.trees
 						)
 
 ###if na.action="na.roughfix" must turn estimated responses back to NA
@@ -797,22 +801,37 @@ PRED <- prediction.model(		model.obj=model.obj,
 ######################### Correlation plot ##################################################
 #############################################################################################
 
-if(DFLAG){qdata.corr<-qdata[,diagnostic.flag]}else{qdata.corr<-qdata}
+#subset out flagged data
+if(DFLAG){qdata.corr<-qdata[qdata[,diagnostic.flag],]}else{qdata.corr<-qdata}
 
-correlation.function(	qdata=qdata.corr,
-				predList=predList,
-				predFactor=predFactor,
-				MODELpredfn=MODELpredfn,
+#remove continuous predictors with variance of zero
 
-				device.type=device.type,
-				res=res,
-				device.width=device.width,
-				device.height=device.height,
-				units=units,
-				pointsize=pointsize,
-				cex=cex	
-				)
+predCont <- predList[!predList%in%predFactor]
 
+if(length(predCont)>=2){
+	predVar<-apply(qdata.corr[,predCont],2,var)
+	predZeroVar<-predCont[predVar==0]
+	if(length(predZeroVar>0)){
+		warning("continuous predictors ",paste(predZeroVar,collapse=", ")," have standard deviation of zero and are not included in correlation plot")
+		predCont<-predCont[!predCont%in%predZeroVar]
+	}
+
+	if(length(predCont)>=2){
+		correlation.function(	qdata=qdata.corr,
+						predList=predCont,
+						predFactor=predFactor,
+						MODELpredfn=MODELpredfn,
+
+						device.type=device.type,
+						res=res,
+						device.width=device.width,
+						device.height=device.height,
+						units=units,
+						pointsize=pointsize,
+						cex=cex	
+					   )
+	}
+}
 
 #############################################################################################
 ########################### If DFLAG=T remove unused rows ###################################

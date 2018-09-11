@@ -16,15 +16,12 @@ mtry = switch(model.type,RF=NULL,QRF=ceiling(length(predList)/3),
 CF = min(5,length(predList)-1),NULL), replace = TRUE, strata = NULL,
 sampsize = NULL, proximity = FALSE, importance=FALSE, 
 quantiles=c(0.1,0.5,0.9), subset = NULL, weights = NULL,
-controls = NULL, xtrafo = NULL, ytrafo = NULL, scores = NULL,
-n.trees = NULL, shrinkage = 0.001, interaction.depth = 10, 
-bag.fraction = 0.5, train.fraction = NULL, nTrain = NULL,
-n.minobsinnode = 10, var.monotone = NULL)
+controls = NULL, xtrafo = NULL, ytrafo = NULL, scores = NULL) 
 }
 
 \arguments{
 
-  \item{model.type}{ String.  Model type.  \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting).  }
+  \item{model.type}{ String.  Model type.  \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. }
 
   \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -73,33 +70,11 @@ If both \code{predList = NULL} and \code{rastLUT = NULL}, then a GUI interface p
 
   \item{controls}{CF models. An object of class \code{\link[party]{ForestControl-class}}, which can be obtained using cforest_control (and its convenience interfaces cforest_unbiased and cforest_classical). If \code{controls} is specified, then stand alone arguments \code{mtry} and \code{ntree} ignored and these parameters must be specified as part of the \code{controls} argument. If \code{controls} not specified, \code{model.build} defaults to \code{cforest_unbiased(mtry=mtry, ntree=ntree)} with the values of \code{mtry} and \code{ntree} specified by the stand alone arguments.}
 
-  \item{xtrafo}{CF models. A function to be applied to all input variables. By default, the \code{\link[party]{ptrafo}} function is applied. Defaults to \code{xtrafo=ptrafo}.}
+  \item{xtrafo}{CF models. A function to be applied to all input variables. By default, the \code{ptrafo} function from the \code{party} package is applied. Defaults to \code{xtrafo=ptrafo}.}
 
-  \item{ytrafo}{CF models. A function to be applied to all response variables. By default, the \code{\link[party]{ptrafo}} function is applied.  Defaults to \code{ytrafo=ptrafo}.}
+  \item{ytrafo}{CF models. A function to be applied to all response variables. By default, the \code{ptrafo} function from the \code{party} package is applied. Defaults to \code{ytrafo=ptrafo}.}
 
   \item{scores}{CF models. An optional named list of scores to be attached to ordered factors. Note: \code{weights} is not supported for cross validation diagnostics.}
-
-  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. 
-
-For \code{response.type="binary"} and \code{"continuous"}, \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.}. 
-
-For \code{response.type="categorical"} the \code{gbm} package has a bug, preventing the use of the function \code{gbm.more}, therefore if \code{n.trees} is not provided, the default is to build a model with 5000 trees. If the best number of trees is within 90% of the total number of trees, a warning is generated suggesting increasing \code{n.trees}.
-
-If \code{n.trees} is given and \code{train.fraction} is less than 1, then the SGB model is built with the given number of trees, and the best number of trees is calculated with \code{gbm} \code{method="test"}. }
-
-  \item{shrinkage}{ Numeric. SGB models.  A shrinkage parameter applied to each tree in the expansion. Also known as the learning rate or step-size reduction. }
-
-  \item{interaction.depth}{ Integer.  SGB models.  The maximum depth of variable interactions. \code{interaction.depth = 1} implies an additive model, \code{interaction.depth = 2} implies a model with up to 2-way interactions, etc... }
-
-  \item{bag.fraction}{ Numeric.  SGB models.  \code{ bag.fraction} must be a number between \code{0} and \code{1}, giving the fraction of the training set observations randomly selected to propose the next tree in the expansion.  This introduces randomnesses into the model fit. If \code{ bag.fraction < 1} then running the same model twice will result in similar but different fits. }
-
-  \item{train.fraction}{ Numeric.  SGB models.  The first \code{ train.fraction * nrows(data)} observations are used to fit the model and the remainder are used for computing out-of-sample estimates of the loss function. Deprecated. }
-
-  \item{nTrain}{ Numeric.  SGB models.  An integer representing the number of cases on which to train. This is the preferred way of specification; The option \code{train.fraction} is deprecated and only maintained for backward compatibility. These two parameters are mutually exclusive. If both are unspecified, all data is used for training.}
-
-  \item{n.minobsinnode}{ Integer.  SGB models.  Minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight. }
-
-  \item{var.monotone}{ String.  SGB models.  an optional vector, the same length as the number of predictors, indicating which variables have a monotone increasing (+1), decreasing (-1), or arbitrary (0) relationship with the outcome. }
 }
 
 \details{
@@ -112,7 +87,7 @@ These functions can be run in a traditional R command mode, where all arguments 
 
 When running the \code{ModelMap} package on non-Windows platforms, file names and folders need to be specified in the argument list, but other pushbutton selections are handled by the \code{select.list()} function, which is platform independent. 
 
-Binary, categorical, and continuous response models are supported for Random Forest, Conditional Forest, and Stochastic Gradient Boosting. Quantile Random Forest is appropriate for only continuous response models.
+Binary, categorical, and continuous response models are supported for Random Forest and Conditional Forest. Quantile Random Forest is appropriate for only continuous response models.
 
 Random Forest is implemented through the \code{randomForest} package within \code{R}.  Random Forest is more user friendly than Stochastic Gradient Boosting, as it has fewer parameters to be set by the user, and is less sensitive to tuning of these parameters.  A Random Forest model consists of multiple trees that vote on predictions.  For each tree a random subset of the training data is used to construct the tree, with the remaining data points used to construct out-of-bag (OOB) error estimates.  At each node of the tree a random selection of predictors is chosen to determine the split.  The number of predictors used to select the splits (argument \code{mtry}) is the primary user specified parameter that can affect model performance.  
 
@@ -124,15 +99,9 @@ Quantile Regression Forests is implemented through the \code{quantregForest} pac
 
 Conditional Forests is implemented with the \code{cforest()} function in the \code{party} package. As stated in the \code{party} package, ensembles of conditional inference trees have not yet been extensively tested, so this routine is meant for the expert user only and its current state is rather experimental.
 
-For CF models, \code{ModelMap} currently only supports binary, categorical and continuous response models. Also, for some CF model parameters (\code{subset}, \code{weights}, and \code{scores}) \code{MOdelMap} only provides OOB and independent test set diagnostics, and does not support cross validation diagnostics.
+For CF models, \code{ModelMap} currently only supports binary, categorical and continuous response models. Also, for some CF model parameters (\code{subset}, \code{weights}, and \code{scores}) \code{ModelMap} only provides OOB and independent test set diagnostics, and does not support cross validation diagnostics.
 
-Stochastic gradient boosting (Friedman 2001, 2002), is related to both boosting and bagging.  Many small classification or regression trees are built sequentially from "pseudo"-residuals (the gradient of the loss function of the previous tree). 
-
-At each iteration, a tree is built from a random sub-sample of the dataset (selected without replacement) and an incremental improvement in the model.  Using only a fraction of the training data increases both the computation speed and the prediction accuracy, while also helping to avoid over-fitting the data.  An advantage of stochastic gradient boosting is that it is not necessary to pre-select or transform predictor variables.  It is also resistant to outliers, as the steepest gradient algorithm emphasizes points that are close to their correct classification.  Stochastic gradient boosting is implemented through the \code{gbm} package within \code{R}.  
-
-One disadvantage of Stochastic Gradient Boosting, compared to Random Forest, is increased number of user specified parameters, and the SGB models tend to be more sensitive to these parameters.  Model fitting parameter options include distribution, interaction depth, bagging fraction, shrinkage rate, and training fraction.  These parameters can be set in the argument list when calling \code{model.map()}.  Values for these parameters other than the defaults can not be set by point and click in the GUI pop up windows, and must be set in the argument list when calling \code{model.build()}.  Friedman (2001, 2002) and Ridgeway (1999) provide guidelines on appropriate settings for model fitting options.
-
-Also, unlike Random Forest models, in Stochastic Gradient Boosting, there is a penalty for using too many trees. The default behavior in \code{model.map()} is to increase the number of trees 100 at a time until the model stops improving, then call the \code{gbm} subfunction \code{gbm.perf(method="OOB")} to select the best number of iterations. Alternatively, the \code{model.build()} argument \code{ntrees} can be used to set some large number of trees to be calculated all at once and, again, the \code{gbm.perf(method="OOB")} function will be used to select the best number of trees. Note that the \code{gbm} package warns that \code{"OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive."} The \code{gbm} package offers two alternative techniques for calculating the best number of trees, but these are not yet implemented in the \code{ModelMap} package, as they require the use of a formula interface for model building. 
+Stochastic gradient boosting is not currently supported by \code{ModelMap}. 
 }
 
 \value{
@@ -145,10 +114,6 @@ The function will return the model object. Additionally, it will write a text fi
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
 
 Elith, J., Leathwick, J. R. and Hastie, T. (2008). A working guide to boosted regression trees. Journal of Animal Ecology. 77:802-813.
-
-Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
-
-Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(4):367-378.
 
 Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 

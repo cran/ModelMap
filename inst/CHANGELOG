@@ -479,6 +479,21 @@ Changed quantregForest argument 'quantiles' to 'what' (change in internal code o
 
 Temporarily disabled importance for QRF models, as current version of quantregForest does not support quantile importances. Will re-enable when new version of quantregForest is released.
 
-######################ModelMap 3.3.5 7/2/16 ########################
 
-RF version of QRF models now created dirrectly from QRF model by simply changing class.
+################ ModelMap 3.3.6 01/31/17 ###########################
+
+fixed bug where ‘response.type’ wasn't properly defined when running ‘model.mapmake()’ with ‘map.sd=TRUE’
+
+fixed bug where default quantiles weren't found when ‘quantiles’ argument to ‘model.dignostics()’ was not specified
+
+fixed bug in model.diagnostics() that crashed at corrplot if diagnostic.flag was used.
+
+################ ModelMap 3.3.7 08/31/18 ###########################
+
+fixed bug in model.diagnostics() that crashed at corrplot if model contained only factored preditors.
+
+################ ModelMap 3.4.0 09/10/18 ###########################
+
+added latin-1 encoding to vignettes
+
+disabled SGB models (until when and if the gbm package is no longer orphaned).

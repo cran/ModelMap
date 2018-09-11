@@ -1,9 +1,9 @@
 citHeader("To cite package 'ModelMap' in publications use:")
 
 citEntry(	entry="Manual",
-  		title = "ModelMap: Modeling and Map production using Random Forest and Stochastic Gradient Boosting",
+  		title = "ModelMap: Modeling and Map Production using Random Forest and Related Stochastic Models",
   		author = personList(as.person("Elizabeth Freeman"),as.person("Tracey Frescino")),
- 	 	year = "2009",
+ 	 	year = "2018",
   		organization = "USDA Forest Service, Rocky Mountain Research Station",
   		address      = "507 25th street, Ogden, UT, USA",
   		note         = "eafreeman@fs.fed.us",

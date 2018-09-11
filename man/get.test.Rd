@@ -23,7 +23,7 @@ qdata.testfn = paste(strsplit(qdatafn, split = ".csv")[[1]], "_test.csv", sep = 
 This function should be run once, before starting analysis to create training and test sets. If the cross validation option is to be used with RF or SGB models, or if the OOB option is to be used for RF models, then this step is unnecessary. 
 }
 \value{
-Outputs a training data file and test data file. Unless \code{qdata.trainfn} or \code{qdata.testfn} are specified, the output will be located in the same folder as the original data file (qdatafn). The output will have the same rows and columns as the original data.
+Outputs a training data file and test data file. Unless \code{qdata.trainfn} or \code{qdata.testfn} are specified, the output will be located in \code{folder}. The output will have the same rows and columns as the original data.
 }
 
 \author{ Elizabeth Freeman }

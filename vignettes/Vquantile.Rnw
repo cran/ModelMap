@@ -10,6 +10,8 @@
 %% packages for paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\usepackage[latin1]{inputenc}
+
 \usepackage[round]{natbib}
 \bibliographystyle{abbrvnat}
 
@@ -22,6 +24,8 @@
 \usepackage{rotating}
 %\usepackage{epstopdf}
 \usepackage{pdflscape}
+
+\usepackage[latin1]{inputenc}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% declarations for vignette

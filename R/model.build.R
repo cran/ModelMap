@@ -34,16 +34,16 @@ model.build<-function(	model.type=NULL,	# "RF", "QRF", "CF", "SGB"
 				controls = NULL,
 				xtrafo = NULL, 
 				ytrafo = NULL, 
-				scores = NULL,
-			# SGB arguments:
-				n.trees=NULL,                 	# number of trees
-				shrinkage=0.001,   	      # shrinkage or learning rate,
-                  	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
-				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				train.fraction = NULL,       	# fraction of data for training,
-				nTrain = NULL,
-                  	n.minobsinnode = 10,        	# minimum total weight needed in each node
-				var.monotone = NULL
+				scores = NULL#,
+#			# SGB arguments:
+#				n.trees=NULL,                 	# number of trees
+#				shrinkage=0.001,   	      # shrinkage or learning rate,
+#                 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
+#				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
+#				train.fraction = NULL,       	# fraction of data for training,
+#				nTrain = NULL,
+#                 	n.minobsinnode = 10,        	# minimum total weight needed in each node
+#				var.monotone = NULL
 
 ){
 
@@ -86,12 +86,16 @@ if(.Platform$OS.type=="windows"){
 
 
 if(is.null(model.type)){
-	model.type <- select.list(c("RF","QRF","CF","SGB"), title="Select model type.")}
+	#model.type <- select.list(c("RF","QRF","CF","SGB"), title="Select model type.")}
+	model.type <- select.list(c("RF","QRF","CF"), title="Select model type.")}
+
 if(model.type=="" || is.null(model.type)){
 	stop("'model.type' needed")}
 
-if(!model.type%in%c("RF","QRF","CF","SGB")){
-	stop("ModelMap currently supports only RF and SGB for 'model.type'")}
+#if(!model.type%in%c("RF","QRF","CF","SGB")){
+#	stop("ModelMap currently supports only RF QRF CF and SGB for 'model.type'")}
+if(!model.type%in%c("RF","QRF","CF")){
+	stop("ModelMap currently supports only RF QRF and CF for 'model.type'")}
 
 
 #############################################################################################
@@ -100,7 +104,7 @@ if(!model.type%in%c("RF","QRF","CF","SGB")){
 
 if(model.type=="CF"){REQUIRE.party()}
 if(model.type=="QRF"){REQUIRE.quantregForest()}
-if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
+#if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
 
 #####################################################################################
 ####################### should warnings be immeadiate ###############################
@@ -123,13 +127,13 @@ if(response.type=="" || is.null(response.type)){
 	stop("'response.type' needed")}	
 
 #if(response.type=="categorical" && model.type=="SGB"){
-#	stop("categorical response only supported for Random Forest models")}
+#	stop("gbm package no longer supports categorical response, consider a Random Forest model")}
 
 if(response.type!="continuous" && model.type=="QRF"){
 	stop("Quantile Regression Random Forest models only available for continuous response")}
 
 if(!response.type%in%c("continuous","binary","categorical")){
-	stop("ModelMap currently supports only continuous binary and categorical for 'response.type'")}
+	stop("ModelMap currently supports only 'continuous' 'binary' and 'categorical' for 'response.type'")}
 
 
 #############################################################################################
@@ -182,7 +186,7 @@ if(is.null(folder)){
 #############################################################################################
 ############################# Generate Output File Names ####################################
 #############################################################################################
-
+#print(paste("A: MODELfn =",MODELfn))
 
 #print(paste("folder =", folder))
 
@@ -190,8 +194,12 @@ if(is.null(folder)){
 if(is.null(MODELfn)){
 	MODELfn<- paste(model.type,"_",response.type,"_",response.name,sep="")}
 
+#print(paste("B: MODELfn =",MODELfn))
+
 if(identical(basename(MODELfn),MODELfn)){
 	MODELfn<-file.path(folder,MODELfn)}
+
+#print(paste("C: MODELfn =",MODELfn))
 	
 #############################################################################################
 ###################################### Load Data ############################################
@@ -453,18 +461,18 @@ if(any(NA.pred)){
 ##################### SGB models: check nTrain vs train.fraction ############################
 #############################################################################################
 
-if(model.type=="SGB"){
-    if (!is.null(nTrain) && !is.null(train.fraction)) {
-        stop("parameters 'nTrain' and 'train.fraction' cannot both be specified")
-    }
-    else if (!is.null(train.fraction)) {
-        warning("parameter 'train.fraction' of gbm.fit is deprecated please specify 'nTrain' instead", immediate. = WARN.IM)
-        nTrain <- floor(train.fraction * nrow(qdata))
-    }
-    else if (is.null(nTrain)) {
-        nTrain <- nrow(qdata)
-    }
-}
+#if(model.type=="SGB"){
+#    if (!is.null(nTrain) && !is.null(train.fraction)) {
+#        stop("parameters 'nTrain' and 'train.fraction' cannot both be specified")
+#    }
+#    else if (!is.null(train.fraction)) {
+#        warning("parameter 'train.fraction' of gbm.fit is deprecated please specify 'nTrain' instead", immediate. = WARN.IM)
+#        nTrain <- floor(train.fraction * nrow(qdata))
+#    }
+#    else if (is.null(nTrain)) {
+#        nTrain <- nrow(qdata)
+#    }
+#}
 
 #print("nrow(qdata):")
 #print(nrow(qdata))
@@ -541,26 +549,26 @@ if (model.type=="CF"){
 }
 
 
-if(model.type=="SGB"){
-	model.obj<-create.model(qdata=qdata,
-					model.type=model.type,		
-					folder=FALSE,		
-					predList=predList,
-					response.name=response.name,
-					response.type=response.type,				
-					seed=NULL,
-					keep.data=keep.data,
-	
-				# SGB arguments:
-					n.trees=n.trees,            	
-					shrinkage=shrinkage,   	      
-                  		interaction.depth=interaction.depth,	
-					bag.fraction=bag.fraction,
-					nTrain=nTrain,          	
-					#train.fraction=train.fraction,       	
-                  		n.minobsinnode=n.minobsinnode,
-					var.monotone = var.monotone)	
-}	
+#if(model.type=="SGB"){
+#	model.obj<-create.model(qdata=qdata,
+#					model.type=model.type,		
+#					folder=FALSE,		
+#					predList=predList,
+#					response.name=response.name,
+#					response.type=response.type,				
+#					seed=NULL,
+#					keep.data=keep.data,
+#	
+#				# SGB arguments:
+#					n.trees=n.trees,            	
+#					shrinkage=shrinkage,   	      
+#                  		interaction.depth=interaction.depth,	
+#					bag.fraction=bag.fraction,
+#					nTrain=nTrain,          	
+#					#train.fraction=train.fraction,       	
+#                  		n.minobsinnode=n.minobsinnode,
+#					var.monotone = var.monotone)	
+#}	
 
 #############################################################################################
 ################# add a copy of the predictor data to the model object ######################
@@ -626,10 +634,12 @@ if(is.matrix(qdata.trainfn)==TRUE || is.data.frame(qdata.trainfn)==TRUE){
 A$datestamp<-Sys.time()
 A<-A[c(length(A),1:(length(A)-1))]
 
+#print(paste("D: MODELfn =",MODELfn))
 #print(paste("ARGfn =",ARGfn))
+#print(A)
 
 
-capture.output(print(A),file=ARGfn)
+capture.output(print(A),file=ARGfn, append=FALSE)
 
 #############################################################################################
 #################################### Return Model Object ####################################

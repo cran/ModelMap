@@ -9,11 +9,11 @@
 \usage{
 model.mapmake(model.obj= NULL, folder = NULL, MODELfn = NULL, 
 rastLUTfn = NULL, na.action = NULL, na.value=-9999, keep.predictor.brick=FALSE, 
-map.sd = FALSE, OUTPUTfn = NULL, quantiles=NULL, n.trees = NULL)
+map.sd = FALSE, OUTPUTfn = NULL, quantiles=NULL)
 }
 
 \arguments{
-  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
+  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. }
 
   \item{folder}{ String.  The folder used for all output from predictions and/or maps.  Do not add ending slash to path string.  If \code{folder = NULL} (default), a GUI interface prompts user to browse to a folder.  To use the working directory, specify \code{folder = getwd()}.}
 
@@ -46,6 +46,8 @@ The names of the additional maps default to:
 	  \tab \tab \tab \code{folder/model.type_response.type_response.name_coefv.img} }
 }
 
+
+
   \item{OUTPUTfn}{ String.  Map Production.  Filename of output file for map production.  The filename can be the full path, or it can be the simple basename, in which case the output will be to the folder specified by \code{folder}. If \code{OUTPUTfn = NULL} (the default), a name is created by pasting \code{modelfn} and \code{"_map"}. 
 
 The \code{raster} package uses the filename extension to determine the output format of the map object. See  the \code{raster} package function \code{\link{writeFormats}} for a list of valid write formats. Because of this, only use the \code{"."} in output filenames if it is indicating a valid file extension.
@@ -55,9 +57,6 @@ If the output filename does not include an extension, the default extension of \
 For continuous random forest models with \code{map.sd = TRUE} then \code{OUTPUTfn} is also used to create output file names for maps of the mean, standard deviation and coeficient of variation of all the trees predictions for each pixel.}
 
  \item{quantiles}{ Numeric Vector.  QRF models.  The quantiles to predict. A numeric vector with values between zero and one. The quantile map output will be a multilayer raster with one layer for each quantile. If \code{model.obj} was created with the \code{ModelMap} package, there will also be a single layer outputraster giving the ordinary RF mean predicted values. }
-
-
-  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
 }
 \details{
@@ -95,10 +94,6 @@ If \code{keep.predictor.brick = TRUE} then a raster brick of all the predictor r
 \references{ 
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
 
-Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
-
-Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(4):367-378.
-
 Liaw, A. and  Wiener, M. (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 
 Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
@@ -107,7 +102,7 @@ Simpson, E. H. (1949). Measurement of diversity. Nature.
  }
 
 
-\note{If \code{model.mapmake()} is interupted it may leave orphan \code{.gri} and \code{.grd} files in your temporary directory. The \code{raster} package functions \code{\link[raster]{showTmpFiles}} and \code{\link[raster]{removeTmpFiles}} can be used to locate and remove these files, or they can be deleated manually from the temporary directory.
+\note{If \code{model.mapmake()} is interupted it may leave orphan \code{.gri} and \code{.grd} files in your temporary directory. The \code{raster} package functions \code{showTmpFiles} and \code{removeTmpFiles} can be used to locate and remove these files, or they can be deleated manually from the temporary directory.
 }
 
 \author{ Elizabeth Freeman and Tracey Frescino }

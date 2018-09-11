@@ -7,6 +7,8 @@
 %% packages for paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\usepackage[latin1]{inputenc}
+
 \usepackage[round]{natbib}
 \bibliographystyle{abbrvnat}
 
@@ -19,6 +21,8 @@
 \usepackage{rotating}
 %\usepackage{epstopdf}
 \usepackage{pdflscape}
+
+\usepackage[latin1]{inputenc}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% declarations for vignette
@@ -72,7 +76,7 @@
 
 \SweaveOpts{engine=R}
 %\VignetteIndexEntry{Exploratory Data Analysis with the ModelMap package} 
-%\VignetteDepends{randomForest, gbm, PresenceAbsence, raster} 
+%\VignetteDepends{randomForest, PresenceAbsence, raster} 
 %\VignetteKeywords{exploratory data analysis, species distribution models, random forest, stochastic gradient boosting, map production, raster, R} 
 %\VignettePackage{ModelMap} 
 

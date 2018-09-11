@@ -20,7 +20,7 @@ col = NULL, xlim = NULL, ylim = NULL, zlim = NULL, ...)
 }
 
 \arguments{
-    \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
+    \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. }
 
   \item{x}{String or Integer. Name of predictor variable to be plotted on the x axis. Alternativly, can be a number indicating a variable name from \code{predList}.}
 

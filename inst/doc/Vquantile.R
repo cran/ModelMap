@@ -1,4 +1,5 @@
 ### R code from vignette source 'Vquantile.Rnw'
+### Encoding: ISO8859-1
 
 ###################################################
 ### code chunk number 1: ExSetup set options

@@ -14,12 +14,12 @@ folder = NULL, MODELfn = NULL, response.name = NULL, unique.rowname = NULL,
  res=NULL, jpeg.res = 72, device.width = 7,  device.height = 7, units="in", 
  pointsize=12, cex=par()$cex, req.sens, req.spec, FPC, FNC, quantiles=NULL, 
  all=TRUE, subset = NULL, weights = NULL, mtry = NULL, controls = NULL, 
- xtrafo = NULL, ytrafo = NULL, scores = NULL, n.trees = NULL)
+ xtrafo = NULL, ytrafo = NULL, scores = NULL)
 }
 
 \arguments{
 
-  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), \code{"CF"} (conditional forest), or \code{"SGB"} (stochastic gradient boosting). }
+  \item{model.obj}{ \code{R} model object.  The model object to use for prediction.  The model object must be of type \code{"RF"} (random forest), \code{"QRF"} (quantile random forest), or \code{"CF"} (conditional forest). The \code{ModelMap} package does not currently support \code{SGB} models. }
 
   \item{qdata.trainfn}{String.  The name (full path or base name with path specified by \code{folder}) of the training data file used for building the model (file should include columns for both response and predictor variables).  The file must be a comma-delimited file \code{*.csv} with column headings. \code{qdata.trainfn} can also be an \code{R} dataframe. If predictions will be made (\code{predict = TRUE} or \code{map=TRUE}) the predictor column headers must match the names of the raster layer files, or a \code{rastLUT} must be provided to match predictor columns to the appropriate raster and band.  If \code{qdata.trainfn = NULL} (the default), a GUI interface prompts user to browse to the training data file.  }
 
@@ -97,13 +97,11 @@ Current choices:
 
   \item{controls}{CF models. Only needed for \code{prediction.type="CV"} for CF models. An object of class \code{\link[party]{ForestControl-class}}, which can be obtained using cforest_control (and its convenience interfaces cforest_unbiased and cforest_classical). If \code{controls} is specified, then stand alone arguments \code{mtry} and \code{ntree} ignored and these parameters must be specified as part of the \code{controls} argument. If \code{controls} not specified, \code{model.build} defaults to \code{cforest_unbiased(mtry=mtry, ntree=ntree)} with the values of \code{mtry} and \code{ntree} specified by the stand alone arguments.}
 
-  \item{xtrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all input variables. By default, the \code{\link[party]{ptrafo}} function is applied. }
+  \item{xtrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all input variables. By default, the \code{ptrafo} function from the \code{party} package is applied. }
 
-  \item{ytrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all response variables. By default, the \code{\link[party]{ptrafo}} function is applied.  }
+  \item{ytrafo}{CF models. Only needed for \code{prediction.type="CV"} for CF models. A function to be applied to all response variables. By default, the \code{ptrafo} function from the \code{party} package is applied. }
 
   \item{scores}{CF models. NOT SUPPORTED. Only needed for \code{prediction.type="CV"} for CF models. An optional named list of scores to be attached to ordered factors. Note: \code{scores} is not yet supported for cross validation diagnostics.}
-
-  \item{n.trees}{ Integer.  SGB models.  The number of stochastic gradient boosting trees for an SGB model. If \code{n.trees=NULL} (the default) the model creation code will increase the number of trees 100 at a time until OOB error rate stops improving. The \code{gbm} function \code{gbm.perf()} will be used to select from the total calculated trees, the best number of trees for model predictions, with argument \code{method="OOB"}. The \code{gbm} package warns that \code{OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive.} }
 
 }
 \details{
@@ -118,7 +116,7 @@ Diagnostic predictions are made my one of four methods, and a text file is gener
 
 A variable importance graph is made. If \code{response.type = "categorical"}, category specific graphs are generated for variable importance. These show how much the model accuracy for each category is affected when the values of each predictor variable is randomly permuted.
 
-The package \code{corrplot} is used to generate a plot of correlation between predictor variables. If there are highly correlated predictor variables, then the variable importances of \code{"RF"}, \code{"QRF"}, \code{"SGB"} and \code{"QSGB"} models need to be interpreted with care, and users may want to consider looking at the conditional variable importances available for \code{"CF"} models produced by the \code{party} package.
+The package \code{corrplot} is used to generate a plot of correlation between predictor variables. If there are highly correlated predictor variables, then the variable importances of \code{"RF"} and \code{"QRF"} models need to be interpreted with care, and users may want to consider looking at the conditional variable importances available for \code{"CF"} models produced by the \code{party} package.
 
 If \code{model.type = "RF"}, the OOB error is plotted as a function of number of trees in the model. If \code{response.type = "binary"} or If \code{response.type = "categorical"} category specific graphs are generated for  OOB error as a function of number of trees.
 
@@ -156,10 +154,6 @@ If \code{prediction.type = "CV"} the dataframe also includes a column indicating
 Breiman, L. (2001) Random Forests. Machine Learning, 45:5-32.
 
 Elith, J., Leathwick, J. R. and Hastie, T. (2008). A working guide to boosted regression trees. Journal of Animal Ecology. 77:802-813.
-
-Friedman, J.H. (2001). Greedy function approximation: a gradient boosting machine. Ann. Stat., 29(5):1189-1232.
-
-Friedman, J.H. (2002). Stochastic gradient boosting. Comput. Stat. Data An., 38(4):367-378.
 
 Hand, D. J., & Till, R. J. (2001). A simple generalisation of the area under the ROC curve for multiple class classification problems. Machine Learning, 45(2), 171-186.
 

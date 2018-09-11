@@ -840,29 +840,29 @@ REQUIRE.quantregForest<-function (stopIfAbsent = TRUE)
 }
 
 ###model.type=="SGB" or "QSGB"###
-REQUIRE.gbm<-function (stopIfAbsent = TRUE) 
-{
-    y <- getOption("gbmLoaded")
-    w <- getOption("warn")
-    options(warn = -1)
-    x <- isTRUE(try(requireNamespace("gbm", quietly = TRUE)))
-    options(warn = w)
-    if (!isTRUE(y)) {
-        if (x) {
-            options(gbmLoaded = TRUE)
-		#library("gbm")
-		#if(!"gbm"%in%loadedNamespaces()){attachNamespace("gbm")}
-            return(TRUE)
-        }
-        else if (stopIfAbsent) {
-            stop("package 'gbm' used for model types 'SGB' and 'QSGB' is not available")
-        }
-        else {
-            return(FALSE)
-        }
-    }
-    return(TRUE)
-}
+#REQUIRE.gbm<-function (stopIfAbsent = TRUE) 
+#{
+#    y <- getOption("gbmLoaded")
+#    w <- getOption("warn")
+#    options(warn = -1)
+#    x <- isTRUE(try(requireNamespace("gbm", quietly = TRUE)))
+#    options(warn = w)
+#    if (!isTRUE(y)) {
+#        if (x) {
+#            options(gbmLoaded = TRUE)
+#		#library("gbm")
+#		#if(!"gbm"%in%loadedNamespaces()){attachNamespace("gbm")}
+#            return(TRUE)
+#        }
+#        else if (stopIfAbsent) {
+#            stop("package 'gbm' used for model types 'SGB' and 'QSGB' is not available")
+#        }
+#        else {
+#            return(FALSE)
+#        }
+#    }
+#    return(TRUE)
+#}
 
 
 #############################################################################################
@@ -967,7 +967,7 @@ if("QRF"%in%names(model.obj)){
 	if(model.type == "RF" ){predList<-row.names(model.obj$importance)}
 	if(model.type == "QRF"){predList<-row.names(model.obj$importance)}
 	if(model.type == "CF"){inputs<-model.obj@data@get("input");predList<-colnames(inputs)}
-	if(model.type == "SGB"){predList<-model.obj$var.names}
+	#if(model.type == "SGB"){predList<-model.obj$variables$var_names}
 }
 return(predList)
 }
@@ -986,13 +986,13 @@ if("QRF"%in%names(model.obj)){
 			for(p in 1:sum(var.factors)){
 				model.levels[[p]]<-model.obj$QRF$forest$xlevels[var.factors][[p]]}}
 }else{
-	if(model.type=="SGB"){
-		var.factors<-model.obj$var.type!=0
-		if( any(var.factors)){
-			model.levels<-as.list(1:sum(var.factors))
-			names(model.levels)<-model.obj$var.names[var.factors]
-			for(p in 1:sum(var.factors)){
-				model.levels[[p]]<-model.obj$var.levels[var.factors][[p]]}}}
+#	if(model.type=="SGB"){
+#		var.factors<-model.obj$variables$var_type!=0
+#		if( any(var.factors)){
+#			model.levels<-as.list(1:sum(var.factors))
+#			names(model.levels)<-model.obj$variables$var_names[var.factors]
+#			for(p in 1:sum(var.factors)){
+#				model.levels[[p]]<-model.obj$variables$var_levels[var.factors][[p]]}}}
 
 	if(model.type=="RF"){
 		var.factors<-!sapply(model.obj$forest$xlevels,identical,0)
@@ -1041,9 +1041,15 @@ if("QRF"%in%names(model.obj)){
 			model.type<-"CF"
 		}else{
 			if("gbm"%in%model.type.long){
-				model.type<-"SGB"
+				#stop("model was created using old version of gbm package, must rebuild model")
+				stop("SGB models not currently supported by ModelMap")
 			}else{
-				model.type<-"unknown"
+				if("GBMFit"%in%model.type.long){
+					#model.type<-"SGB"
+					stop("SGB models not currently supported by ModelMap")
+				}else{
+					model.type<-"unknown"
+				}
 			}
 		}
 	}
@@ -1058,6 +1064,8 @@ if("QRF"%in%names(model.obj)){
 ############ check response.type ##################
 
 check.response.type<-function(model.obj,model.type,ONEorTWO){
+
+	response.type <- "unknown"
 
 	if(model.type=="RF"){
 		response.type<-switch(model.obj$type,"regression"="continuous","classification"="classification","unknown")
@@ -1079,8 +1087,14 @@ check.response.type<-function(model.obj,model.type,ONEorTWO){
 		}else{
 			response.type<-"continuous"}}
 	
-	if(model.type=="SGB"){
-		response.type<-switch(model.obj$distribution$name,"gaussian"="continuous","bernoulli"="binary","multinomial"="categorical","unknown")}
+#	if(model.type=="SGB"){
+#		response.type<-switch(	gbm:::distribution_name(model.obj),
+#							#"gaussian"="continuous",
+#							"Gaussian"="continuous",
+#							#"bernoulli"="binary",
+#							"Bernoulli"="binary",
+#							#"multinomial"="categorical",
+#							"unknown")}
 	
 	if(response.type=="unknown"){stop("supplied ", ONEorTWO," has an unknown response type")}
 
@@ -1140,14 +1154,14 @@ return(response.name)
 
 ########## extract importance SGB ############
 
-imp.extract.sgb<-function(model.obj,imp.type=NULL){
-	imp.type.gbm<-switch(imp.type,"1"=gbm::permutation.test.gbm,"2"=gbm::relative.influence)
-	IMP.SGB<-gbm::summary.gbm(model.obj, method=imp.type.gbm, plotit=FALSE)
-	names(IMP.SGB)<-c("pred","imp")
-	row.names(IMP.SGB)<-IMP.SGB$pred
-	IMP.SGB<-IMP.SGB[order(IMP.SGB$imp,decreasing=FALSE),]
-	return(IMP.SGB)
-}
+#imp.extract.sgb<-function(model.obj,imp.type=2, num_trees=length(gbm::trees(model.obj))){
+#	imp.type.gbm<-switch(imp.type,"1"=gbm::permutation_relative_influence,"2"=gbm::relative_influence)
+#	IMP.SGB<-summary(model.obj, method=imp.type.gbm, plot_it=FALSE, num_trees=num_trees)
+#	names(IMP.SGB)<-c("pred","imp")
+#	row.names(IMP.SGB)<-IMP.SGB$pred
+#	IMP.SGB<-IMP.SGB[order(IMP.SGB$imp,decreasing=FALSE),]
+#	return(IMP.SGB)
+#}
 
 ######### extract importance RF ############
 
@@ -1624,22 +1638,22 @@ for(i in 1:length(device.type)){
 		}
 	}
 
-	if(model.type=="SGB"){
-	
-		initialize.device(	PLOTfn=IMPORTANCEfn,DEVICE.TYPE=device.type[i],
-						res=res,device.width=device.width,device.height=device.height,
-						units=units,pointsize=pointsize,cex=cex)
-
-		opar<-par(las=1,mar=(c(5, 11, 4, 2) + 0.1),cex=cex)
-		gbm::summary.gbm(model.obj)
-		par(las=0)
-		mtext("Relative Influence",side=3,line=.7,cex=1.5*cex)
-		mtext(main,side=3,line=2.7,cex=1.5*cex)
-		mtext("Predictors",side=2,line=10,cex=1*cex)
-		par(opar)
-
-		if(!device.type[i]%in%c("default","none")){dev.off()}
-	}
+#	if(model.type=="SGB"){
+#	
+#		initialize.device(	PLOTfn=IMPORTANCEfn,DEVICE.TYPE=device.type[i],
+#						res=res,device.width=device.width,device.height=device.height,
+#						units=units,pointsize=pointsize,cex=cex)
+#
+#		opar<-par(las=1,mar=(c(5, 11, 4, 2) + 0.1),cex=cex)
+#		summary(model.obj)
+#		par(las=0)
+#		mtext("Relative Influence",side=3,line=.7,cex=1.5*cex)
+#		mtext(main,side=3,line=2.7,cex=1.5*cex)
+#		mtext("Predictors",side=2,line=10,cex=1*cex)
+#		par(opar)
+#
+#		if(!device.type[i]%in%c("default","none")){dev.off()}
+#	}
 
 
 	###################   PRED Based   ##############################
@@ -1897,111 +1911,26 @@ for(i in 1:length(device.type)){
 ################################ SGB - Model Creation #######################################
 #############################################################################################
 
-model.SGB<-function(	qdata,
-				predList,
-				response.name,
-				response.type,
-				seed=NULL,
-				n.trees=NULL,                 # number of trees
-				shrinkage=0.001,   	      # shrinkage or learning rate,
-                 	 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
-				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				nTrain = NULL,
-				#train.fraction = NULL,       	# fraction of data for training,
-                 	 	n.minobsinnode = 10,         	# minimum total weight needed in each node
-				keep.data=TRUE,
-				var.monotone = NULL
-){
+#model.SGB<-function(	qdata,
+#				predList,
+#				response.name,
+#				response.type,
+#				seed=NULL,
+#				n.trees=NULL,                 # number of trees
+#				shrinkage=0.001,   	      # shrinkage or learning rate,
+#                	 	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
+#				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
+#				nTrain = NULL,
+#				#train.fraction = NULL,       	# fraction of data for training,
+#                	 	n.minobsinnode = 10,         	# minimum total weight needed in each node
+#				keep.data=TRUE,
+#				var.monotone = NULL
+#){
 
 
 ## This function generates a model using gbm.
 ##	Inputs: Full dataset, training indices, predictor names, response name, and seed (optional)
 ##	Output: SGB model
-
-if(!is.null(seed)){
-	set.seed(seed)}
-
-if(response.type=="binary"){distribution="bernoulli"}
-if(response.type=="continuous"){distribution="gaussian"}
-if(response.type=="categorical"){distribution="multinomial"}
-
-flag.nt<-FALSE
-if(response.type=="categorical"){
-	flag.nt<-TRUE
-	if(is.null(n.trees)){n.trees<-5000}}
-
-qdata.x<-qdata[,match(predList,names(qdata))]
-
-qdata.y<-qdata[,response.name]
-if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
-
-if(is.null(n.trees)){
-
-	if(keep.data==FALSE){
-		warning("keep.data reset to TRUE because data needed for 'gbm.more()' function needed for OOB determination of optimal number of trees")}
-
-	SGB <- gbm::gbm.fit(	x=qdata.x,
-				y=qdata.y,        
-				distribution=distribution,
-				n.trees=100,                	
-				shrinkage=shrinkage, 
-				interaction.depth=interaction.depth,		
-				bag.fraction = bag.fraction,   
-				nTrain = nTrain,       	
-				#train.fraction = train.fraction,       	           		
-				n.minobsinnode = n.minobsinnode,
-				keep.data=TRUE,
-				var.monotone=var.monotone)
-
-	# check performance using an out-of-bag estimator
-	best.iter <- suppressWarnings(gbm::gbm.perf(SGB,method="OOB",plot.it=FALSE))
-      
-	# iterate until a sufficient number of trees are fit
-
-	while(SGB$n.trees - best.iter < 10){
-     	 	# do 100 more iterations
-      	SGB <- gbm::gbm.more(SGB,100)          
-      	best.iter <- suppressWarnings(gbm::gbm.perf(SGB,method="OOB",plot.it=FALSE))
-	}
-	SGB$best.iter <- best.iter
-	warning("ModelMap currently uses OOB estimation to determine optimal number of trees in SGB model when calling 'gbm.perf' in the gbm package however OOB generally underestimates the optimal number of iterations although predictive performance is reasonably competitive however using cv.folds>0 when calling gbm usually results in improved predictive performance but is not yet supported in ModelMap")
-
-}else{
-
-	SGB <- gbm::gbm.fit(	x=qdata.x,
-				y=qdata.y,        
-				distribution=distribution,
-				n.trees=n.trees,                	
-				shrinkage=shrinkage, 
-				interaction.depth=interaction.depth,		
-				bag.fraction = bag.fraction, 
-				nTrain = nTrain,         	
-				#train.fraction = train.fraction,       	           		
-				n.minobsinnode = n.minobsinnode,
-				keep.data=keep.data,
-				var.monotone=var.monotone)
-
-	if(!is.null(nTrain) && nTrain<nrow(qdata.x)){
-		SGB$best.iter <- suppressWarnings(gbm::gbm.perf(SGB,method="test",plot.it=FALSE))
-		if(SGB$best.iter>0.9*n.trees){
-			warning("best number of trees is ", SGB$best.iter, " and total number trees tested was ", n.trees, " therefore you may want to explore increasing the 'n.trees' argument")
-		}
-	}else{
-		if(flag.nt){
-			SGB$best.iter <- suppressWarnings(gbm::gbm.perf(SGB,method="OOB",plot.it=FALSE))
-			if(SGB$best.iter>0.9*n.trees){
-				warning("best number of trees is ", SGB$best.iter, " and total number trees tested was ", n.trees, " therefore you may want to explore increasing the 'n.trees' argument")
-			}
-		}
-	}
-}
-
-SGB$response<-response.name
-
-return(SGB)
-
-}
-
 
 
 
@@ -2009,73 +1938,17 @@ return(SGB)
 ################################### SGB - Predict ###########################################
 #############################################################################################
 
-prediction.SGB<-function(	prediction.type,
-					qdata,
-					response.name=deparse(substitute(SGB$response.name)),
-					SGB,
-					n.trees
-					){
+#prediction.SGB<-function(	prediction.type,
+#					qdata,
+#					response.name=deparse(substitute(SGB$response.name)),
+#					SGB,
+#					n.trees
+#					){
 
 ## This function makes predictions for SGB model.
 ##	Inputs: Training data, training data indices, predictor names, response variable name,
 ##			the Random Forest model and what to do if NAs are in predictors (default).
 ##	Output: Observed and predicted values.
-
-response.type<-switch(SGB$distribution$name,"gaussian"="continuous","bernoulli"="binary","multinomial"="categorical","unknown")
-
-if(response.type=="unknown"){
-	stop("supplied model.obj has an unknown response type")
-}
-
-if(is.null(response.name)){
-	stop("must provide response name")}
-
-predList<-SGB$var.names
-
-qdata.x<-qdata[,match(predList,names(qdata))]
-qdata.y<-qdata[,response.name]
-
-if(response.type=="binary"){qdata.y[qdata.y>0]<-1}
-
-if(prediction.type=="TRAIN"){
-
-	if(!is.null(SGB$levels)){
-		for(p in names(SGB$levels)){
-			qdata.x[,p]<-factor(qdata.x[,p],levels=SGB$levels[[p]])
-		}
-	}
-
-	pred<-gbm::predict.gbm(	object=SGB,
-					newdata=qdata.x,
-					n.trees=n.trees,
-					type="response",
-					single.tree=FALSE)
-}
-
-if(prediction.type=="TEST"){
-	
-	pred<-gbm::predict.gbm(	object=SGB,
-					newdata=qdata.x,
-					n.trees=n.trees,
-					type="response",
-					single.tree=FALSE)
-}
-
-if(response.type=="categorical"){
-	vote<-pred[,,1]
-	pred<-colnames(vote)[apply(vote,1,which.max)]
-	SGB.PRED<-data.frame(qdata.y,pred,vote)
-	names(SGB.PRED)<-c("obs","pred",colnames(vote))
-}else{
-	SGB.PRED<-data.frame(obs=qdata.y,pred=pred)
-}
-
-rownames(SGB.PRED)<-rownames(qdata)
-
-return(SGB.PRED)
-}
-
-
 #############################################################################################
 ########################## RF - Model Creation - Binary response ############################
 #############################################################################################
@@ -2534,9 +2407,20 @@ if(prediction.type=="TEST"){
 	qdata.y<-qdata[,response.name]
 }
 
+#print("inside prediction.rF.quantreg")
+#print("quantiles:")
+#print(quantiles)
+
+
 quantlab<-sprintf("P%02d", 100*quantiles)
+#print("quantlab:")
+#print(quantlab)
 
 QRF.PRED<-data.frame(	cbind(obs=as.numeric(as.character(qdata.y)),pred))
+#print("ncol QRF.PRED")
+#print(ncol(QRF.PRED))
+#print(head(QRF.PRED))
+
 names(QRF.PRED)   <-c("obs",quantlab)
 rownames(QRF.PRED)<-rownames(qdata)
 
@@ -2888,17 +2772,17 @@ create.model<-function(	qdata,
 				controls=party::cforest_unbiased(),
 				xtrafo=party::ptrafo, 
 				ytrafo=party::ptrafo,
-				scores=NULL,
+				scores=NULL#,
 
-			# SGB arguments:
-				n.trees=NULL,                 # number of trees
-				shrinkage=0.001,   	      # shrinkage or learning rate,
-                  	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
-				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
-				nTrain = NULL,
-				#train.fraction = NULL,       # fraction of data for training,
-                  	n.minobsinnode = 10,         	# minimum total weight needed in each node
-				var.monotone = NULL
+#			# SGB arguments:
+#				n.trees=NULL,                 # number of trees
+#				shrinkage=0.001,   	      # shrinkage or learning rate,
+#                  	interaction.depth=10,		# 1: additive model, 2: two-way interactions, etc.
+#				bag.fraction = 0.5,          	# subsampling fraction, 0.5 is probably best
+#				nTrain = NULL,
+#				#train.fraction = NULL,       # fraction of data for training,
+#                 	n.minobsinnode = 10,         	# minimum total weight needed in each node
+#				var.monotone = NULL
 
 ){
 
@@ -3017,25 +2901,25 @@ if(model.type=="CF"){
 							seed=NULL)}
 }
 
-if(model.type=="SGB"){
-
-	#print("calling model.SGB")
-	model.obj<-model.SGB(	qdata=qdata,
-					predList=predList,
-					response.name=response.name,
-					seed=NULL,
-					response.type=response.type, 				
-					n.trees=n.trees,                 	# number of trees
-					shrinkage=shrinkage,   	      	# shrinkage or learning rate,
-                  		interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
-					bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
-					nTrain=nTrain,
-					#train.fraction=train.fraction,      # fraction of data for training,
-                  		n.minobsinnode=n.minobsinnode,      # minimum total weight needed in each node
-					keep.data=keep.data,
-					var.monotone = var.monotone)
-
-}
+#if(model.type=="SGB"){
+#
+#	#print("calling model.SGB")
+#	model.obj<-model.SGB(	qdata=qdata,
+#					predList=predList,
+#					response.name=response.name,
+#					seed=NULL,
+#					response.type=response.type, 				
+#					n.trees=n.trees,                 	# number of trees
+#					shrinkage=shrinkage,   	      	# shrinkage or learning rate,
+#                 		interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
+#					bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
+#					nTrain=nTrain,
+#					#train.fraction=train.fraction,      # fraction of data for training,
+#                 		n.minobsinnode=n.minobsinnode,      # minimum total weight needed in each node
+#					keep.data=keep.data,
+#					var.monotone = var.monotone)
+#
+#}
 
 return(model.obj)
 }
@@ -3080,10 +2964,10 @@ prediction.model<-function(	model.obj,
 					controls,
 					xtrafo, 
 					ytrafo,
-					scores,
+					scores#,
 
-				# SGB arguments
-					n.trees
+#				# SGB arguments
+#					n.trees
 ){
 
 #should warnings be immeadiate
@@ -3121,7 +3005,9 @@ if(prediction.type!="CV"){
 	if(model.type=="QRF"){
 
 		if("QRF"%in%names(model.obj)){
-			#print("starting continuous predictions")
+			#print("starting quantile predictions")
+			#print("quantiles:")
+			#print(quantiles)
 			PRED<-prediction.rF.quantreg(	prediction.type=prediction.type,
 									qdata=qdata,
 									response.name=response.name,
@@ -3133,8 +3019,8 @@ if(prediction.type!="CV"){
 									response.name=response.name,
 									RF=model.obj$RF)
 			Nq<-length(quantiles)
-			PRED<-cbind(PRED[,1:(Nq+1)],RFPRED$pred,PRED[,(Nq+2):(Nq+4)])
-			names(PRED)<-c(names(PRED[,1:(Nq+1)]),"RFmean","lower","median","upper")
+			PRED<-cbind(PRED[,1:(Nq+1),drop=FALSE],RFPRED$pred,PRED[,(Nq+2):(Nq+4)])
+			names(PRED)<-c(names(PRED[,1:(Nq+1),drop=FALSE]),"RFmean","lower","median","upper")
 		}else{
 			PRED<-prediction.rF.quantreg(	prediction.type=prediction.type,
 									qdata=qdata,
@@ -3169,14 +3055,14 @@ if(prediction.type!="CV"){
 	}
 
 
-	if(model.type=="SGB"){
-		#print("calling prediction.SGB")
-		PRED<-prediction.SGB(	prediction.type=prediction.type,
-						qdata=qdata,
-						response.name=response.name,
-						SGB=model.obj,
-						n.trees=n.trees)
-	}
+#	if(model.type=="SGB"){
+#		#print("calling prediction.SGB")
+#		PRED<-prediction.SGB(	prediction.type=prediction.type,
+#						qdata=qdata,
+#						response.name=response.name,
+#						SGB=model.obj,
+#						n.trees=n.trees)
+#	}
 
 	#print("got predictions, checking rownames")
 
@@ -3244,19 +3130,19 @@ if(prediction.type!="CV"){
 	#	ytrafo
 	#	scores
 	#	}
-	if(model.type=="SGB"){
-		shrinkage<-model.obj$shrinkage
-		interaction.depth<-model.obj$interaction.depth
-		bag.fraction<-model.obj$bag.fraction
-		nTrain<-model.obj$nTrain
-		n.minobsinnode<-model.obj$n.minobsinnode
-		
-		#deal with nTrain<nrow(qdata)
-		#print(paste("nTrain =",nTrain))
-		#print(paste("nrow(qdata) =",nrow(qdata)))
-		if(nTrain<nrow(qdata)){
-			qdata<-qdata[1:nTrain,]}	
-	}
+#	if(model.type=="SGB"){
+#		shrinkage<-model.obj$params$shrinkage
+#		interaction.depth<-model.obj$params$interaction_depth
+#		bag.fraction<-model.obj$params$bag_fraction
+#		nTrain<-model.obj$params$num_train
+#		n.minobsinnode<-model.obj$params$min_num_obs_in_node
+#		
+#		#deal with nTrain<nrow(qdata)
+#		#print(paste("nTrain =",nTrain))
+#		#print(paste("nrow(qdata) =",nrow(qdata)))
+#		if(nTrain<nrow(qdata)){
+#			qdata<-qdata[1:nTrain,]}	
+#	}
 
 	n.data=nrow(qdata)
 	n.per.fold<-floor(n.data/v.fold)
@@ -3276,7 +3162,7 @@ if(prediction.type!="CV"){
 
 	###cv.index[qdata[,p]=="70"]<-2###
 	
-	if(model.type=="RF" || model.type=="CF" || model.type=="SGB"){
+	if(model.type=="RF" || model.type=="CF"){ #|| model.type=="SGB"){
 		if(response.type=="categorical"){
 			qdata.y<-qdata[,response.name]
 			if(!is.factor(qdata.y)){qdata.y<-as.factor(qdata.y)}
@@ -3455,8 +3341,8 @@ if(prediction.type!="CV"){
 								response.name=response.name,
 								RF=RF.cv)
 			Nq<-length(quantiles)
-			PRED.cv<-cbind(QRFPRED.cv[,1:(Nq+1)],RFPRED.cv$pred,QRFPRED.cv[,(Nq+2):(Nq+4)])
-			names(PRED.cv)<-c(names(QRFPRED.cv[,1:(Nq+1)]),"RFmean","lower","median","upper")
+			PRED.cv<-cbind(QRFPRED.cv[,1:(Nq+1),drop=FALSE],RFPRED.cv$pred,QRFPRED.cv[,(Nq+2):(Nq+4)])
+			names(PRED.cv)<-c(names(QRFPRED.cv[,1:(Nq+1),drop=FALSE]),"RFmean","lower","median","upper")
 		}
 
 		if(model.type=="CF"){
@@ -3517,30 +3403,31 @@ if(prediction.type!="CV"){
 			}
 		}
 
-		if(model.type=="SGB"){
-			#print(paste("      making SGB model for fold",i))
+#		if(model.type=="SGB"){
+#			#print(paste("      making SGB model for fold",i))
+#
+#			
+#			SGB.cv<-suppressMessages(model.SGB(	qdata=qdata.train.cv,
+#							predList=predList,
+#							response.name=response.name,
+#							seed=NULL,
+#							response.type=response.type, 				
+#							n.trees=n.trees,	               	# number of trees
+#							shrinkage=shrinkage,   	      	# shrinkage or learning rate,
+#                  				interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
+#							bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
+#							nTrain=nrow(qdata.train.cv),
+#							#train.fraction=train.fraction,      # fraction of data for training,
+#                 				n.minobsinnode=n.minobsinnode       # minimum total weight needed in each node
+#							))
+#			#print(paste("      making SGB predictions for fold",i))
+#			PRED.cv<-prediction.SGB(	prediction.type="TEST",
+#								qdata=qdata.test.cv,
+#								response.name=response.name,
+#								SGB=SGB.cv,
+#								n.trees=n.trees)
+#		}
 
-			
-			SGB.cv<-suppressWarnings(model.SGB(	qdata=qdata.train.cv,
-							predList=predList,
-							response.name=response.name,
-							seed=NULL,
-							response.type=response.type, 				
-							n.trees=n.trees,	               	# number of trees
-							shrinkage=shrinkage,   	      	# shrinkage or learning rate,
-                  				interaction.depth=interaction.depth,# 1: additive model, 2: two-way interactions, etc.
-							bag.fraction=bag.fraction,          # subsampling fraction, 0.5 is probably best
-							nTrain=nrow(qdata.train.cv),
-							#train.fraction=train.fraction,      # fraction of data for training,
-                  				n.minobsinnode=n.minobsinnode       # minimum total weight needed in each node
-							))
-			#print(paste("      making SGB predictions for fold",i))
-			PRED.cv<-prediction.SGB(	prediction.type="TEST",
-								qdata=qdata.test.cv,
-								response.name=response.name,
-								SGB=SGB.cv,
-								n.trees=n.trees)
-		}
 		PRED.cv$VFold<-i
 		PRED<-rbind(PRED,PRED.cv)
 		#print(paste("     ending fold",i))
@@ -3799,13 +3686,15 @@ production.prediction<-function(	model.obj,
 						#response.name,
 						keep.predictor.brick,							
 						map.sd=FALSE,
+						
 						OUTPUTfn,
 						OUTPUTfn.noext,
 						#OUTPUTpath,
 						OUTPUTname,
 						OUTPUText,
-						quantiles,
-						n.trees){
+						quantiles#,
+						#n.trees
+						){
 
 #############################################################################################
 ################################## Create File names ########################################
@@ -3858,7 +3747,6 @@ if(map.sd && model.type%in%c("RF","QRF") && response.type=="continuous"){
 }
 
 
-
 #####################################################################################
 ########################## Extract predictor names ##################################
 #####################################################################################
@@ -3891,7 +3779,7 @@ if(response.type=="categorical"){
 	if(model.type=="RF"){ Rclasses<-colnames(model.obj$votes)}
 	#if(model.type=="CF"){ Rclasses<-model.obj@responses@levels[[response.name]]}#might be needed for multivariate?
 	if(model.type=="CF"){ Rclasses<-model.obj@responses@levels[[1]]}
-	if(model.type=="SGB"){Rclasses<-model.obj$classes}
+#	if(model.type=="SGB"){Rclasses<-model.obj$classes}
 	Nrc<-length(Rclasses)
 }
 
@@ -3936,7 +3824,7 @@ print(paste("write start", OUTPUTfn))
 
 #print(paste("datatype =",data.type))
 
-if(model.type%in%c("RF","CF","SGB")){ 
+if(model.type%in%c("RF","CF")){ #,"SGB")){ 
 	out <- raster(RAST[[1]])
 	dataType(out) <- data.type
 	NAvalue(out) <- NAval
@@ -3970,7 +3858,6 @@ if(map.sd){
 	out.coefv <- writeStart(out.coefv, filename=extension(TMPfn.coefv,""), overwrite=TRUE, datatype=data.type)
 }
 
-
 ###############################################################################################################
 print("starting row by row predictions")
 for(r in 1:(dim(RB)[1])){
@@ -3997,7 +3884,7 @@ for(r in 1:(dim(RB)[1])){
 	nonPredict <- apply(((v == NAval)|is.na(v)), 1, any)
 
 	
-	if(model.type%in%c("RF","CF","SGB")){
+	if(model.type%in%c("RF","CF")){ #,"SGB")){
 		v.pred<-rep(NA,length=nrow(v))
 	}
 	if(model.type=="QRF"){
@@ -4006,6 +3893,8 @@ for(r in 1:(dim(RB)[1])){
 
 		if(!is.null(model.obj.RF)){v.pred.RF<-rep(NA,length=nrow(v))}
 	}
+
+
 
 		
 	if(any(!nonPredict)){
@@ -4021,7 +3910,6 @@ for(r in 1:(dim(RB)[1])){
 				}else{
 					v.pred[!nonPredict] <- as.integer(as.character(PRED))
 				}
-
 			}
 
 			if(response.type=="continuous"){
@@ -4053,28 +3941,28 @@ for(r in 1:(dim(RB)[1])){
 				writeValues(out.RF, v.pred.RF, r)
 				}
 		}
-		if(model.type=="SGB"){
-			if(response.type=="categorical"){
-				 vote <- gbm::predict.gbm(	object=model.obj,
-									newdata=v[!nonPredict,,drop=FALSE],
-									n.trees=n.trees,
-									type="response",
-									single.tree=FALSE)[,,1]
-				PRED<-factor(colnames(vote)[apply(vote,1,which.max)],levels=Ylev)
-				if(any(is.na(suppressWarnings(as.numeric(Ylev))))){
-					v.pred[!nonPredict] <- as.integer(PRED)
-				}else{
-					v.pred[!nonPredict] <- as.integer(as.character(PRED))
-				}
+#		if(model.type=="SGB"){
+#			if(response.type=="categorical"){
+#				 vote <- predict(	object=model.obj,
+#									newdata=v[!nonPredict,,drop=FALSE],
+#									n.trees=n.trees,
+#									type="response",
+#									single.tree=FALSE)[,,1]
+#				PRED<-factor(colnames(vote)[apply(vote,1,which.max)],levels=Ylev)
+#				if(any(is.na(suppressMessages(as.numeric(Ylev))))){
+#					v.pred[!nonPredict] <- as.integer(PRED)
+#				}else{
+#					v.pred[!nonPredict] <- as.integer(as.character(PRED))
+#				}
 
-			}else{
-				v.pred[!nonPredict] <- gbm::predict.gbm(	object=model.obj,
-											newdata=v[!nonPredict,,drop=FALSE],
-											n.trees=n.trees,
-											type="response",
-											single.tree=FALSE)
-			}
-		}
+#			}else{
+#				v.pred[!nonPredict] <- predict(	object=model.obj,
+#											newdata=v[!nonPredict,,drop=FALSE],
+#											n.trees=n.trees,
+#											type="response",
+#											single.tree=FALSE)
+#			}
+#		}
 
 	}
 
@@ -4103,13 +3991,14 @@ for(r in 1:(dim(RB)[1])){
 		writeValues(out.coefv, v.coefv, r)
 	}
 
+
 }
 
 ################################################################################################
 
 out <- writeStop(out)
 
-if(model.type%in%c("RF","CF","SGB")){
+if(model.type%in%c("RF","CF")){ #,"SGB")){
 	out<-setMinMax(out)
 }
 if(model.type=="QRF"){
@@ -4139,6 +4028,8 @@ if(map.sd){
 }
 
 
+
+
 ###clean up tmp files
 
 #print(OUTPUTfn.brick)
@@ -4165,6 +4056,7 @@ if(map.sd){
 	file.remove(grd2gri(TMPfn.stdev))
 	file.remove(grd2gri(TMPfn.coefv))
 }
+
 
 }
 

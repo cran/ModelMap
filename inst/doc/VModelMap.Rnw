@@ -7,6 +7,8 @@
 %% packages for paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\usepackage[latin1]{inputenc}
+
 \usepackage[round]{natbib}
 \bibliographystyle{abbrvnat}
 
@@ -65,7 +67,7 @@
 
 \SweaveOpts{engine=R}
 %\VignetteIndexEntry{ModelMap: an R package for Model Creation and Map Production} 
-%\VignetteDepends{randomForest, gbm, PresenceAbsence, raster} 
+%\VignetteDepends{randomForest, PresenceAbsence, raster} 
 %\VignetteKeywords{species distribution models, random forest, stochastic gradient boosting, map production, raster, R} 
 %\VignettePackage{ModelMap} 
 
@@ -91,9 +93,9 @@ The \proglang{R} software environment offers sophisticated new modeling techniqu
 While spatial data is typically manipulated within a Geographic Information System (GIS), the \pkg{ModelMap} package facilitates modeling and mapping extensive spatial data in the \proglang{R} software environment. 
 \pkg{ModelMap} has simple to use GUI prompts for non-programmers, but still has the flexibility to be run at the command line or in batch mode, and the power to take full advantage of sophisticated new modeling techniques. \pkg{ModelMap} uses the \pkg{raster} package to read and predict over GIS raster data. Large maps are read in by row, to keep memory usage reasonable. 
 
-The current implementation of \pkg{ModelMap} builds predictive models using Random Forests or Stochastic Gradient Boosting. Random Forest models are constructed using the \pkg{randomForest} package \citep{randomForest} and Stochastic Gradient Boosting models are constructed using the \pkg{gbm} package \citep{gbm}. The \pkg{ModelMap} package models both continuous and binary response variables. For binary response, the \pkg{PresenceAbsence} package \citep{PresenceAbsence} package is used for model diagnostics.
+The current implementation of \pkg{ModelMap} builds predictive models using Random Forests, Quantile Regression Forests, and Conditional Inference Forests. Stochastic Gradient Boosting models are not currently supported. Random Forest models are constructed using the \pkg{randomForest} package \citep{randomForest}. For more information on Quantile Regression Forests and Conditional Inference Forests see the additional vignette, "`Pick Your Flavor of Random Forest". The \pkg{ModelMap} package models both continuous and binary response variables. For binary response, the \pkg{PresenceAbsence} package \citep{PresenceAbsence} package is used for model diagnostics.
 
-Both Random Forest and Stochastic Gradient Boosting models are built as an ensemble of classification or regression trees \citep{breiman84}. Classification and regression trees are intuitive methods, often described in graphical or biological terms. Typically shown growing upside down, a tree begins at its root. An observation passes down the tree through a series of splits, or nodes, at which a decision is made as to which direction to proceed based on the value of one of the explanatory variables. Ultimately, a terminal node or leaf is reached and predicted response is given. 
+Random Forest models are built as an ensemble of classification or regression trees \citep{breiman84}. Classification and regression trees are intuitive methods, often described in graphical or biological terms. Typically shown growing upside down, a tree begins at its root. An observation passes down the tree through a series of splits, or nodes, at which a decision is made as to which direction to proceed based on the value of one of the explanatory variables. Ultimately, a terminal node or leaf is reached and predicted response is given. 
 
 Trees partition the explanatory variables into a series of boxes (the leaves) that contain the most homogeneous collection of outcomes possible. Creating splits is analogous to variable selection in regression. Trees are typically fit via binary recursive partitioning. The term binary refers to the fact that the parent node will always be split into exactly two child nodes. The term recursive is used to indicate that each child node will, in turn, become a parent node, unless it is a terminal node. To start with a single split is made using one explanatory variable. The variable and the location of the split are chosen to minimize the impurity of the node at that point. There are many ways to minimizing the impurity of each node. These are known as splitting rules. Each of the two regions that result from the initial split are then split themselves according to the same criteria, and the tree continues to grow until it is no longer possible to create additional splits or the process is stopped by some user-defined criteria. The tree may then be reduced in size using a process known as pruning. Overviews of classification and regression trees are provided by \citet{death00}, \citet{vayssieres00}, and \citet{moisen08}. 
 
@@ -111,7 +113,7 @@ While classification and regression trees are powerful methods in and of themsel
 
 \section{Package Overview}
 
-The \pkg{ModelMap} package for \proglang{R} enables user-friendly modeling, diagnostics, and mapping over large geographic areas though simple R function calls: \code{model.build()}, \code{model.diagnostics()}, and \code{model.mapmake()}. The function \code{model.build()} constructs predictive models of continuous or discrete responses using Random Forests or Stochastic Gradient Boosting. The function \code{model.diagnostics()} validates these models with an independent test set, cross-validation, or (in the case of Random Forest Models) with Out OF Bag (OOB) predictions on the training data. This function also creates graphs and tables of the basic model validation diagnostics. The functions \code{model.importance.plot()} and \code{model.interaction.plot} provide additional graphical tools to examine the relationships between the predictor variable. The function \code{model.mapmake()} applies the models to GIS image files of predictors to create detailed prediction surfaces. This function will handle large predictor files for map making, by reading in the GIS data in sections, thus keeping memory usage reasonable. The \pkg{raster} package is used to read and write to the GIS image files.
+The \pkg{ModelMap} package for \proglang{R} enables user-friendly modeling, diagnostics, and mapping over large geographic areas though simple R function calls: \code{model.build()}, \code{model.diagnostics()}, and \code{model.mapmake()}. The function \code{model.build()} constructs predictive models of continuous or discrete responses using Random Forests. The function \code{model.diagnostics()} validates these models with an independent test set, cross-validation, or (in the case of Random Forest Models) with Out OF Bag (OOB) predictions on the training data. This function also creates graphs and tables of the basic model validation diagnostics. The functions \code{model.importance.plot()} and \code{model.interaction.plot} provide additional graphical tools to examine the relationships between the predictor variable. The function \code{model.mapmake()} applies the models to GIS image files of predictors to create detailed prediction surfaces. This function will handle large predictor files for map making, by reading in the GIS data in sections, thus keeping memory usage reasonable. The \pkg{raster} package is used to read and write to the GIS image files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -164,11 +166,11 @@ Note: in \proglang{Imagine} image files, if the specified \code{NODATA} is set a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Model Object}
 
-The two available model types (Random Forest and Stochastic Gradient Boosting) are stochastic models. If a seed is not specified (with argument \code{seed}) each function call will result in a slightly different model. The function \code{model.build()} returns the model object. To keep this particular model for use in later \proglang{R} sessions, assign the function output to an \proglang{R} object, then use the functions \code{save()} and \code{load()}.  
+The models built by the \pkg{ModelMap} package are stochastic models. If a seed is not specified (with argument \code{seed}) each function call will result in a slightly different model. The function \code{model.build()} returns the model object. To keep this particular model for use in later \proglang{R} sessions, assign the function output to an \proglang{R} object, then use the functions \code{save()} and \code{load()}.  
 
-Random Forest is implemented through the \pkg{randomForest} package within \proglang{R}. Random Forest is more user friendly than Stochastic Gradient Boosting, as it has fewer parameters to be set by the user, and is less sensitive to tuning of these parameters. The number of predictors used to select the splits (the \code{mtry} argument) is the primary user specified parameter that can affect model performance, and the default for \pkg{ModelMap} is to automatically optimize this parameter with the \code{tuneRF()} function from the randomForest package. In most circumstance, Random Forest is less likely to over fit data. For an in depth discussion of the possible penalties of increasing the number of trees (the \code{ntree} argument) see \citet{lin02}. The \pkg{randomForest} package provides two measures to evaluate variable importance. The first is the percent increase in Mean Standard Error (MSE) as each variable is randomly permuted. The second is the increase in node purity from all the splits in the forest based on a particular variable, as measured by the gini criterion \citep{Breiman01}. These importance measures should be used with caution when predictors vary in scale or number of categories \citep{strobl07}.
+Random Forest is implemented through the \pkg{randomForest} package within \proglang{R}. Random Forest has relatively few user set parameters and is not very sensitive to tuning of these parameters. The number of predictors used to select the splits (the \code{mtry} argument) is the primary user specified parameter that can affect model performance, and the default for \pkg{ModelMap} is to automatically optimize this parameter with the \code{tuneRF()} function from the randomForest package. In most circumstance, Random Forest is less likely to over fit data. For an in depth discussion of the possible penalties of increasing the number of trees (the \code{ntree} argument) see \citet{lin02}. The \pkg{randomForest} package provides two measures to evaluate variable importance. The first is the percent increase in Mean Standard Error (MSE) as each variable is randomly permuted. The second is the increase in node purity from all the splits in the forest based on a particular variable, as measured by the gini criterion \citep{Breiman01}. These importance measures should be used with caution when predictors vary in scale or number of categories \citep{strobl07}.
 
-Stochastic gradient boosting is implemented through the \pkg{gbm} package within \proglang{R}. Like Random Forest, Stochastic gradient boosting also provides measures of variable importance. In this case, it is the relative influence as described in \citet{Friedman01}. Stochastic Gradient Boosting is more challenging for a user, in that it requires a greater number of user specified parameters, and the SGB models tend to be quite sensitive to these parameters. Model fitting parameters available from the \pkg{gbm} package include shrinkage rate, interaction depth, bagging fraction, training fraction, and the minimum number of observations per terminal node. In the \pkg{ModelMap} package, values for these parameters can be set in the argument list when calling \code{model.build()}. \citet{Friedman01, Friedman02} and \citet{Ridgeway99} provide guidelines on appropriate settings for these model parameters. In addition, the supplementary materials in \citet{elith08} provide \proglang{R} tools to tune model parameters, and also to select the most relevant variables. Models created with the code from \citet{elith08} can be used with the \pkg{ModelMap} package functions \code{model.diagnostics()} and \code{model.mapmake()} to run additional diagnostics and predict over large raster grids. 
+Stochastic gradient boosting is currently disabled in \pkg{ModelMap}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -199,9 +201,9 @@ In a windows environment, the function \code{build.rastLUT()} may be used to hel
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Examples}
 
-These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building four models: Random Forest with continuous response; Random Forest with binary response; Random Forest with categorical response; and, Stochastic Gradient Boosting with binary response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species.The categorical response is vegetation category.  
+These examples demonstrate some of the capabilities of the \pkg{ModelMap} package by building three Random Forest models: continuous response, binary response and categorical response. The continuous response variables are percent cover for two species of interest: Pinyon and Sage. The binary response variables are Presence/Absence of these same species.The categorical response is vegetation category.  
 
-Next, model validation diagnostics are performed with three techniques: an independent test set; Out Of Bag estimation; and cross-validation. Independent test set validation and cross-validation work for both Random Forest and Stochastic Gradient Boosting models. Out Of Bag estimation is only available for Random Forest models. (Note: in an actual model comparison study, rather than a package demonstration, the models would be compared with the same validation technique, rather than mixing techniques.)
+Next, model validation diagnostics are performed with three techniques: an independent test set, Out Of Bag estimation, and cross-validation. Note: in an actual model comparison study, rather than a package demonstration, the models would be compared with the same validation technique, rather than mixing techniques.
 
 Finally, spatial maps are produced by applying these models to remote sensing raster layers.
 
@@ -291,7 +293,7 @@ library("ModelMap")
 
 Next define some of the arguments for the models.
 
-Specify model type. The choices are \code{"RF"} for Random Forest models, and \code{"SGB"} for Stochastic Gradient boosting models.
+Specify model type. The choices are \code{"RF"} for Random Forest models, \code{"QRF"} for quantile regression forest models, and \code{"CF"} for conditional inference forest models. See the "Pick your flavor of Random Forest" vignette for further information on QRF and CF models.
 
 <<Ex1 Define model type, results=hide>>=
 model.type <- "RF"
@@ -485,11 +487,6 @@ The \code{model.importance.plot()} function uses a back-to-back barplot to compa
 \hline
 Model&	Response&	Importance Type								& Measured By\\
 \hline
-SGB& continuous &	1 - permutation               & reduction in predictive performance \\
-SGB& binary     &	1 - permutation               & reduction in predictive performance \\
-SGB& continuous &	2 - gradient of loss function & reduction of squared error \\
-SGB& binary     &	2 - gradient of loss function & reduction in sum of squared error \\
-\hline
 RF & continuous &	1 - permutation               & Percent Increase in MSE \\
 RF & binary     &	1 - permutation               & Mean Decrease in Accuracy \\
 RF & categorical&	1 - permutation               & Mean Decrease in Accuracy \\
@@ -573,7 +570,7 @@ par(opar)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Interaction Plots}
 
-The \code{model.interaction.plot()} function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations over the range of both variables. The remaining predictor variables are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis. The \code{model.interaction.plot()} function was devoloped from the \code{gbm.perspec} function from the tutorial provided as appendix S3 in \citet{elith08}.
+The \code{model.interaction.plot()} function provides a diagnostic plot useful in visualizing two-way interactions between predictor variables. Two of the predictor variables from the model are used to produce a grid of possible combinations over the range of both variables. The remaining predictor variables are fixed at either their means (for continuous predictors) or their most common value (for categorical predictors). Model predictions are generated over this grid and plotted as the z axis. The \code{model.interaction.plot()} function was developed from the \code{gbm.perspec} function from the tutorial provided as appendix S3 in \citet{elith08}.
 
 The \code{model.interaction.plot()} function provides two graphical options: an image plot, and a 3-D perspective plot. These options are selected by setting \code{plot.type = "image"} or \code{plot.type = "persp"}
 
@@ -1945,401 +1942,7 @@ par(opar)
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example 4 - Stochastic Gradient Boosting - Binary Response}
 
-Example 4 models the same data as previous examples, but this time with Stochastic Gradient Boosting. Stochastic Gradient Boosting does not have the option of out-of-bag estimates for model validation. To use all of the data for model building and avoid setting aside an independent test set use cross-validation for model validation. 
-
-(Note: in the \pkg{gbm} package, the function \code{gbm.perf()} offers the optional argument \code{method = "OOB"}, however, this argument specifies the technique to be used to estimated the best number of trees (\code{n.trees}), and is not a method for SGB model prediction.)
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Set up}
-
-Define model type. 
-
-<< Ex4 Define model type, results=hide>>=
-model.type <- "SGB"
-@
-
-Define data.
-
-<<Ex4 Define training and test files, results=hide>>=
-qdatafn <- "VModelMapData.csv"
-@
-
-Define \code{folder}.
-
-<<Ex4 define folder, results=hide>>=
-folder <- getwd()
-@
-
-Define model filenames.
-
-<< Ex4 Define model filename, results=hide>>=
-MODELfn.a    <- "VModelMapEx4a"
-MODELfn.b    <- "VModelMapEx4b"
-@
-
-Example 4 uses the same predictors as example 2.
-
-<< Ex4 Define predictors, results=hide>>=
-predList <- c( "ELEV250",
-               "NLCD01_250",
-               "EVI2005097",
-               "NDV2005097",
-               "NIR2005097",
-               "RED2005097")
-predFactor <- c("NLCD01_250")
-@
-
-
-Define the response variable, and whether it is continuous, binary or categorical. 
-
-<<Ex4 Define response, results=hide>>=
-response.name.a <- "PINYON"
-response.name.b <- "SAGE"
-response.type <- "binary"
-@
-
-Define the seeds for each model.
-
-<<Ex4 set seed, results=hide>>=
-seed.a <- 42
-seed.b <- 43
-@
-
-Define the column that contains unique identifiers.
-
-<<Ex4 Define Identifier, results=hide>>=
-unique.rowname <- "ID"
-@
-
-Define raster look up table.
-
-<<Ex4 update raster LUT, results=hide>>=
-rastLUTfn   <- "VModelMapData_LUT.csv"
-rastLUTfn     <- read.table( rastLUTfn,
-                             header=FALSE,
-                             sep=",",
-                             stringsAsFactors=FALSE)
-rastLUTfn[,1] <- paste(folder,rastLUTfn[,1],sep="/")
-@
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Model creation}
-
-Create the model and run the model validation diagnostics, this time saving JPEG, PDF, and PS versions of the diagnostic plots. 
-
-<<Ex4 Create Model, results=hide>>=
-model.obj.ex4a <- model.build( model.type=model.type,
-                               qdata.trainfn=qdatafn,
-                               folder=folder,
-                               unique.rowname=unique.rowname,               
-                               MODELfn=MODELfn.a,
-                               predList=predList,
-                               predFactor=predFactor,
-                               response.name=response.name.a,
-                               response.type=response.type,
-                               seed=seed.a)
-           
-model.obj.ex4b <- model.build( model.type=model.type,
-                               qdata.trainfn=qdatafn,
-                               folder=folder,
-                               unique.rowname=unique.rowname,               
-                               MODELfn=MODELfn.b,
-                               predList=predList,
-                               predFactor=predFactor,
-                               response.name=response.name.b,
-                               response.type=response.type,
-                               seed=seed.b)
-@
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Model Diagnostics}
-
-Make cross validation model predictions on the training data and run the diagnostics on these predictions.  
-
-Model predictions using cross validation are stochastic, so it is necessary to set the seed.
-
-This time, set  \code{na.action = "na.roughfix"}. Even though the original dataset does not contain NA values, with cross-validation, a categorical predictor \code{NLCD01_250} may have categories present in one of the folds that were not present in any of the other folds. The roughfix option will subsitute the most common category from the training data for the new, unknown category. When running cross-validation, this can be a common occurrence, especially if it is a small dataset with many categories. When this does occur, \code{model.map()} will generate warnings:
-
-\begin{Schunk}
-\begin{Soutput}
-9: In production.prediction(model.obj = model.obj, rastLUTfn = rastLUTfn,  :
-  categorical factored predictor NLCD01_250 contains levels 41, 43, 20 not  
-  found in training data
-10: In production.prediction(model.obj = model.obj, rastLUTfn = rastLUTfn,  :
-  Replacing categorical factored predictor levels not found in training data, 
-  with most common category that is found in training
-\end{Soutput}
-\end{Schunk}
-
-
-Again, the \code{model.diagnostics()} function creates diagnostic graphs and saves a file of observed and predicted values. In the case of Cross Validation predictions, there is an additional column listing the assigned fold for each data point. Variable importance was almost identical for the SGB model and the RF model in Example 2. The AUC for Pinyon also very similar for the two models (0.95 for SGB verses 0.97 for RF). The SGB model for Sage, however, had a stronger AUC than the RF model (0.80 for SGB verse 0.70 for RF). 
-
-<<Ex4 Model Diagnostics, results=hide>>=
-model.pred.ex4a <- model.diagnostics( model.obj=model.obj.ex4a,
-                                      qdata.trainfn=qdatafn,
-                                      folder=folder,           
-                                      MODELfn=MODELfn.a,
-                                      unique.rowname=unique.rowname,
-                                      seed=44,
-                             # Model Validation Arguments
-                                      prediction.type="CV",
-                                      device.type=c("jpeg","pdf","postscript"),
-                                      cex=1.2,
-                                      na.action = "na.roughfix")
-           
-model.pred.ex4b <- model.diagnostics( model.obj=model.obj.ex4b,
-                                      qdata.trainfn=qdatafn,
-                                      folder=folder,           
-                                      MODELfn=MODELfn.b,
-                                      unique.rowname=unique.rowname,
-                                      seed=45,
-                              # Model Validation Arguments
-                                      prediction.type="CV",
-                                      device.type=c("jpeg","pdf","postscript"),
-                                      cex=1.2,
-                                      na.action = "na.roughfix")
-@
-
-
-
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4a_pred_importance}
-\end{center}
-\caption{\label{fig:Ex4aVarImp}Example 4 - Variable importance graph for Pinyon presence (SGB model).}
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_pred_importance}
-\end{center}
-\caption{\label{fig:Ex4bVarImp}Example 4 - Variable importance graph for Sage presence (SGB model).}
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4a_pred_thresholdplots}
-\end{center}
-\caption{\label{fig:Ex4aThresh}Example 4 - Model quality and threshold selection graphs for Pinyon presence (SGB model).}
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_pred_thresholdplots}
-\end{center}
-\caption{\label{fig:Ex4bThresh}Example 4 - Model quality and threshold selection graphs for Sage presence (SGB model).}
-\end{figure}
-
-<<Ex4 Optimal Threshold Table, results=hide>>=
-opt.thresh.a <- read.table( paste(MODELfn.a,"_pred_optthresholds.csv",sep=""),
-                            header=TRUE,
-                            sep=",",
-                            stringsAsFactors=FALSE)
-opt.thresh.a[,-1]<-signif(opt.thresh.a[,-1],2)
-
-opt.thresh.b <- read.table( paste(MODELfn.b,"_pred_optthresholds.csv",sep=""),
-                            header=TRUE,
-                            sep=",",
-                            stringsAsFactors=FALSE)
-opt.thresh.b[,-1]<-signif(opt.thresh.b[,-1],2)
-@
-
-Here are the optimized thresholds for Pinyon:
-
-<<Ex4a Optimal Threshold Table Show>>=
-opt.thresh.a
-@
-
-And for Sage:
-
-<<Ex4b Optimal Threshold Table Show>>=
-opt.thresh.b
-@
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Comparing Variable Importance}
-
-In previous examples the \code{model.importance.plot()} function was used to compare the importance between RF models for different response variables. Here we will compare the variable importances of two models for the same response variable, one an RF model and the other an SGB model. We will compare the the binary RF models from Example 2 with the SGB models we have just created \mbox{(Figure \ref{fig:Ex4Comp}).} 
-
-<<Ex4CompImp,include=TRUE,include=TRUE,width=7.5,height=7.5, results=hide>>=
-
-opar <- par(mfrow=c(2,1),mar=c(3,3,3,3),oma=c(0,0,3,0))
-
-model.importance.plot( model.obj.1=model.obj.ex2a,
-                       model.obj.2=model.obj.ex4a,
-                       model.name.1="RF",
-                       model.name.2="SGB",
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Pinyon Presence",
-                       device.type="none",
-                       cex=0.9)
-                      
-model.importance.plot( model.obj.1=model.obj.ex2b,
-                       model.obj.2=model.obj.ex4b,
-                       model.name.1="RF",
-                       model.name.2="SGB",
-                       sort.by="predList",
-                       predList=predList,
-                       scale.by="sum",
-                       main="Sage Presence",
-                       device.type="none",
-                       cex=0.9)
-                       
-mtext("Variable Importance Comparison",side=3,line=0,cex=1.8,outer=TRUE)
-par(opar)
-@
-
-\begin{figure}
-\begin{center}
-<<Ex4CompImpFig,fig=TRUE, results=hide, echo=FALSE, width=7.5,height=7.5>>=
-<<Ex4CompImp>>
-@
-\end{center}
-\caption{\label{fig:Ex4Comp}Example 4 - Comparison of variable importances between RF and SGB binary models for Pinyon presence and Sage presence.}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Interaction Plots}
-
-We will look at how the \code{pred.means} argument can be used in the \code{model.interaction.plot()} function for a more detailed examination of interactions between predictor variables.  For example, when checking for 30way interactions. The default behavior in \code{model.interaction.plot()} is to fix the unused predictor variables at either their means (for continuous predictors) or their most common value (for categorical predictors).  The \code{pred.means} argument allows setting these variables to other values. 
-
-Here we look at the effect of two remote sensing bands on Sage presence at two different elevations within two of the NLCD cover classes\mbox{(Figure \ref{fig:Ex4bPerspEviNdv1},Figure \ref{fig:Ex4bPerspEviNdv2},Figure \ref{fig:Ex4bPerspEviNdv3},Figure \ref{fig:Ex4bPerspEviNdv4}).}
-
-<<Ex4 Interaction Plots, results=hide>>=
-ELEV<-c(1600,2100)
-NCLD<-c(30,80)
-
-for(j in ELEV){
-for(k in NCLD){
-      pred.means<-list(j,k)
-      names(pred.means)<-c("ELEV250","NLCD01_250")
-      model.interaction.plot( model.obj.ex4b,
-                              x="EVI2005097",
-                              y="NDV2005097",
-                              main=paste(response.name.b," (ELEV=",j,"  NCLD=",k,")",sep=""),
-                              plot.type="persp",
-                              device.type="pdf",
-                              pred.means=pred.means,
-                              theta=65,phi=25,
-                              MODELfn=paste(MODELfn.b,"ELEV",j,"NCLD",k,sep="_"),
-                              folder=folder)
-}}
-
-@
-
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_ELEV_1600_NCLD_30_persp_EVI2005097_NDV2005097}
-\end{center}
-\caption{\label{fig:Ex4bPerspEviNdv1}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two remote sensing bands (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 30. Here we see that predicted Sage presence increases as NDV increases to 2500, then drops only slightly as NDV increases beyond 3000. Also, predicted presence is highest at mid values of EVI, and lowest at low values of EVI. }
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_ELEV_1600_NCLD_80_persp_EVI2005097_NDV2005097}
-\end{center}
-\caption{\label{fig:Ex4bPerspEviNdv2}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 1600m and NCLD class set to 80. Here, in NLCD class 80, predicted Sage presence is still highest at mid values of NDV, but falls sharply at high values of this predictor. Predicted presence is still highest at mid values of EVI, but in contrast to NLCD class 30, there is little difference between high and low values of this predictor. }
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_ELEV_2100_NCLD_30_persp_EVI2005097_NDV2005097}
-\end{center}
-\caption{\label{fig:Ex4bPerspEviNdv3}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 30. At this combination of elevation and NLCD, NDV has much less influence on predicted Sage presence. There is a slight drop off of predicted presence at high values of this predictor, but otherwise the graph is flat along this axis. The effect of EVI is also different at this elevation when compared to the same NLCD class at the lower elevation. The rise in presence for mid-values of EVI is much weaker, and there is a slight drop off of predicted presence for high vales of EVI, which is the opposite effect as was seen at the lower elevation.  }
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\includegraphics{VModelMapEx4b_ELEV_2100_NCLD_80_persp_EVI2005097_NDV2005097}
-\end{center}
-\caption{\label{fig:Ex4bPerspEviNdv4}Example 4 - Interaction plot for Sage presence-absence (SGB model), showing interactions between two of the satellite based predictors (EVI2005097 and NDV2005097), with elevation set to 2100m and NCLD class set to 80. At this combination of elevation and NLCD, there is a sharp drop in predicted Sage presence with high values of NDV. This is similar to what was seen in this class at lower elevation, however, at the lower elevation there was also a drop in predicted presence with low NDV, which is not seen here. In NLCD class 80 the drop in predicted Sage presence at high EVI is even stronger than that seen in class 30. }
-\end{figure}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Map production}
-
-Run \code{model.mapmake()} to create the maps. 
-
-<<Ex4 Produce Maps, results=hide>>=
-
-model.mapmake( model.obj=model.obj.ex4a,
-               folder=folder,           
-               MODELfn=MODELfn.a,
-               rastLUTfn=rastLUTfn)
-            
-
-model.mapmake( model.obj=model.obj.ex4b,
-               folder=folder,           
-               MODELfn=MODELfn.b,
-               rastLUTfn=rastLUTfn)
-
-@
-
-Map the probability surface (the probability that the species is present at each grid point) \mbox{(Figure \ref{fig:Ex4ProbSurf})}, using the color ramp defined in example 2.
-
-<<Ex4 define color sequence, results=hide>>=
-h=c(  seq(10,30,length.out=10),
-	    seq(31,40,length.out=10),
-    	seq(41,90,length.out=60),
-	    seq(91,100,length.out=10),
-	    seq(101,110,length.out=10))
-l =c( seq(25,40,length.out=10),
-	    seq(40,90,length.out=35),
-	    seq(90,90,length.out=10),
-	    seq(90,40,length.out=35),
-	    seq(40,10,length.out=10))
-probpres.ramp <- hcl(h = h, c = 80, l = l)
-@
-
-<<Ex4ProbabilitySurface,include=TRUE,width=7.5,height=5.7, results=hide>>=
-opar <- par(mfrow=c(1,2),mar=c(3,3,2,1),oma=c(0,0,3,4),xpd=NA)
-
-mapgrid.a <- raster(paste(MODELfn.a,"_map.img",sep=""))
-mapgrid.b <- raster(paste(MODELfn.b,"_map.img",sep=""))
-
-legend.subset<-c(100,80,60,40,20,1)
-legend.colors<-probpres.ramp[legend.subset]
-legend.label<-c("100%"," 80%"," 60%"," 40%"," 20%","  0%")
-
-image( mapgrid.a, 
-       col=probpres.ramp,
-       xlab="",ylab="",xaxt="n",yaxt="n",
-       zlim=c(0,1),
-       asp=1,bty="n",main="")
-mtext(response.name.a,side=3,line=1,cex=1.2)
-image(mapgrid.b, 
-      col=probpres.ramp,
-      xlab="",ylab="",xaxt="n",yaxt="n",
-      zlim=c(0,1),
-      asp=1,bty="n",main="")
-mtext(response.name.b,side=3,line=1,cex=1.2)
-
-legend( x=xmax(mapgrid.b),y=ymax(mapgrid.b),
-        legend=legend.label,
-        fill=legend.colors,
-        bty="n",
-        cex=1.2)
-				    
-mtext("Probability of Presence",side=3,line=1,cex=1.5,outer=T)
-par(opar)
-@
-
-\begin{figure}
-\begin{center}
-<<Ex4ProductionMapsFig,fig=TRUE,echo=FALSE, width=7.5,height=5.7>>=
-<<Ex4ProbabilitySurface>>
-@
-\end{center}
-\caption{\label{fig:Ex4ProbSurf}Example 4 - Probability surface maps for Pinyon and Sage presence (SGB models)}
-\end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2372,7 +1975,7 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \hline
 
 
-\code{model.type}     & Model type:  \code{"RF"} or \code{"SGB"}.\\
+\code{model.type}     & Model type:  \code{"RF"} or \code{"QRF"} or \code{"CF"}.\\
 
 \code{qdata.trainfn}  & Filename of the training data file for building model.\\
 
@@ -2390,7 +1993,7 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 
 \code{unique.rowname} & Unique identifier for each row in the training data.\\
 
-\code{seed}           & Seed to initialize randomization to build RF or SGB models.\\
+\code{seed}           & Seed to initialize randomization to build stochastic models.\\
 
 \code{na.action}      & Specifies the action to take if there are \code{NA} values in the prediction data\\
 
@@ -2411,28 +2014,6 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \code{strata}          & A (factor) variable that is used for stratified sampling.\\
 
 \code{sampsize}        &  For classification, if strata provided, sampling is stratified by strata. For binary response models, if argument strata is not provided then sampling is stratified by presence/absence.\\
-
-\hline
-
-\multicolumn{2}{|c|}{Stochastic Gradient Boosting Models:} \\
-\hline
-
-\code{n.trees}          & Total number of stochastic gradient boosting trees for an SGB model. The \code{gbm} function \code{gbm.perf(method="OOB")} will be used to select the best number of trees from this total number of trees.\\
-
-\code{shrinkage}        & Shrinkage parameter applied to each tree in the expansion. Also known as the learning rate or step-size reduction.\\
-
-\code{interaction.depth}& Maximum depth of variable interactions. \code{interaction.depth = 1} implies an additive model, \code{interaction.depth = 2} implies a model with up to 2-way interactions, etc\ldots \\
-
-\code{bag.fraction}     & Fraction of the training set observations randomly selected to propose the next tree in the expansion. If \code{bag.fraction < 1} then running the same model twice will result in similar but different fits.\\
-
-\code{train.fraction}   & Fraction of observations used to fit the model. Note: \code{train.fraction} is deprecated, \code{nTrain} is preferred.\\
-
-\code{nTRAIN}           & An integer representing the number of cases on which to train.\\
-
-\code{n.minobsinnode}   & Minimum number of observations in the trees terminal nodes. Note that this is the actual number of observations not the total weight.\\
-
-\code{var.monotone}     & Otional vector, the same length as the number of predictors, indicating which variables have a monotone increasing (+1), decreasing (-1), or arbitrary (0) relationship with the outcome.\\
-
 
 \hline
 
@@ -2469,7 +2050,7 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 
 \code{diagnostic.flag} & Name of column in training that indicates subset of data to use for diagnostics.\\
 
-\code{seed}           & Seed to initialize randomization to build RF or SGB models.\\
+\code{seed}           & Seed to initialize randomization to build stochastic models.\\
 
 \code{prediction.type}& Type of prediction to use for model validation: \code{"TEST"}, \code{"CV"},
           \code{"OOB"} or \code{"TRAIN"}\\
@@ -2499,8 +2080,6 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \code{FPC}          & False Positive Cost for threshold optimization for binary response model.\\
 
 \code{FNC}          & False Negative Cost for threshold optimization for binary response model.\\
-
-\code{n.trees}      & For SGB models, the number of stochastic gradient boosting trees for an SGB model.\\
 
 \hline
 \end{tabularx}
@@ -2533,8 +2112,6 @@ In summary, the \pkg{ModelMap} software package for \proglang{R} creates sophist
 \code{map.sd}       & Should maps of mean, standard deviation, and coefficient of variation of the predictions be produced: \code{TRUE} or \code{FALSE}. Only used if \code{response.type = "continuous"}.\\  
 
 \code{OUTPUTfn}      & Filename for output raster file for map production. If \code{NULL}, \mbox{\code{"\textit{modelfn}\_map.txt"}}.\\
-
-\code{n.trees}       &  The number of stochastic gradient boosting trees for an SGB model.\\
 
 \hline
 \end{tabularx}

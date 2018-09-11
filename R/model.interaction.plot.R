@@ -144,7 +144,7 @@ if(model.type=="QRF"){if("QRF"%in%names(model.obj)){model.obj<-model.obj$QRF}}
 
 if(model.type=="CF"){REQUIRE.party()}
 if(model.type=="QRF"){REQUIRE.quantregForest()}
-if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
+#if(model.type=="SGB" || model.type=="QSGB"){REQUIRE.gbm()}
 
 if(model.type=="CF"){
 	WARN.IM<-TRUE
@@ -185,7 +185,7 @@ if(model.type=="CF"){
 if(response.type=="categorical"){
 	if(model.type=="RF"){ response.levels<-colnames(model.obj$votes)}
 	if(model.type=="CF"){ response.levels<-model.obj@responses@levels[[1]]}
-	if(model.type=="SGB"){response.levels<-model.obj$classes}
+#	if(model.type=="SGB"){response.levels<-model.obj$classes}
 
 	if(is.null(response.category)){
 		response.category <- select.list(response.levels, title="Select response category.")
@@ -296,10 +296,11 @@ if(model.type=="CF"){
 }
 
 ##SGB
-if(model.type=="SGB"){
-	if(!is.null(model.obj$var.type)){var.type<-model.obj$var.type}
-	if(!is.null(model.obj$var.levels)){var.levels<-model.obj$var.type}
-}
+#if(model.type=="SGB"){
+#	var.levels<-as.list(rep(0,n.preds))
+#	if(!is.null(model.obj$variables$var_type)){var.type<-model.obj$variables$var_type}
+#	if(!is.null(model.obj$variables$var_levels)){var.levels[var.type!=0]<-model.obj$variables$var_levels[var.type!=0]}
+#}
 
 ### define predictor data ###
 
@@ -308,18 +309,18 @@ qdata<-NULL
 if(model.type!="CF"){
 	if(!is.null(model.obj$predictor.data)){
 		qdata <- model.obj$predictor.data
-	}else{
-		if(model.type=="SGB" && !is.null(model.obj$data$x)){
-			qdata<-model.obj$data$x
-			Nrow<-length(qdata)/n.preds
-			qdata<-data.frame(matrix(qdata,Nrow,n.preds))
-			names(qdata)<-predList
-	
-			for(p in (1:n.preds)[var.type!=0]   ){
-				qdata[,p]<-factor(qdata[,p],labels=var.levels[[p]])
-			}
-		}
-	}
+	}#else{
+#		if(model.type=="SGB" && !is.null(model.obj$data$x)){
+#			qdata<-model.obj$data$x
+#			Nrow<-length(qdata)/n.preds
+#			qdata<-data.frame(matrix(qdata,Nrow,n.preds))
+#			names(qdata)<-predList
+#	
+#			for(p in (1:n.preds)[var.type!=0]   ){
+#				qdata[,p]<-factor(qdata[,p],labels=var.levels[[p]])
+#			}
+#		}
+#	}
 }
 
 if(model.type=="CF"){
@@ -495,14 +496,14 @@ if(model.type=="CF"){
 	}
 }
 
-if(model.type=="SGB"){
-	if(is.null(model.obj$best.iter)){
-		n.trees<-model.obj$n.trees
-	}else{
-		n.trees<-model.obj$best.iter
-	}
-	prediction <- gbm::predict.gbm(model.obj,pred.frame,n.trees = n.trees, type="response")
-}
+#if(model.type=="SGB"){
+#	if(is.null(model.obj$best.iter)){
+#		n.trees<-model.obj$n.trees
+#	}else{
+#		n.trees<-model.obj$best.iter
+#	}
+#	prediction <- predict(model.obj,pred.frame,n.trees = n.trees, type="response")
+#}
 
 
 ### model smooth if specified ###
