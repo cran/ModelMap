@@ -110,6 +110,8 @@ Simpson, E. H. (1949). Measurement of diversity. Nature.
 \seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.diagnostics}}, \code{\link{compareRaster}}, \code{\link{writeRaster}}}
 \examples{
 
+\dontrun{
+
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -259,7 +261,7 @@ legend(	x=xmax(mapgrid.2001),y=ymax(mapgrid.2001),
 mtext("Predictions",side=3,line=1,cex=1.5,outer=TRUE)
 par(opar)
 
-
+} # end dontrun
 
 }
 

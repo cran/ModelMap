@@ -166,6 +166,9 @@ Ridgeway, G., (1999). The state of boosting. Comp. Sci. Stat. 31:172-181
 
 \seealso{ \code{\link{get.test}}, \code{\link{model.build}}, \code{\link{model.mapmake}}}
 \examples{
+
+\dontrun{
+
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -335,6 +338,9 @@ PRED.OOB
 #                   		na.action="na.roughfix"
 #)
 #PRED.TEST
+)
+
+} # end dontrun
 
 }
 

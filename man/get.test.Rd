@@ -30,6 +30,7 @@ Outputs a training data file and test data file. Unless \code{qdata.trainfn} or 
 
 \examples{
 
+\dontrun{
 qdatafn<-system.file("extdata", "helpexamples","DATATRAIN.csv", package = "ModelMap")
 
 qdata<-read.table(file=qdatafn,sep=",",header=TRUE,check.names=FALSE)
@@ -40,7 +41,7 @@ get.test(	proportion.test=0.2,
 		folder=getwd(),
 		qdata.trainfn="example.train.csv",
 		qdata.testfn="example.test.csv")
-
+} # end dontrun
 
 }
 

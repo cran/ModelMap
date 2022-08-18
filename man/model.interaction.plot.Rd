@@ -122,6 +122,9 @@ Elith, J., Leathwick, J. R. and Hastie, T. (2008). A working guide to boosted re
 
 
 \examples{
+
+\dontrun{
+
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -195,7 +198,7 @@ model.interaction.plot(	model.obj,
 			plot.type="persp", 
 			device.type="default") 
 
-\dontrun{
+
 ### specify predictors in 'predList' by name (one continuous one factored) ###
 
 model.interaction.plot(model.obj,
@@ -296,7 +299,7 @@ for(i in 1:3){
 				plot.type="persp", 
 				device.type="default") 
 }
-} #end dontRun
+} #end dontrun
 
 }
 

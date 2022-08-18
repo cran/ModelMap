@@ -137,6 +137,7 @@ Torston Hothorn, Kurt Hornik and Achim Zeileis (2006b). Unbiased Recursive Parti
 \seealso{ \code{\link{get.test}}, \code{\link{model.diagnostics}}, \code{\link{model.mapmake}}}
 \examples{
 
+\dontrun{
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -254,7 +255,7 @@ model.obj = model.build( model.type="RF",
                        na.action="na.roughfix"
 )
 
-
+} # end dontrun
 
 }
 

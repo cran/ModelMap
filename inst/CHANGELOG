@@ -497,3 +497,7 @@ fixed bug in model.diagnostics() that crashed at corrplot if model contained onl
 added latin-1 encoding to vignettes
 
 disabled SGB models (until when and if the gbm package is no longer orphaned).
+
+################ ModelMap 3.4.0.2 08/17/22 ###########################
+
+Wrapped help file examples in \dontrun{} to avoid "non-standard things in the check directory"

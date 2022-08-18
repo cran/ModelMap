@@ -169,6 +169,8 @@ Carolin Strobl, Anne-Laure Boulesteix, Thomas Kneib, Thomas Augustin, and Achim 
 
 \examples{
 
+\dontrun{
+
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -234,7 +236,6 @@ model.importance.plot(	model.obj.1=model.obj.RF,
 			device.type="default")
 
 
-\dontrun{
 ##################################################################
 ########## Categorical Response, Continuous Predictors ###########
 ##################################################################
@@ -328,7 +329,8 @@ model.importance.plot(	model.obj.1=model.obj.CF,
 			device.type="default"
 )
 
-} # end dontRun
+} # end dontrun
+
 }
 
 \keyword{ models }

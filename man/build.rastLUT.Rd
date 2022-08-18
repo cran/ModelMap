@@ -40,12 +40,13 @@ Returns a data frame containing the raster Look-Up-Table. Also Writes a \code{.c
 
 \examples{
 
+\dontrun{
 folder<-system.file("external", "helpexamples", package = "ModelMap")
 qdata.trainfn = paste(folder,"/DATATRAIN.csv",sep="")
 
 #build.rastLUT(	qdata.trainfn=qdata.trainfn,
 #		folder=folder)
-
+} # end dontrun
 
 }
 

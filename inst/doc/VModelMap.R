@@ -1,5 +1,4 @@
 ### R code from vignette source 'VModelMap.Rnw'
-### Encoding: ISO8859-1
 
 ###################################################
 ### code chunk number 1: Ex1 set options

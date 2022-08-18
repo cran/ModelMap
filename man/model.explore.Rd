@@ -114,6 +114,8 @@ The default graphics device is disabled unless \code{allow.default.graphics} is 
 
 \examples{
 
+\dontrun{
+
 ###########################################################################
 ############################# Run this set up code: #######################
 ###########################################################################
@@ -186,15 +188,7 @@ model.explore(	qdata.trainfn=qdata.trainfn,
 			  "darkolivegreen2","yellow","thistle2",
 			  "brown2","brown4")
 )
-
-
-
-
-
-
-
-
-
+} # end dontrun
 
 
 
