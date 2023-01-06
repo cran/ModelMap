@@ -12,8 +12,8 @@ Creates sophisticated models of training data and validates the models with an i
 \tabular{ll}{
 Package: \tab ModelMap\cr
 Type: \tab Package\cr
-Version: \tab 3.4.0.2\cr
-Date: \tab 2022-08-17
+Version: \tab 3.4.0.3\cr
+Date: \tab 2023-01-05
 \cr
 License: \tab Unlimited. This code was written and prepared by a U.S. Government employee on official time, 
 and therefore it is in the public domain and not subject to copyright.\cr
@@ -42,7 +42,7 @@ For interaction plots, the \code{fields} package is used to produce image plots.
 \author{
 Author: Elizabeth Freeman and Tracey Frescino
 
-Maintainer: Elizabeth Freeman <eafreeman@fs.fed.us>
+Maintainer: Elizabeth Freeman <elizabeth.a.freeman@usda.gov>
 
 }
 \references{

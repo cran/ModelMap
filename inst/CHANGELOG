@@ -501,3 +501,7 @@ disabled SGB models (until when and if the gbm package is no longer orphaned).
 ################ ModelMap 3.4.0.2 08/17/22 ###########################
 
 Wrapped help file examples in \dontrun{} to avoid "non-standard things in the check directory"
+
+################ ModelMap 3.4.0.3 01/05/23 ###########################
+
+Updated both email and postal addresses for package maintainer and citation
