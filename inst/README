@@ -4,7 +4,7 @@ ModalMap: Modeling and Map production using Random Forest and Stochastic Gradien
 
 If you are installing from a local zip file
 
-Make certain you have already installed packages: gbm, randomForest, rgdal, raster, PresenceAbsence, fields, HandTill2001
+Make certain you have already installed packages: gbm, randomForest, raster, PresenceAbsence, fields, HandTill2001
 
 Install ModalMap package using Packages > Install package(s) from local zip files...
 

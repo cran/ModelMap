@@ -505,3 +505,10 @@ Wrapped help file examples in \dontrun{} to avoid "non-standard things in the ch
 ################ ModelMap 3.4.0.3 01/05/23 ###########################
 
 Updated both email and postal addresses for package maintainer and citation
+
+################ ModelMap 3.4.0.4 04/12/23 ###########################
+
+Removed references to rgdal in package DESCRIPTION and NAMESPACE. 
+
+Updated CITATION file to use currently preference functions c() insteas of as.personList() and bibentry() instead of citEntry()
+

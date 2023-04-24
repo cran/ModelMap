@@ -31,6 +31,5 @@ importFrom("PresenceAbsence","Kappa")
 import(
   randomForest,
   HandTill2001,
-  raster,
-  rgdal
+  raster
 )

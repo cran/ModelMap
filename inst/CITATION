@@ -1,8 +1,8 @@
 citHeader("To cite package 'ModelMap' in publications use:")
 
-citEntry(	entry="Manual",
+bibentry(	bibtype = "Manual",
   		title = "ModelMap: Modeling and Map Production using Random Forest and Related Stochastic Models",
-  		author = personList(as.person("Elizabeth Freeman"),as.person("Tracey Frescino")),
+  		author = c(person("Elizabeth","Freeman"),person("Tracey","Frescino")),
  	 	year = "2018",
   		organization = "USDA Forest Service, Rocky Mountain Research Station",
   		address      = "507 25th street, Ogden, UT, USA",
